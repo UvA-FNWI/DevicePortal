@@ -1,0 +1,17 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "outDir": "wwwroot/js",
+    "noImplicitAny": false,
+    "noEmitOnError": true,
+    "removeComments": false,
+    "inlineSources": true,
+    "inlineSourceMap": true,
+    "target": "es5"
+  },
+  "include": [ "./Scripts/**/*" ],
+  "exclude": [
+    "node_modules",
+    "wwwroot"
+  ]
+}
