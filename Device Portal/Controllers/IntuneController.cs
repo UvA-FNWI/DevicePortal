@@ -9,30 +9,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Device_Portal.Controllers
+namespace DevicePortal.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class IntuneController : ControllerBase
     {
-        private static ClientCredentialProvider authProvider;
-
-        public IntuneController(IConfiguration configuration)
-        {
-            if (authProvider == null)             
-            { 
-                string clientId = configuration["AzureAD:ClientID"];
-                string clientSecret = configuration["AzureAD:ClientSecret"];
-                string tentantId = configuration["AzureAD:TenantID"]; ;
-
-                var confidentialClientApplication = ConfidentialClientApplicationBuilder
-                    .Create(clientId)
-                    .WithTenantId(tentantId)
-                    .WithClientSecret(clientSecret)
-                    .Build();
-                authProvider = new ClientCredentialProvider(confidentialClientApplication);
-            }
-        }
+        public static ClientCredentialProvider authProvider;
 
         [HttpGet("me")]
         public async Task<ActionResult> GetMe() 

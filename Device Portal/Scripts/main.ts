@@ -7,6 +7,7 @@ enum Page {
     Users,
     Faculty,
     Requests,
+    Admin,
     Home, // Make sure this is last since it's pattern matches all paths
 }
 
@@ -16,21 +17,20 @@ let pages = [
     '/users',
     '/faculty',
     '/requests',
+    '/admin',
     '/',
 ];
 
 let iPage = Page.Home;
-let devices: Device[] = [
-    { id: 0,name: 'Personal phone', type: DeviceType.Mobile, os: 'Android', status: 'Approved' },
-    { id: 1,name: 'Work phone', type: DeviceType.Mobile, os: 'iOS', status: 'Approved' },
-    { id: 2,name: 'iPad', type: DeviceType.Tablet, os: 'iOS', status: 'Denied' },
-    { id: 3,name: 'Macbook', type: DeviceType.Laptop, os: 'macOS', status: 'Approved' },
-    { id: 4,name: 'PC', type: DeviceType.Desktop, os: 'Windows', status: 'Denied' },
-];
+let contextModal = new ContextualModal();
 
+let devices: Device[] = []; // TODO, contains only devices registered to current user
 let operatingSystems = ['Windows', 'Linux', 'macOS', 'iOS', 'Android'];
 
 ks.run(function () {
+    // Global modals, run before any pages
+    contextModal.run();
+
     let iPagePrev = iPage;
     let pathname = window.location.pathname.toLowerCase();
     let parameters = '';
@@ -85,6 +85,12 @@ ks.run(function () {
                     ks.navigate_to('Approval requests', pages[Page.Requests]);
                     return false;
                 });
+
+                ks.nav_item('Admin', iPage === Page.Users,  pages[Page.Admin]);
+                ks.is_item_clicked(function () {
+                    ks.navigate_to('Admin', pages[Page.Admin]);
+                    return false;
+                });
             });
 
             ks.nav_item('Logout', false, '/logout');
@@ -114,6 +120,9 @@ ks.run(function () {
             case Page.Requests:
                 page_requests(parameters);
                 break;
+            case Page.Admin:
+                page_admin();
+                break;
             default:
                 page_home();
                 break;
@@ -124,8 +133,14 @@ ks.run(function () {
 });
 
 function page_home() {
-    ks.h5('My devices', 'mb-2');
+    if (isPageSwap) {
+        GET_ONCE('devices', API.Devices('me')).done((result: Device[]) => {
+            devices = result;
+            ks.refresh();
+        });
+    }
 
+    ks.h5('My devices', 'mb-2');
     ks.row('devices', function () {
         ks.set_next_item_class_name('mb-3');
         ks.column('devices', 12, function () {
@@ -172,8 +187,6 @@ function device_row(d: Device, showSecurityCheckLink: boolean) {
             break;
     }
 
-    let statusColor = d.status === 'Approved' ? 'success' : (d.status === 'Submitted' ? 'warning' : 'danger');
-
     ks.table_row(function () {
         ks.table_cell(d.name);
         ks.table_cell(function () {
@@ -184,7 +197,7 @@ function device_row(d: Device, showSecurityCheckLink: boolean) {
         });
         ks.table_cell(d.os);
         ks.table_cell(function () {
-            ks.text(d.status, 'badge badge-' + statusColor);
+            ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
         });
 
         if (showSecurityCheckLink) {
@@ -197,6 +210,36 @@ function device_row(d: Device, showSecurityCheckLink: boolean) {
                 });
             }).style.width = '1%';
         }
+    });
+}
+
+function page_admin() {
+    ks.h5('Upload files', 'mb-2');
+    ks.form('form', '', false, function () {
+        let files: any[];
+        ks.group('inline', 'd-inline-flex', function () {
+            ks.input_file('File', '', function (f) {
+                files = [f[0], f[1]];
+            }).multiple = true;
+            ks.button('Upload', function () {
+                ks.cancel_current_form_submission();
+                if (files) {
+                    ks.refresh(this);
+                    const xhr = new XMLHttpRequest();
+                    const fd = new FormData();
+                    xhr.open("POST", API.Import(), true);
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState === 4 && xhr.status == 400) {
+                            console.warn(xhr.responseText);
+                        }
+                    };
+                    for (let i = 0; i < files.length; ++i) {
+                        fd.append('my_file' + i, files[i]);
+                    }
+                    xhr.send(fd);
+                }
+            });
+        });
     });
 }
 
@@ -235,14 +278,13 @@ function header_breadcrumbs(items: string[], proc: (i: number) => void) {
     });
 }
 
-declare var $: any;
-function GET(url: string) {
-    return $.get(url);
-}
-
 abstract class API {
 
     static Identity = API.getUrlFactory('/api/Identity');   
+    static Import = API.getUrlFactory('/api/Import');
+    static Devices = API.getUrlFactory('/api/Devices');
+    static SecurityQuestions = API.getUrlFactory('/api/SecurityQuestions');
+    static SecurityCheck = API.getUrlFactory('/api/SecurityChecks');
 
     private static getUrlFactory(base: string) {
         return function (sufffix: string | number = undefined) {

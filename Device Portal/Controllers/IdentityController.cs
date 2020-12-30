@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Device_Portal.Controllers
+namespace DevicePortal.Controllers
 {
     [Route("api/[controller]")]
     [ApiController, Authorize]

@@ -1,3 +1,5 @@
+using DevicePortal.Controllers;
+using DevicePortal.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -5,10 +7,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Graph.Auth;
 using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System;
@@ -56,6 +60,22 @@ namespace DevicePortal
                 options.ClaimActions.Add(new JsonKeyClaimAction("uids", null, "uids"));
                 options.ResponseType = OpenIdConnectResponseType.Code;
                 options.SaveTokens = true;
+            });
+
+            string clientId = Configuration["AzureAD:ClientID"];
+            string clientSecret = Configuration["AzureAD:ClientSecret"];
+            string tentantId = Configuration["AzureAD:TenantID"]; ;
+            var confidentialClientApplication = ConfidentialClientApplicationBuilder
+                .Create(clientId)
+                .WithTenantId(tentantId)
+                .WithClientSecret(clientSecret)
+                .Build();
+            IntuneController.authProvider = new ClientCredentialProvider(confidentialClientApplication);
+
+            services.AddDbContext<PortalContext>(options =>
+            {
+                options.EnableSensitiveDataLogging();
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"), so => so.EnableRetryOnFailure());
             });
 
             services.AddControllers();

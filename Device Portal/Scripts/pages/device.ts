@@ -16,8 +16,21 @@ class Device {
     name = '';
     type: DeviceType;
     os = '';
-    status = '';
+    status = DeviceStatus.Submitted;
 }
+enum DeviceStatus {
+    Approved,
+    Denied,
+    Submitted,
+}
+let statusNames = {};
+statusNames[DeviceStatus.Approved] = 'Approved';
+statusNames[DeviceStatus.Denied] = 'Denied';
+statusNames[DeviceStatus.Submitted] = 'Pending';
+let statusColors = {};
+statusColors[DeviceStatus.Approved] = 'sucess';
+statusColors[DeviceStatus.Denied] = 'danger';
+statusColors[DeviceStatus.Submitted] = 'warning';
 
 function page_device(parameters: string) {
     let state = ks.local_persist('page_device', {
@@ -107,7 +120,7 @@ function page_device(parameters: string) {
                         name: state.device.name,
                         os: state.device.os,
                         type: state.options[state.selected].type,
-                        status: '',
+                        status: DeviceStatus.Denied,
                     });
                     ks.navigate_to('Home', '/');
                 }
