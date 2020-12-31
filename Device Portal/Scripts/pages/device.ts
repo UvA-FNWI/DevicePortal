@@ -20,16 +20,16 @@ class Device {
 }
 enum DeviceStatus {
     Approved,
-    Denied,
+    Rejected,
     Submitted,
 }
 let statusNames = {};
 statusNames[DeviceStatus.Approved] = 'Approved';
-statusNames[DeviceStatus.Denied] = 'Denied';
+statusNames[DeviceStatus.Rejected] = 'Rejected';
 statusNames[DeviceStatus.Submitted] = 'Pending';
 let statusColors = {};
 statusColors[DeviceStatus.Approved] = 'sucess';
-statusColors[DeviceStatus.Denied] = 'danger';
+statusColors[DeviceStatus.Rejected] = 'danger';
 statusColors[DeviceStatus.Submitted] = 'warning';
 
 function page_device(parameters: string) {
@@ -52,12 +52,22 @@ function page_device(parameters: string) {
     if (parameters && parameters !== 'add') {
         let parts = parameters.split('/');
         let deviceId = parseInt(parts[0]);
-        if (!isNaN(deviceId)) {
-            // TODO: get device from server
-            state.device = { ...devices[deviceId] };
-        } else {
+        if (isNaN(deviceId)) {
             ks.navigate_to('Home', '/');
             return;
+        }
+        if (state.device.id !== deviceId && deviceId) {
+            GET_ONCE('device', API.Devices(deviceId)).done((d: Device) => {
+                state.device = d;
+                let mask = d.type;
+                state.selected = -1;
+                while (mask) {
+                    ++state.selected;
+                    mask = mask >> 1;
+                }
+                ks.refresh();
+            });
+            return; // wait for device
         }
     } else if (!parameters) {
         ks.navigate_to('Home', '/');
@@ -97,7 +107,7 @@ function page_device(parameters: string) {
                 });
 
                 ks.text('Operating system', 'mt-2 mb-1');
-                ks.set_next_input_validation(state.device.os.length > 0, '', 'This is a required field.');
+                ks.set_next_input_validation(state.device.os?.length > 0, '', 'This is a required field.');
                 ks.combo('Operating system', function () {
                     ks.selectable('##none', !state.device.os);
                     for (let i = 0; i < operatingSystems.length; ++i) {
@@ -120,7 +130,7 @@ function page_device(parameters: string) {
                         name: state.device.name,
                         os: state.device.os,
                         type: state.options[state.selected].type,
-                        status: DeviceStatus.Denied,
+                        status: DeviceStatus.Rejected,
                     });
                     ks.navigate_to('Home', '/');
                 }

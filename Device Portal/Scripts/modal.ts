@@ -73,7 +73,7 @@ class ContextualModal {
             ks.set_next_item_class_name(modal.css_class);
             ks.set_next_item_class_name('text-center px-4 py-5');
             ks.modal_body(function () {
-                ks.icon('far fa-exclamation-triangle text-warning mb-2').style.fontSize = '2.25rem';
+                ks.icon('fa fa-exclamation-triangle text-warning mb-2').style.fontSize = '2.25rem';
                 ks.h5(modal.header, 'mb-3');
 
                 if (typeof modal.str_or_proc === 'function') {

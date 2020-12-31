@@ -1,20 +1,38 @@
 ﻿function page_requests(parameters: string) {
     let state = ks.local_persist('page_users', {
         device: <Device>null,
+        security_check: <SecurityCheck>null,
+        checks: <SecurityCheck[]>[],
         search: { name: '', institute: '' },
     });
     if (isPageSwap) {
         state.device = null;
         state.search.name = '';
         state.search.institute = '';
+
+        GET_ONCE('security checks', API.SecurityCheck()).done((checks: SecurityCheck[]) => {
+            state.checks = checks;
+            ks.refresh();
+        });
+        return; // wait for security checks
     }
 
     if (parameters) {
         let parts = parameters.split('/');
         let deviceId = parseInt(parts[0]);
         if (!isNaN(deviceId)) {
-            // TODO: get device from server
-            state.device = devices[deviceId];
+            $.when(
+                GET_ONCE('device', API.Devices(deviceId)).done(d => {
+                    state.device = d;
+                }),
+                GET_ONCE('security_check', API.Devices(`${deviceId}/SecurityCheck`)).done(c => {
+                    state.security_check = c;
+                })).always(function () {
+                    if (state.device && state.security_check) { state.security_check.deviceId = state.device.id; }
+                    ks.refresh();
+                });
+
+            return; // wait for get device & security check
         } else { state.device = null; }
     } else { state.device = null; }
 
@@ -23,31 +41,57 @@
     header_breadcrumbs(breadcrumbs, function () {
         ks.navigate_to('Requests', pages[Page.Requests]);
     });
+    if (state.device) {
+        ks.text('Firstname Lastname', 'mt-n3 mb-3 text-muted');
+    }
 
-    ks.row('requests', function () {
-        ks.set_next_item_class_name('mb-3');
-        ks.column('devices', 12, function () {
-            ks.set_next_item_class_name('bg-white border');
-            ks.table('devices', function () {
-                ks.table_body(function () {
-                    for (let i = 0; i < devices.length; ++i) {
-                        let d = devices[i];
 
-                        ks.table_row(function () {
-                            ks.table_cell(users[2].name);
-                            ks.table_cell(d.name);
-                            ks.table_cell(function () {
-                                ks.set_next_item_class_name('text-nowrap');
-                                ks.anchor('View', pages[Page.SecurityCheck] + '/' + d.id);
-                                ks.is_item_clicked(function () {
-                                    ks.navigate_to('Security check', pages[Page.SecurityCheck] + '/' + d.id);
-                                    return false;
-                                });
-                            }).style.width = '1%';
-                        });
-                    }
-                });
+    if (!state.device) {
+        ks.set_next_item_class_name('bg-white border');
+        ks.table('devices', function () {
+            ks.table_body(function () {
+                for (let i = 0; i < devices.length; ++i) {
+                    let d = devices[i];
+
+                    ks.table_row(function () {
+                        ks.table_cell(users[2].name);
+                        ks.table_cell(d.name);
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('text-nowrap');
+                            ks.anchor('View', pages[Page.Requests] + '/' + d.id);
+                            ks.is_item_clicked(function () {
+                                ks.navigate_to('Request', pages[Page.Requests] + '/' + d.id);
+                                return false;
+                            });
+                        }).style.width = '1%';
+                    });
+                }
             });
         });
-    });
+    } else {
+        for (let i = 0; i < state.security_check.questions.length; ++i) {
+            let q = state.security_check.questions[i];
+            if (!(q.mask & state.device.type)) { continue; }
+
+            ks.push_id(i.toString());
+
+            ks.text(q.question, 'font-weight-bold mb-1');
+            ks.group('radios', 'mb-3', function () {
+                ks.set_next_item_class_name('custom-control-inline');
+                ks.radio_button('Yes', q.answer === true, ks.no_op).disabled = true;
+
+                ks.set_next_item_class_name('custom-control-inline');
+                ks.radio_button('No', q.answer === false, ks.no_op).disabled = true;
+            });
+
+            if (q.answer === false) {
+                ks.text(q.explanation);
+            }
+
+            ks.pop_id();
+        }
+
+        ks.button('Reject', ks.no_op, 'danger mr-2');
+        ks.button('Approve', ks.no_op, 'success');
+    }
 }

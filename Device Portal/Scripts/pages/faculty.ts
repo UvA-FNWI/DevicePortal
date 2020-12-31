@@ -6,21 +6,30 @@
 function page_faculty(parameters: string) {
     header_breadcrumbs(['Faculty'], ks.no_op);
 
+    ks.set_next_item_class_name('mx-n2');
     ks.row('faculties', function () {
-        ks.set_next_item_class_name('mb-3');
-        ks.column('faculties', 12, function () {
-            for (let i = 0; i < faculties.length; ++i) {
-                let f = faculties[i];
+        for (let i = 0; i < faculties.length; ++i) {
+            let f = faculties[i];
 
-                ks.group(f.name, 'card mb-3',function () {
+            ks.column(i.toString(), '12 col-md-6 px-2', function () {
+                ks.group(f.name, 'card mb-3', function () {
                     ks.group('body', 'card-body', function () {
                         ks.h5(f.name, 'card-title');
-                        ks.text('Completed: ' + f.numCompleted, 'd-inline mr-3');
-                        ks.text('Authorized: ' + f.numAuthorized, 'd-inline mr-3');
-                        ks.text('Devices: ' + f.numDevices, 'd-inline');
+
+                        ks.group('devices', 'mb-2', function () {
+                            ks.icon('fa fa-microchip mr-1 d-inline-block').style.width = '16px';
+                            ks.text('Registered devices: ', 'd-inline');
+                            ks.text('' + f.numDevices + ' ', 'd-inline');
+                        });
+
+                        ks.group('completed', 'mb-1', function () {
+                            ks.icon('fa fa-list-ol d-inline');
+                            ks.text('Users completed their security checks:', 'ml-1 d-inline');
+                        });
+                        ks.progress_bar('bar', f.numCompleted + ' / ' + f.numAuthorized, f.numCompleted, f.numAuthorized, 'bg-info');
                     });
                 });
-            }
-        });
+            });
+        }
     });
 }

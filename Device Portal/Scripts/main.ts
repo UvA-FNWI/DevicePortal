@@ -163,6 +163,19 @@ function page_home() {
     });
 }
 
+function deviceIcon(type: DeviceType): string {
+    switch (type) {
+        case DeviceType.Mobile:
+            return 'fa fa-mobile';
+        case DeviceType.Tablet:
+            return 'fa fa-tablet';
+        case DeviceType.Laptop:
+            return 'fa fa-laptop';
+        default:
+            return 'fa fa-desktop';
+    }
+}
+
 function device_row(d: Device, showSecurityCheckLink: boolean) {
     let icon: string;
     let iconSize = '1rem';
@@ -215,30 +228,29 @@ function device_row(d: Device, showSecurityCheckLink: boolean) {
 
 function page_admin() {
     ks.h5('Upload files', 'mb-2');
-    ks.form('form', '', false, function () {
+    ks.form('form', '', true, function () {
         let files: any[];
-        ks.group('inline', 'd-inline-flex', function () {
-            ks.input_file('File', '', function (f) {
-                files = [f[0], f[1]];
-            }).multiple = true;
-            ks.button('Upload', function () {
-                ks.cancel_current_form_submission();
-                if (files) {
-                    ks.refresh(this);
-                    const xhr = new XMLHttpRequest();
-                    const fd = new FormData();
-                    xhr.open("POST", API.Import(), true);
-                    xhr.onreadystatechange = function () {
-                        if (xhr.readyState === 4 && xhr.status == 400) {
-                            console.warn(xhr.responseText);
-                        }
-                    };
-                    for (let i = 0; i < files.length; ++i) {
-                        fd.append('my_file' + i, files[i]);
+        ks.input_file('File', '', function (f) {
+            files = [f[0], f[1]];
+        }).multiple = true;
+        ks.button('Upload', function () {
+            ks.cancel_current_form_submission();
+            if (files) {
+                ks.refresh(this);
+                const xhr = new XMLHttpRequest();
+                const fd = new FormData();
+                xhr.open("POST", API.Import(), true);
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status == 400) {
+                        contextModal.showWarning(xhr.responseText);
+                        console.warn(xhr.responseText);
                     }
-                    xhr.send(fd);
+                };
+                for (let i = 0; i < files.length; ++i) {
+                    fd.append('my_file' + i, files[i]);
                 }
-            });
+                xhr.send(fd);
+            }
         });
     });
 }

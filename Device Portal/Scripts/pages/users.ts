@@ -41,7 +41,6 @@ function page_users(parameters: string) {
     if (!state.user) {
         ks.set_next_item_class_name('mx-n2');
         let stats = ks.row('stats', function () {
-            // user count, authorized, devices, approvers
             ks.column('users', '12 col-sm-6 col-md-3 px-2', function () {
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {

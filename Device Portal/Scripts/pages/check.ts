@@ -19,26 +19,24 @@ function page_security_check(parameters: string) {
     let state = ks.local_persist('page_security_check', {
         security_check: <SecurityCheck>null,
         device: <Device>null,
-        read_only: false,
     });
     if (isPageSwap) {
-        GET_ONCE('questions', API.SecurityQuestions())
-            .done((result: SecurityQuestion[]) => {
-                questions = result;
-                state.security_check = new SecurityCheck();                
-                state.security_check.questions = questions.map(q => {
-                    return {
-                        answer: undefined,
-                        explanation: '',
-                        question: q.text,
-                        mask: q.mask,
-                    };
-                });
-                ks.refresh();
-            });
         state.security_check = null;
+        GET_ONCE('questions', API.SecurityQuestions()).done((result: SecurityQuestion[]) => {
+            questions = result;
+            state.security_check = new SecurityCheck();                
+            state.security_check.questions = questions.map(q => {
+                return {
+                    answer: undefined,
+                    explanation: '',
+                    question: q.text,
+                    mask: q.mask,
+                };
+            });
+            ks.refresh();
+        });
+
         state.device = null;
-        state.read_only = false;
         return; // wait for get questions
     }
 
@@ -49,13 +47,12 @@ function page_security_check(parameters: string) {
 
             $.when(
                 GET_ONCE('device', API.Devices(deviceId)).done(d => {
-                    state.device = d
-                    state.security_check.deviceId = d.id;
+                    state.device = d;
                 }),
                 GET_ONCE('security_check', API.Devices(`${deviceId}/SecurityCheck`)).done(c => {
                     state.security_check = c;
-                    state.read_only = true;
                 })).always(function () {
+                    if (state.device && state.security_check) { state.security_check.deviceId = state.device.id; }
                     ks.refresh();
                 });
                 
@@ -69,7 +66,10 @@ function page_security_check(parameters: string) {
     }
 
     header_breadcrumbs(['Security check'], ks.no_op);
-
+    ks.group('sub header', 'mt-n3 mb-3 text-muted', function () {
+        ks.icon(deviceIcon(state.device.type) + ' d-inline');
+        ks.text(state.device.name, 'd-inline ml-1');
+    });
 
     ks.form('security', '', false, function () {
         for (let i = 0; i < state.security_check.questions.length; ++i) {
@@ -83,23 +83,29 @@ function page_security_check(parameters: string) {
                 ks.set_next_item_class_name('custom-control-inline');
                 ks.radio_button('Yes', q.answer === true, function () {
                     q.answer = true;
-                    ks.refresh(this);
-                }).disabled = state.read_only;
+                    ks.refresh();
+                });
 
                 ks.set_next_input_validation(q.answer !== undefined, '', 'Must select a value');
                 ks.set_next_item_class_name('custom-control-inline');
                 ks.radio_button('No', q.answer === false, function () {
                     q.answer = false;
-                    ks.refresh(this);
-                }).disabled = state.read_only;
+                    ks.refresh();
+                });
             });
+
+            if (q.answer === false) {
+                ks.set_next_input_validation(!!q.explanation, '', 'Please provide a clarification');
+                ks.input_text_area('explanation', q.explanation, 'Please clarify', function (str) {
+                    q.explanation = str;
+                    ks.refresh(this);
+                });
+            }
 
             ks.pop_id();
         }
 
-        if (!state.read_only) {
-            ks.button('Submit', function () { });
-        }
+        ks.button('Submit', ks.no_op);
 
         if (ks.current_form_submitted()) {
             if (this.getElementsByClassName('is-invalid').length) {
