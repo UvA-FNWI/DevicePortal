@@ -44,6 +44,23 @@ namespace DevicePortal.Controllers
             return securityCheck;
         }
 
+        // GET: api/SecurityCheck/Device/5
+        [HttpGet("Device/{id}")]
+        public async Task<ActionResult<SecurityCheck>> GetSecurityCheckDevice(int id)
+        {
+            var securityCheck = await _context.SecurityChecks
+                .Include(c => c.Questions)
+                .OrderByDescending(c => c.Id)
+                .FirstOrDefaultAsync(c => c.DeviceId == id);
+
+            if (securityCheck == null)
+            {
+                return NotFound();
+            }
+
+            return securityCheck;
+        }
+
         // PUT: api/SecurityChecks/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutSecurityCheck(int id, SecurityCheck securityCheck)
@@ -52,28 +69,33 @@ namespace DevicePortal.Controllers
             {
                 return BadRequest();
             }
+            if (!SecurityCheckExists(id))
+            {
+                return NotFound();
+            }
+            if (!_context.SecurityChecks.Any(c => c.Id == id && c.Status == DeviceStatus.Submitted))
+            {
+                return BadRequest("Expected security check status to be submitted.");
+            }
+
+            var device = await _context.Devices.FindAsync(securityCheck.DeviceId);
+            if (device == null)
+            {
+                return NotFound();
+            }
+            if (device.UserName != User.GetUserName())
+            {
+                return Forbid();
+            }
 
             foreach (var q in securityCheck.Questions)
             {
                 _context.CreateOrUpdate(q);
             }
+            securityCheck.Status = DeviceStatus.Submitted;
+            securityCheck.StatusEffectiveDate = DateTime.Now;
             _context.Entry(securityCheck).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!SecurityCheckExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
@@ -99,7 +121,10 @@ namespace DevicePortal.Controllers
                 device.Status = DeviceStatus.Submitted;
                 _context.UpdateProperties(device, d => d.Status);
 
-                securityCheck.SubmissionDate = DateTime.Now;
+                DateTime now = DateTime.Now;
+                securityCheck.SubmissionDate = now;
+                securityCheck.Status = DeviceStatus.Submitted;
+                securityCheck.StatusEffectiveDate = now;
                 securityCheck.UserName = userName;
                 _context.SecurityChecks.Add(securityCheck);
 
