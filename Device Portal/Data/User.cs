@@ -19,5 +19,6 @@ namespace DevicePortal.Data
         public bool CanAdmin { get; set; }
 
         public HashSet<SecurityCheck> SecurityChecks { get; set; }
+        public HashSet<Device> Devices { get; set; }
     }
 }

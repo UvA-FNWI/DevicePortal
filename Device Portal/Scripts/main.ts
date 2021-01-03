@@ -298,6 +298,7 @@ abstract class API {
     static Identity = API.getUrlFactory('/api/Identity');   
     static Import = API.getUrlFactory('/api/Import');
     static Devices = API.getUrlFactory('/api/Devices');
+    static Faculties = API.getUrlFactory('/api/Faculties');
     static SecurityQuestions = API.getUrlFactory('/api/SecurityQuestions');
     static SecurityCheck = API.getUrlFactory('/api/SecurityChecks');
     static Users = API.getUrlFactory('/api/Users');

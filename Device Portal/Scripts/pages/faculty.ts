@@ -1,32 +1,46 @@
-﻿let faculties = [
-    { name: 'Informatics', numAuthorized: 123, numCompleted: 100, numDevices: 321 },
-    { name: 'Mathematics', numAuthorized: 123, numCompleted: 100, numDevices: 321 },
-];
+﻿class Institute {
+    name: string;
+    users: number;
+    usersCompleted: number;
+    devices: number;
+}
 
 function page_faculty(parameters: string) {
+    let state = ks.local_persist('page_faculty', {
+        institutes: <Institute[]>[],
+    });
+
     header_breadcrumbs(['Faculty'], ks.no_op);
+
+    if (isPageSwap) {
+        GET_ONCE('get_faculties', API.Faculties()).done((institutes: Institute[]) => {
+            state.institutes = institutes.sort((a,b) => sort_string(a.name, b.name));
+            ks.refresh();
+        });
+        return; // wait for institutes
+    }
 
     ks.set_next_item_class_name('mx-n2');
     ks.row('faculties', function () {
-        for (let i = 0; i < faculties.length; ++i) {
-            let f = faculties[i];
+        for (let i = 0; i < state.institutes.length; ++i) {
+            let inst = state.institutes[i];
 
             ks.column(i.toString(), '12 col-md-6 px-2', function () {
-                ks.group(f.name, 'card mb-3', function () {
+                ks.group(inst.name, 'card mb-3', function () {
                     ks.group('body', 'card-body', function () {
-                        ks.h5(f.name, 'card-title');
+                        ks.h5(inst.name, 'card-title');
 
                         ks.group('devices', 'mb-2', function () {
                             ks.icon('fa fa-microchip mr-1 d-inline-block').style.width = '16px';
                             ks.text('Registered devices: ', 'd-inline');
-                            ks.text('' + f.numDevices + ' ', 'd-inline');
+                            ks.text('' + inst.devices + ' ', 'd-inline');
                         });
 
                         ks.group('completed', 'mb-1', function () {
                             ks.icon('fa fa-list-ol d-inline');
                             ks.text('Users completed their security checks:', 'ml-1 d-inline');
                         });
-                        ks.progress_bar('bar', f.numCompleted + ' / ' + f.numAuthorized, f.numCompleted, f.numAuthorized, 'bg-info');
+                        ks.progress_bar('bar', inst.usersCompleted + ' / ' + inst.users, inst.usersCompleted, inst.users, 'bg-info');
                     });
                 });
             });
