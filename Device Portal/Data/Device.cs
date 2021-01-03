@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -39,7 +40,6 @@ namespace DevicePortal.Data
     public class Device : IEntity
     {
         public int Id { get; set; }
-        public string UserName { get; set; }
 
         public string Name { get; set; }
         public string SerialNumber { get; set; }
@@ -49,6 +49,11 @@ namespace DevicePortal.Data
         public DeviceStatus Status { get; set; }
         public DeviceOrigin Origin { get; set; }
 
+        [ForeignKey("User")]
+        public string UserName { get; set; }
+        public User User { get; set; }
+
+        [JsonIgnore]
         public HashSet<SecurityCheck> SecurityChecks { get; set; }
     }
 }

@@ -125,13 +125,14 @@ function page_device(parameters: string) {
 
                 if (ks.current_form_submitted() && state.selected >= 0 && !this.getElementsByClassName('is-invalid').length) {
                     ks.cancel_current_form_submission();
-                    devices.push({
-                        id: devices.length,
-                        name: state.device.name,
-                        os: state.device.os,
-                        type: state.options[state.selected].type,
-                        status: DeviceStatus.Rejected,
-                    });
+                    // TODO save device
+                    //state.devices.push({
+                    //    id: state.devices.length,
+                    //    name: state.device.name,
+                    //    os: state.device.os,
+                    //    type: state.options[state.selected].type,
+                    //    status: DeviceStatus.Rejected,
+                    //});
                     ks.navigate_to('Home', '/');
                 }
             });

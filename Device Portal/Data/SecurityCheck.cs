@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace DevicePortal.Data
 {
-    public class SecurityCheck
+    public class SecurityCheck : IEntity
     {
         public int Id { get; set; }
-        public string UserName { get; set; }
         public DateTime SubmissionDate { get; set; }
+
+        [ForeignKey("User")]
+        public string UserName { get; set; }
+        public User User { get; set; }
 
         public int DeviceId { get; set; }
         public Device Device { get; set; }
@@ -18,7 +22,7 @@ namespace DevicePortal.Data
         public HashSet<SecurityCheckQuestions> Questions { get; set; }
     }
 
-    public class SecurityCheckQuestions
+    public class SecurityCheckQuestions : IEntity
     {
         public int Id { get; set; }
 

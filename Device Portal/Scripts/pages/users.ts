@@ -1,19 +1,15 @@
 ﻿class User {
-    id: number;
+    userName: string;
     name: string;
     institute: string;
     canSecure: boolean;
     canApprove: boolean;
 }
 
-let users: User[] = [
-    { id: 0, name: 'John Doe', institute: 'Informatics', canSecure: false, canApprove: false },
-    { id: 1, name: 'Jane Doe', institute: 'Informatics', canSecure: false, canApprove: false },
-    { id: 2, name: 'Germens Oomrit', institute: 'Mathematics', canSecure: true, canApprove: false },
-];
-
 function page_users(parameters: string) {
     let state = ks.local_persist('page_users', {
+        devices: <Device[]>[],
+        users: <User[]>null,
         user: <User>null,
         search: { name: '', institute: '' },
     });
@@ -21,15 +17,35 @@ function page_users(parameters: string) {
         state.user = null;
         state.search.name = '';
         state.search.institute = '';
+
+        GET_ONCE('get_users', API.Users()).done((users) => {
+            state.users = users;
+            ks.refresh();
+        });
+        return; // wait for users
     }
 
     if (parameters) {
         let parts = parameters.split('/');
-        let userId = parseInt(parts[0]);
-        if (!isNaN(userId)) {
-            // TODO: get user from server
-            state.user = users[userId];
-        } else { state.user = null; }
+        let userId = parts[0];
+        if (userId && (!state.user || state.user.userName != userId)) {
+
+            $.when(
+                GET_ONCE('get_user', API.Users(userId)).then((user) => {
+                    state.user = user;
+                    ks.refresh();
+                }, (fail) => {
+                    if (fail.status === 404) { contextModal.showWarning("User not found"); }
+                    ks.navigate_to('Users', pages[Page.Users])
+                }),
+                GET_ONCE('get_device', API.Devices(`User/${userId}`)).done(devices => {
+                    state.devices = devices;
+                })).always(() => {
+                    ks.refresh();
+                });
+
+            return; // wait for user
+        }
     } else { state.user = null; }
 
     let breadcrumbs = ['Users'];
@@ -45,7 +61,7 @@ function page_users(parameters: string) {
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {
                         ks.icon('fa fa-users').style.fontSize = '1.5rem';
-                        ks.h4(users.length.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
+                        ks.h4(state.users.length.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
                         ks.text('Users', 'text-muted');
                     });
                 });
@@ -55,7 +71,7 @@ function page_users(parameters: string) {
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {
                         ks.icon('fa fa-list-ol').style.fontSize = '1.5rem';
-                        let count = users.reduce((count, u) => count + (u.canSecure ? 1 : 0), 0);
+                        let count = state.users.reduce((count, u) => count + (u.canSecure ? 1 : 0), 0);
                         ks.h4(count.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
                         ks.text('Authorized', 'text-muted');
                     });
@@ -66,7 +82,7 @@ function page_users(parameters: string) {
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {
                         ks.icon('fa fa-gavel').style.fontSize = '1.5rem';
-                        let count = users.reduce((count, u) => count + (u.canApprove ? 1 : 0), 0);
+                        let count = state.users.reduce((count, u) => count + (u.canApprove ? 1 : 0), 0);
                         ks.h4(count.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
                         ks.text('Approvers', 'text-muted');
                     });
@@ -120,8 +136,8 @@ function page_users(parameters: string) {
                     let searchName = state.search.name.toLowerCase();
                     let searchInst = state.search.institute.toLowerCase();
                     ks.table_body(function () {
-                        for (let i = 0; i < users.length; ++i) {
-                            let u = users[i];
+                        for (let i = 0; i < state.users.length; ++i) {
+                            let u = state.users[i];
 
                             // Note: can optimize this by preprocessing lowercase for names
                             if (searchName) {
@@ -159,30 +175,29 @@ function page_users(parameters: string) {
                                 ks.pop_id();
                             });
                             ks.is_item_clicked(function () {
-                                ks.navigate_to(u.name, '/users/' + u.id);
+                                ks.navigate_to(u.name, '/users/' + u.userName);
                             });
                         }
                     });
                 }, function (i_head, order) {
-                    if (i_head === 0) { users.sort((a, b) => order * sort_string(a.name, b.name)); }
-                    if (i_head === 1) { users.sort((a, b) => order * sort_string(a.institute, b.institute)); }
-                    if (i_head === 2) { users.sort((a, b) => order * sort_bool(a.canApprove, b.canApprove)); }
-                    if (i_head === 3) { users.sort((a, b) => order * sort_bool(a.canSecure, b.canSecure)); }
+                    if (i_head === 0) { state.users.sort((a, b) => order * sort_string(a.name, b.name)); }
+                    if (i_head === 1) { state.users.sort((a, b) => order * sort_string(a.institute, b.institute)); }
+                    if (i_head === 2) { state.users.sort((a, b) => order * sort_bool(a.canApprove, b.canApprove)); }
+                    if (i_head === 3) { state.users.sort((a, b) => order * sort_bool(a.canSecure, b.canSecure)); }
                 });
             });
         });
     } else {
         ks.text(state.user.institute, 'mt-n3 mb-3 text-muted');
 
-        ks.row(state.user.id.toString(), function () {
+        ks.row(state.user.userName.toString(), function () {
             ks.set_next_item_class_name('mb-3');
             ks.column('devices', 12, function () {
                 ks.set_next_item_class_name('bg-white border');
                 ks.table('devices', function () {
                     ks.table_body(function () {
-                        // TODO: get user devices here
-                        for (let i = 0; i < devices.length; ++i) {
-                            device_row(devices[i], false);
+                        for (let i = 0; i < state.devices.length; ++i) {
+                            device_row(state.devices[i], false);
                         }
                     });
                 });

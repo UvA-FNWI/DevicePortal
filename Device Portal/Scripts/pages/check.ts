@@ -1,5 +1,8 @@
 ﻿class SecurityCheck {
+    id: number;
+    userName: string;
     deviceId: number;
+    device: Device;
     submissionDate: string;
     questions: {
         question: string;
@@ -45,20 +48,22 @@ function page_security_check(parameters: string) {
         let deviceId = parseInt(parts[0]);
         if (!isNaN(deviceId) && (!state.device || state.device.id != deviceId)) {
 
+            // TODO Handle device not found
             $.when(
                 GET_ONCE('device', API.Devices(deviceId)).done(d => {
                     state.device = d;
                 }),
                 GET_ONCE('security_check', API.Devices(`${deviceId}/SecurityCheck`)).done(c => {
+                    // TODO: Handle new questions
                     state.security_check = c;
                 })).always(function () {
                     if (state.device && state.security_check) { state.security_check.deviceId = state.device.id; }
                     ks.refresh();
                 });
-                
+
             return; // wait for get device & security check
         }
-    }
+    } else { state.device = null; }
 
     if (!state.device) {
         ks.navigate_to('Home', '/');

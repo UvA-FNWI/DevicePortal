@@ -37,8 +37,8 @@ namespace DevicePortal.Controllers
             return await _context.Devices.Where(d => d.UserName == userId).ToListAsync();
         }
 
-        // GET: api/Devices/{userName}
-        [HttpGet("userName")]
+        // GET: api/Devices/User{userName}
+        [HttpGet("User/{userName}")]
         public async Task<ActionResult<IEnumerable<Device>>> GetDevices(string userName)
         {
             return await _context.Devices.Where(d => d.UserName == userName).ToListAsync();

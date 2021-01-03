@@ -33,6 +33,7 @@ namespace DevicePortal.Controllers
         {
             var securityCheck = await _context.SecurityChecks
                 .Include(c => c.Questions)
+                .Include(d => d.Device)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (securityCheck == null)
@@ -44,34 +45,38 @@ namespace DevicePortal.Controllers
         }
 
         // PUT: api/SecurityChecks/5
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> PutSecurityCheck(int id, SecurityCheck securityCheck)
-        //{
-        //    if (id != securityCheck.Id)
-        //    {
-        //        return BadRequest();
-        //    }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutSecurityCheck(int id, SecurityCheck securityCheck)
+        {
+            if (id != securityCheck.Id)
+            {
+                return BadRequest();
+            }
 
-        //    _context.Entry(securityCheck).State = EntityState.Modified;
+            foreach (var q in securityCheck.Questions)
+            {
+                _context.CreateOrUpdate(q);
+            }
+            _context.Entry(securityCheck).State = EntityState.Modified;
 
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateConcurrencyException)
-        //    {
-        //        if (!SecurityCheckExists(id))
-        //        {
-        //            return NotFound();
-        //        }
-        //        else
-        //        {
-        //            throw;
-        //        }
-        //    }
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!SecurityCheckExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
 
-        //    return NoContent();
-        //}
+            return NoContent();
+        }
 
         // POST: api/SecurityChecks
         [HttpPost]

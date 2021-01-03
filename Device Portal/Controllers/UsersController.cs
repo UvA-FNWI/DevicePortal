@@ -27,9 +27,9 @@ namespace DevicePortal.Controllers
             return await _context.Users.ToListAsync();
         }
 
-        // GET: api/Users/5
+        // GET: api/Users/UserName
         [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(int id)
+        public async Task<ActionResult<User>> GetUser(string id)
         {
             var user = await _context.Users.FindAsync(id);
 
@@ -40,5 +40,7 @@ namespace DevicePortal.Controllers
 
             return user;
         }
+
+
     }
 }

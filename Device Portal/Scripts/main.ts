@@ -24,7 +24,6 @@ let pages = [
 let iPage = Page.Home;
 let contextModal = new ContextualModal();
 
-let devices: Device[] = []; // TODO, contains only devices registered to current user
 let operatingSystems = ['Windows', 'Linux', 'macOS', 'iOS', 'Android'];
 
 ks.run(function () {
@@ -132,23 +131,27 @@ ks.run(function () {
     isPageSwap = false;
 });
 
-function page_home() {
+function page_home() {    
+    let state = ks.local_persist('page_home', {
+        devices: <Device[]>null,
+    });
     if (isPageSwap) {
         GET_ONCE('devices', API.Devices('me')).done((result: Device[]) => {
-            devices = result;
+            state.devices = result;
             ks.refresh();
         });
+        return; // wait for devices
     }
 
-    ks.h5('My devices', 'mb-2');
+    ks.h5('My devices', 'mb-2');        
     ks.row('devices', function () {
         ks.set_next_item_class_name('mb-3');
         ks.column('devices', 12, function () {
             ks.set_next_item_class_name('bg-white border');
             ks.table('devices', function () {
                 ks.table_body(function () {
-                    for (let i = 0; i < devices.length; ++i) {
-                        device_row(devices[i], true);
+                    for (let i = 0; i < state.devices.length; ++i) {
+                        device_row(state.devices[i], true);
                     }
                 });
             });
@@ -297,6 +300,7 @@ abstract class API {
     static Devices = API.getUrlFactory('/api/Devices');
     static SecurityQuestions = API.getUrlFactory('/api/SecurityQuestions');
     static SecurityCheck = API.getUrlFactory('/api/SecurityChecks');
+    static Users = API.getUrlFactory('/api/Users');
 
     private static getUrlFactory(base: string) {
         return function (sufffix: string | number = undefined) {
