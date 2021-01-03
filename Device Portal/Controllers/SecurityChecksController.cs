@@ -26,6 +26,12 @@ namespace DevicePortal.Controllers
         {
             return await _context.SecurityChecks.Include(c => c.Questions).ToListAsync();
         }
+        // GET: api/SecurityChecks/Count
+        [HttpGet("Count")]
+        public async Task<ActionResult<int>> GetSecurityCheckCount()
+        {
+            return await _context.SecurityChecks.CountAsync();
+        }
 
         // GET: api/SecurityChecks/5
         [HttpGet("{id}")]

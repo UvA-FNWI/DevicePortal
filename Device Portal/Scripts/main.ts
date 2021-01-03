@@ -42,6 +42,14 @@ ks.run(function () {
     }
     isPageSwap = isPageSwap || iPage !== iPagePrev;
 
+    let requestCount = ks.local_persist('request count', { count: 0 });
+    if (isPageSwap) {
+        GET(API.SecurityCheck('Count')).done(c => requestCount.count = c);
+    }
+    ks.set_interval('fetch request count', 60000, function () {
+        GET(API.SecurityCheck('Count')).done(c => requestCount.count = c);
+    }, true);
+
     ks.nav_bar('top bar', 'navbar-expand navbar-light bg-white shadow-sm', function () {
         ks.set_next_item_class_name('navbar-nav');
         ks.group('container', 'container px-3 d-flex justify-content-between', function () {
@@ -77,8 +85,9 @@ ks.run(function () {
 
                 ks.nav_item('requests', iPage === Page.Requests, pages[Page.Requests], function () {
                     ks.text('Requests', 'd-inline mr-1');
-                    // TODO: get actual count
-                    ks.text('12', 'badge badge-primary badge-pill');
+                    if (requestCount.count) {
+                        ks.text(requestCount.count.toString(), 'badge badge-primary badge-pill');
+                    }
                 });
                 ks.is_item_clicked(function () {
                     ks.navigate_to('Approval requests', pages[Page.Requests]);
