@@ -27,7 +27,7 @@ namespace DevicePortal.Controllers
             return await _context.Users.ToListAsync();
         }
 
-        // GET: api/Users/UserName
+        // GET: api/Users/{UserName}
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetUser(string id)
         {
@@ -41,6 +41,36 @@ namespace DevicePortal.Controllers
             return user;
         }
 
+        // PUT: api/Users/{UserName}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutDevice(string id, User user)
+        {
+            if (id != user.UserName)
+            {
+                return BadRequest();
+            }
 
+            var entry = _context.Entry(user);
+            entry.Property(u => u.CanApprove).IsModified = true;
+            entry.Property(u => u.CanSecure).IsModified = true;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Users.Any(u => u.UserName == id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
     }
 }

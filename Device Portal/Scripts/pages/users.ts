@@ -11,6 +11,7 @@
 function page_users(parameters: string) {
     let state = ks.local_persist('page_users', {
         devices: <Device[]>[],
+        deviceCount: <number>null,
         users: <User[]>null,
         user: <User>null,
         search: { name: '', institute: '' },
@@ -20,15 +21,20 @@ function page_users(parameters: string) {
         state.search.name = '';
         state.search.institute = '';
 
-        GET_ONCE('get_users', API.Users()).done((users) => {
-            for (let i = 0; i < users.length; ++i) {
-                users[i].nameLowerCase = users[i].name.toLowerCase();
-                users[i].instituteLowerCase = users[i].institute.toLowerCase();
-            }
-            users.sort((a, b) => sort_string(a.name, b.name));
-            state.users = users;
-            ks.refresh();
-        });
+        $.when(
+            GET(API.Users()).done((users) => {
+                for (let i = 0; i < users.length; ++i) {
+                    users[i].nameLowerCase = users[i].name.toLowerCase();
+                    users[i].instituteLowerCase = users[i].institute.toLowerCase();
+                }
+                users.sort((a, b) => sort_string(a.name, b.name));
+                state.users = users;
+            }),
+            GET(API.Devices('count')).done(count => {
+                state.deviceCount = count;
+            }))
+            .always(function () { ks.refresh() })
+
         return; // wait for users
     }
 
@@ -100,7 +106,7 @@ function page_users(parameters: string) {
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {
                         ks.icon('fa fa-microchip').style.fontSize = '1.5rem';
-                        ks.h4('5', 'font-weight-bolder text-secondary mt-2 mb-2');
+                        ks.h4(state.deviceCount.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
                         ks.text('Devices', 'text-muted');
                     });
                 });
@@ -159,7 +165,7 @@ function page_users(parameters: string) {
                         });
                     });
 
-                    
+
                     ks.table_body(function () {
                         let countdown = range.i_end - range.i_start;
                         for (let i = range.i_start; countdown > 0; ++i) {
@@ -183,6 +189,7 @@ function page_users(parameters: string) {
                                 ks.table_cell(function () {
                                     ks.switch_button('##approve', u.canApprove, function (checked) {
                                         u.canApprove = checked;
+                                        PUT_JSON(API.Users(u.userName), u);
                                         ks.refresh(stats);
                                     });
                                 });
@@ -191,6 +198,7 @@ function page_users(parameters: string) {
                                 ks.table_cell(function () {
                                     ks.switch_button('##secure', u.canSecure, function (checked) {
                                         u.canSecure = checked;
+                                        PUT_JSON(API.Users(u.userName), u);
                                         ks.refresh(stats);
                                     });
                                 });

@@ -27,6 +27,13 @@ namespace DevicePortal.Controllers
             return await _context.Devices.ToListAsync();
         }
 
+        // GET: api/Devices/Count
+        [HttpGet("count")]
+        public async Task<ActionResult<int>> GetDeviceCount()
+        {
+            return await _context.Devices.CountAsync();
+        }
+
         // GET: api/Devices/Me
         [HttpGet("me")]
         public async Task<ActionResult<IEnumerable<Device>>> GetMyDevices()
