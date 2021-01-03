@@ -58,23 +58,6 @@ namespace DevicePortal.Controllers
             return device;
         }
 
-        // GET: api/Devices/5/SecurityCheck
-        [HttpGet("{id}/SecurityCheck")]
-        public async Task<ActionResult<SecurityCheck>> GetSecurityCheck(int id)
-        {
-            var securityCheck = await _context.SecurityChecks
-                .Include(c => c.Questions)
-                .OrderByDescending(c => c.Id)
-                .FirstOrDefaultAsync(c => c.DeviceId == id);
-
-            if (securityCheck == null)
-            {
-                return NotFound();
-            }
-
-            return securityCheck;
-        }
-
         // PUT: api/Devices/5        
         //[HttpPut("{id}")]
         //public async Task<IActionResult> PutDevice(int id, Device device)

@@ -11,6 +11,9 @@ namespace DevicePortal.Data
     {
         public int Id { get; set; }
         public DateTime SubmissionDate { get; set; }
+        public DateTime? ValidTill { get; set; }
+        public DeviceStatus Status { get; set; }
+        public DateTime StatusEffectiveDate { get; set; }
 
         [ForeignKey("User")]
         public string UserName { get; set; }

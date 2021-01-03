@@ -4,6 +4,8 @@
     deviceId: number;
     device: Device;
     submissionDate: string;
+    status: DeviceStatus;
+    statusEffectiveDate: string;
     questions: {
         question: string;
         answer: boolean;
@@ -16,26 +18,17 @@ class SecurityQuestion {
     text: string;
     mask: DeviceType;
 }
-let questions: SecurityQuestion[] = [];
 
 function page_security_check(parameters: string) {
     let state = ks.local_persist('page_security_check', {
+        questions: <SecurityQuestion[]>[],
         security_check: <SecurityCheck>null,
         device: <Device>null,
     });
     if (isPageSwap) {
         state.security_check = null;
         GET_ONCE('questions', API.SecurityQuestions()).done((result: SecurityQuestion[]) => {
-            questions = result;
-            state.security_check = new SecurityCheck();                
-            state.security_check.questions = questions.map(q => {
-                return {
-                    answer: undefined,
-                    explanation: '',
-                    question: q.text,
-                    mask: q.mask,
-                };
-            });
+            state.questions = result;
             ks.refresh();
         });
 
@@ -47,19 +40,35 @@ function page_security_check(parameters: string) {
         let parts = parameters.split('/');
         let deviceId = parseInt(parts[0]);
         if (!isNaN(deviceId) && (!state.device || state.device.id != deviceId)) {
-
-            // TODO Handle device not found
+            
             $.when(
-                GET_ONCE('device', API.Devices(deviceId)).done(d => {
+                GET_ONCE('get_device', API.Devices(deviceId)).then(d => {
                     state.device = d;
+                }, fail => {
+                    if (fail.status === 404) { contextModal.showWarning("Device not found"); }
+                    ks.navigate_to('Users', pages[Page.Home])
                 }),
-                GET_ONCE('security_check', API.Devices(`${deviceId}/SecurityCheck`)).done(c => {
-                    // TODO: Handle new questions
-                    state.security_check = c;
-                })).always(function () {
+                GET_ONCE('get_security_check', API.SecurityCheck(`Device/${deviceId}`)).then((c: SecurityCheck) => {
+                    // Allow user to edit existing submission, otherwise start new request
+                    if (c.status === DeviceStatus.Submitted) {
+                        state.security_check = c;
+                    } else { security_check_not_found(); }
+                }, security_check_not_found)).always(function () {
                     if (state.device && state.security_check) { state.security_check.deviceId = state.device.id; }
                     ks.refresh();
                 });
+
+            function security_check_not_found() {
+                state.security_check = new SecurityCheck();
+                state.security_check.questions = state.questions.map(q => {
+                    return {
+                        answer: undefined,
+                        explanation: '',
+                        question: q.text,
+                        mask: q.mask,
+                    };
+                });
+            }
 
             return; // wait for get device & security check
         }
@@ -116,10 +125,17 @@ function page_security_check(parameters: string) {
             if (this.getElementsByClassName('is-invalid').length) {
                 ks.cancel_current_form_submission();
             } else {
-                POST_JSON(API.SecurityCheck(), state.security_check).then(function () {
-                    ks.navigate_to('Home', '/');
-                    state.device.status = DeviceStatus.Submitted;
-                }, function (error) { contextModal.showWarning(error.responseText); });
+                if (state.security_check.id) {
+                    PUT_JSON(API.SecurityCheck(state.security_check.id), state.security_check).then(function () {
+                        ks.navigate_to('Home', '/');
+                        state.device.status = DeviceStatus.Submitted;
+                    }, function (error) { contextModal.showWarning(error.responseText); });
+                } else {
+                    POST_JSON(API.SecurityCheck(), state.security_check).then(function () {
+                        ks.navigate_to('Home', '/');
+                        state.device.status = DeviceStatus.Submitted;
+                    }, function (error) { contextModal.showWarning(error.responseText); });
+                }
             }
         }
     });
