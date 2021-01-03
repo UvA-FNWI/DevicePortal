@@ -31,14 +31,14 @@ function page_users(parameters: string) {
         if (userId && (!state.user || state.user.userName != userId)) {
 
             $.when(
-                GET_ONCE('get_user', API.Users(userId)).then((user) => {
+                GET(API.Users(userId)).then((user) => {
                     state.user = user;
                     ks.refresh();
                 }, (fail) => {
                     if (fail.status === 404) { contextModal.showWarning("User not found"); }
                     ks.navigate_to('Users', pages[Page.Users])
                 }),
-                GET_ONCE('get_device', API.Devices(`User/${userId}`)).done(devices => {
+                GET(API.Devices(`User/${userId}`)).done(devices => {
                     state.devices = devices;
                 })).always(() => {
                     ks.refresh();

@@ -42,13 +42,13 @@ function page_security_check(parameters: string) {
         if (!isNaN(deviceId) && (!state.device || state.device.id != deviceId)) {
             
             $.when(
-                GET_ONCE('get_device', API.Devices(deviceId)).then(d => {
+                GET(API.Devices(deviceId)).then(d => {
                     state.device = d;
                 }, fail => {
                     if (fail.status === 404) { contextModal.showWarning("Device not found"); }
                     ks.navigate_to('Users', pages[Page.Home])
                 }),
-                GET_ONCE('get_security_check', API.SecurityCheck(`Device/${deviceId}`)).then((c: SecurityCheck) => {
+                GET(API.SecurityCheck(`Device/${deviceId}`)).then((c: SecurityCheck) => {
                     // Allow user to edit existing submission, otherwise start new request
                     if (c.status === DeviceStatus.Submitted) {
                         state.security_check = c;
