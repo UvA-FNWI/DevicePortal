@@ -1,7 +1,9 @@
 ﻿class User {
     userName: string;
     name: string;
+    nameLowerCase: string;
     institute: string;
+    instituteLowerCase: string;
     canSecure: boolean;
     canApprove: boolean;
 }
@@ -19,6 +21,11 @@ function page_users(parameters: string) {
         state.search.institute = '';
 
         GET_ONCE('get_users', API.Users()).done((users) => {
+            for (let i = 0; i < users.length; ++i) {
+                users[i].nameLowerCase = users[i].name.toLowerCase();
+                users[i].instituteLowerCase = users[i].institute.toLowerCase();
+            }
+            users.sort((a, b) => sort_string(a.name, b.name));
             state.users = users;
             ks.refresh();
         });
@@ -103,7 +110,24 @@ function page_users(parameters: string) {
         ks.row('users', function () {
             ks.set_next_item_class_name('mb-3');
             ks.column('users', 12, function () {
-                ks.set_next_item_class_name('bg-white border');
+                let count = 0;
+                let searchName = state.search.name.toLowerCase();
+                let searchInst = state.search.institute.toLowerCase();
+
+                for (let i = 0; i < state.users.length; ++i) {
+                    let u = state.users[i];
+                    if (searchName) {
+                        if (u.nameLowerCase.indexOf(searchName) < 0) { continue; }
+                    }
+                    if (searchInst) {
+                        if (u.instituteLowerCase.indexOf(searchInst) < 0) { continue; }
+                    }
+                    ++count;
+                }
+
+                let range = paginator_range('paginator', count);
+
+                ks.set_next_item_class_name('bg-white border mb-2');
                 ks.table('users', function () {
                     ks.table_head(function () {
                         ks.table_row(function () {
@@ -111,15 +135,17 @@ function page_users(parameters: string) {
                                 ks.set_next_item_class_name('form-control-sm');
                                 ks.input_text('name', state.search.name, 'Name', function (str) {
                                     state.search.name = str;
+                                    range.reset();
                                     ks.refresh();
                                 });
                                 ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                            }, ks.Sort_Order.none);
+                            }, ks.Sort_Order.asc);
 
                             ks.table_cell(function () {
                                 ks.set_next_item_class_name('form-control-sm');
                                 ks.input_text('institute', state.search.institute, 'Institute', function (str) {
                                     state.search.institute = str;
+                                    range.reset();
                                     ks.refresh();
                                 });
                                 ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
@@ -133,23 +159,21 @@ function page_users(parameters: string) {
                         });
                     });
 
-                    let searchName = state.search.name.toLowerCase();
-                    let searchInst = state.search.institute.toLowerCase();
+                    
                     ks.table_body(function () {
-                        for (let i = 0; i < state.users.length; ++i) {
+                        let countdown = range.i_end - range.i_start;
+                        for (let i = range.i_start; countdown > 0; ++i) {
                             let u = state.users[i];
 
-                            // Note: can optimize this by preprocessing lowercase for names
                             if (searchName) {
-                                if (u.name.toLowerCase().indexOf(searchName) < 0) { continue; }
+                                if (u.nameLowerCase.indexOf(searchName) < 0) { continue; }
                             }
                             if (searchInst) {
-                                if (u.institute.toLowerCase().indexOf(searchInst) < 0) { continue; }
+                                if (u.instituteLowerCase.indexOf(searchInst) < 0) { continue; }
                             }
+                            --countdown;
 
                             ks.table_row(function () {
-                                ks.push_id(i.toString());
-
                                 ks.set_next_item_class_name('cursor-pointer');
                                 ks.table_cell(u.name);
 
@@ -171,8 +195,6 @@ function page_users(parameters: string) {
                                     });
                                 });
                                 ks.is_item_clicked(function (_, ev) { ev.stopPropagation() });
-
-                                ks.pop_id();
                             });
                             ks.is_item_clicked(function () {
                                 ks.navigate_to(u.name, '/users/' + u.userName);
@@ -185,12 +207,15 @@ function page_users(parameters: string) {
                     if (i_head === 2) { state.users.sort((a, b) => order * sort_bool(a.canApprove, b.canApprove)); }
                     if (i_head === 3) { state.users.sort((a, b) => order * sort_bool(a.canSecure, b.canSecure)); }
                 });
+
+                ks.set_next_item_class_name('ml-1');
+                paginator('paginator', state.users.length, () => ks.refresh(this));
             });
         });
     } else {
         ks.text(state.user.institute, 'mt-n3 mb-3 text-muted');
 
-        ks.row(state.user.userName.toString(), function () {
+        ks.row(state.user.userName, function () {
             ks.set_next_item_class_name('mb-3');
             ks.column('devices', 12, function () {
                 ks.set_next_item_class_name('bg-white border');

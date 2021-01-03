@@ -72,22 +72,16 @@
             let q = state.security_check.questions[i];
             if (!(q.mask & state.device.type)) { continue; }
 
-            ks.push_id(i.toString());
-
             ks.text(q.question, 'font-weight-bold mb-1');
-            ks.group('radios', 'mb-3', function () {
+            ks.group(i.toString(), 'mb-3', function () {
                 ks.set_next_item_class_name('custom-control-inline');
                 ks.radio_button('Yes', q.answer === true, ks.no_op).disabled = true;
 
                 ks.set_next_item_class_name('custom-control-inline');
                 ks.radio_button('No', q.answer === false, ks.no_op).disabled = true;
+
+                if (q.answer === false) { ks.text(q.explanation, 'mt-1 font-italic'); }
             });
-
-            if (q.answer === false) {
-                ks.text(q.explanation);
-            }
-
-            ks.pop_id();
         }
 
         ks.button('Reject', ks.no_op, 'danger mr-2');

@@ -42,6 +42,14 @@ ks.run(function () {
     }
     isPageSwap = isPageSwap || iPage !== iPagePrev;
 
+    let requestCount = ks.local_persist('request count', { count: 0 });
+    if (isPageSwap) {
+        GET(API.SecurityCheck('Count')).done(c => requestCount.count = c);
+    }
+    ks.set_interval('fetch request count', 60000, function () {
+        GET(API.SecurityCheck('Count')).done(c => requestCount.count = c);
+    }, true);
+
     ks.nav_bar('top bar', 'navbar-expand navbar-light bg-white shadow-sm', function () {
         ks.set_next_item_class_name('navbar-nav');
         ks.group('container', 'container px-3 d-flex justify-content-between', function () {
@@ -77,8 +85,9 @@ ks.run(function () {
 
                 ks.nav_item('requests', iPage === Page.Requests, pages[Page.Requests], function () {
                     ks.text('Requests', 'd-inline mr-1');
-                    // TODO: get actual count
-                    ks.text('12', 'badge badge-primary badge-pill');
+                    if (requestCount.count) {
+                        ks.text(requestCount.count.toString(), 'badge badge-primary badge-pill');
+                    }
                 });
                 ks.is_item_clicked(function () {
                     ks.navigate_to('Approval requests', pages[Page.Requests]);
@@ -308,4 +317,67 @@ abstract class API {
             return sufffix ? `${base}/${sufffix}` : base;
         }
     }
+}
+
+function paginator_range(id: string, total: number): { i_start: number, i_end: number, reset: () => void } {
+    let p = ks.local_persist(id, { page: 0, pages: 1, count: 20 });
+    return {
+        i_start: p.count * p.page,
+        i_end: Math.min(total, p.count * (p.page + 1)),
+        reset: () => {
+            p.page = 0;
+            p.pages = 1;
+        },
+    };
+}
+
+function paginator(id: string, total: number, proc_change: (i_page: number, count: number) => void) {
+    let p = ks.local_persist(id, { page: 0, pages: 1, count: 20 });
+    let range = paginator_range(id, total);
+    p.pages = Math.ceil(total / p.count);
+
+    ks.group(id, 'd-flex align-items-center', function () {
+        let pagination = this;
+        ks.group('records', 'flex-grow-1', function () {
+            if (!total) { return; }
+            if (p.pages === 1) { ks.text('Showing ' + total + ' results.'); }
+            else { ks.text('Showing ' + (range.i_start + 1) + ' to ' + range.i_end + ' of ' + total); }
+        });
+        ks.form('pagination-form', '', true, function () {
+            if (p.pages > 1) {
+                ks.text('Page', 'mr-1');
+                ks.group('page', 'form-group mr-3', function () {
+                    ks.set_next_item_class_name('custom-select-sm');
+                    ks.combo('page', function () {
+                        for (let i = 0; i < p.pages; ++i) {
+                            ks.selectable((i + 1).toString(), p.page == i);
+                            ks.is_item_clicked(function () {
+                                p.page = i;
+                                ks.refresh(pagination);
+                                proc_change(p.page, p.count);
+                            });
+                        }
+                    });
+                });
+            }
+
+            ks.text('Show', 'mr-1');
+            ks.group('count', 'form-group', function () {
+                ks.set_next_item_class_name('custom-select-sm');
+                ks.combo('page-count', function () {
+                    for (let option of [10, 20, 50, 100, 150, 200]) {
+                        ks.selectable(option.toString(), p.count === option);
+                        ks.is_item_clicked(function () {
+                            let i_start = p.count * p.page;
+                            p.count = option;
+                            p.pages = Math.ceil(total / p.count);
+                            p.page = Math.floor(p.pages * i_start / (total - 1));
+                            ks.refresh(pagination);
+                            proc_change(p.page, p.count);
+                        });
+                    }
+                });
+            });
+        });
+    });
 }
