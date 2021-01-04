@@ -1,5 +1,6 @@
 using DevicePortal.Controllers;
 using DevicePortal.Data;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -20,6 +21,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace DevicePortal
@@ -37,6 +39,7 @@ namespace DevicePortal
         public void ConfigureServices(IServiceCollection services)
         {
             JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+            services.AddTransient<IClaimsTransformation, ClaimsTransformer>();
             services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -60,6 +63,13 @@ namespace DevicePortal
                 options.ClaimActions.Add(new JsonKeyClaimAction("uids", null, "uids"));
                 options.ResponseType = OpenIdConnectResponseType.Code;
                 options.SaveTokens = true;
+            });
+
+            services.AddAuthorization(options => 
+            {
+                options.AddPolicy(AppPolicies.AdminOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanAdmin));
+                options.AddPolicy(AppPolicies.ApproverOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanApprove));
+                options.AddPolicy(AppPolicies.AuthorizedOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanSecure));
             });
 
             string clientId = Configuration["AzureAD:ClientID"];
@@ -110,5 +120,58 @@ namespace DevicePortal
                 endpoints.MapFallbackToPage("/Index");
             });
         }
+
+        class ClaimsTransformer : IClaimsTransformation
+        {
+            private readonly PortalContext _context;
+
+            public ClaimsTransformer(PortalContext context) 
+            {
+                _context = context;
+            }
+
+            public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal) 
+            {
+                var userId = principal.GetUserName();
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null) 
+                {
+                    user = new User()
+                    {
+                        // TODO Get from datanose API
+                        Faculty = "",
+                        Institute = "",
+
+                        Name = principal.GetFullName(),
+                        UserName = userId,
+                    };
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+                }
+
+                var identity = (ClaimsIdentity)principal.Identity;                
+                if (user.CanSecure || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanSecure)); }
+                if (user.CanApprove || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanApprove)); }
+                if (user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanAdmin)); }
+                return principal;
+            }
+        }
+    }
+
+    public static class AppPolicies
+    {
+        public const string AdminOnly = "AdminOnly";
+        public const string ApproverOnly = "ApproverOnly";
+        public const string AuthorizedOnly = "AuthorizedOnly";
+    }
+    public static class AppClaims
+    {
+        public const string CanSecure = "CanSecure";
+        public const string CanApprove = "CanApprove";
+        public const string CanAdmin = "CanAdmin";
+    }
+    public static class AppClaimTypes
+    {
+        public static string Permission = "https://secure.datanose.nl/claims/permission";
     }
 }

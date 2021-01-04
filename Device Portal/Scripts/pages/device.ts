@@ -14,23 +14,27 @@ deviceNames[DeviceType.Desktop] = 'Desktop';
 class Device {
     id: number;
     name = '';
+    serialNumber: string;
     type: DeviceType;
     os = '';
-    status = DeviceStatus.Submitted;
+    status = DeviceStatus.Unsecure;
 }
 enum DeviceStatus {
     Approved,
     Rejected,
     Submitted,
+    Unsecure,
 }
 let statusNames = {};
 statusNames[DeviceStatus.Approved] = 'Approved';
 statusNames[DeviceStatus.Rejected] = 'Rejected';
 statusNames[DeviceStatus.Submitted] = 'Pending';
+statusNames[DeviceStatus.Unsecure] = 'Unsecure';
 let statusColors = {};
-statusColors[DeviceStatus.Approved] = 'sucess';
+statusColors[DeviceStatus.Approved] = 'success';
 statusColors[DeviceStatus.Rejected] = 'danger';
-statusColors[DeviceStatus.Submitted] = 'warning';
+statusColors[DeviceStatus.Submitted] = 'info';
+statusColors[DeviceStatus.Unsecure] = 'warning';
 
 function page_device(parameters: string) {
     let state = ks.local_persist('page_device', {
@@ -125,15 +129,12 @@ function page_device(parameters: string) {
 
                 if (ks.current_form_submitted() && state.selected >= 0 && !this.getElementsByClassName('is-invalid').length) {
                     ks.cancel_current_form_submission();
-                    // TODO save device
-                    //state.devices.push({
-                    //    id: state.devices.length,
-                    //    name: state.device.name,
-                    //    os: state.device.os,
-                    //    type: state.options[state.selected].type,
-                    //    status: DeviceStatus.Rejected,
-                    //});
-                    ks.navigate_to('Home', '/');
+                    state.device.type = state.options[state.selected].type;
+                    POST_JSON(API.Devices(), state.device).then(() => {
+                        ks.navigate_to('Home', '/');
+                    }, fail => {
+                        contextModal.showWarning(fail.responseText);
+                    });                    
                 }
             });
         });

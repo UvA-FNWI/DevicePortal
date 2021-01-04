@@ -26,7 +26,53 @@ let contextModal = new ContextualModal();
 
 let operatingSystems = ['Windows', 'Linux', 'macOS', 'iOS', 'Android'];
 
+class ActiveUser {
+    user_name: string;
+    first_name: string;
+    last_name: string;
+    can_secure: boolean;
+    can_approve: boolean;
+    can_admin: boolean;
+    page_access: { [key: number]: boolean } = {};
+
+    constructor(claims: { type: string, value: string; }[]) {
+        for (let claim of claims) {
+            switch (claim.type) {
+                case 'uids': this.user_name = claim.value; break;
+                case 'give_name': this.first_name = claim.value; break;
+                case 'family_name': this.last_name = claim.value; break;
+                case 'https://secure.datanose.nl/claims/permission':
+                    if (claim.value == "CanSecure") { this.can_secure = true; }
+                    if (claim.value == "CanApprove") { this.can_approve = true; }
+                    if (claim.value == "CanAdmin") { this.can_admin = true; }
+                    break;
+            }
+        }
+
+        this.page_access[Page.Home] = true;
+        this.page_access[Page.Device] = true;
+
+        // Secure & Approve
+        this.page_access[Page.Requests] = this.can_approve;
+        this.page_access[Page.SecurityCheck] = this.can_approve || this.can_secure;
+
+        // Admin
+        this.page_access[Page.Admin] = this.can_admin;
+        this.page_access[Page.Faculty] = this.can_admin;
+        this.page_access[Page.Users] = this.can_admin;
+    }
+}
+let user: ActiveUser;
+
 ks.run(function () {
+    if (!user) {
+        GET(API.Identity()).done((claims: { type: string, value: string; }[]) => {
+            user = new ActiveUser(claims);
+            ks.refresh();
+        });
+        return;
+    }
+
     // Global modals, run before any pages
     contextModal.run();
 
@@ -40,15 +86,22 @@ ks.run(function () {
             break;
         }
     }
+    if (!user.page_access[iPage]) {
+        ks.navigate_to('Home', '/');
+        return;
+    }
     isPageSwap = isPageSwap || iPage !== iPagePrev;
 
+    // Setup request count update interval
     let requestCount = ks.local_persist('request count', { count: 0 });
-    if (isPageSwap) {
-        GET(API.SecurityCheck('Count')).done(c => requestCount.count = c);
+    if (user.can_approve) {
+        if (isPageSwap) {
+            GET(API.SecurityCheck('Submitted/Count')).done(c => requestCount.count = c);
+        }
+        ks.set_interval('fetch request count', 60000, function () {
+            GET(API.SecurityCheck('Submitted/Count')).done(c => requestCount.count = c);
+        }, true);
     }
-    ks.set_interval('fetch request count', 60000, function () {
-        GET(API.SecurityCheck('Count')).done(c => requestCount.count = c);
-    }, true);
 
     ks.nav_bar('top bar', 'navbar-expand navbar-light bg-white shadow-sm', function () {
         ks.set_next_item_class_name('navbar-nav');
@@ -71,34 +124,42 @@ ks.run(function () {
                     return false;
                 });
 
-                ks.nav_item('Faculty', iPage === Page.Faculty, pages[Page.Faculty]);
-                ks.is_item_clicked(function () {
-                    ks.navigate_to('Faculty', pages[Page.Faculty]);
-                    return false;
-                });
+                if (user.can_admin) {
+                    ks.nav_item('Faculty', iPage === Page.Faculty, pages[Page.Faculty]);
+                    ks.is_item_clicked(function () {
+                        ks.navigate_to('Faculty', pages[Page.Faculty]);
+                        return false;
+                    });
+                }
 
-                ks.nav_item('Users', iPage === Page.Users, pages[Page.Users]);
-                ks.is_item_clicked(function () {
-                    ks.navigate_to('Users', pages[Page.Users]);
-                    return false;
-                });
+                if (user.can_admin) {
+                    ks.nav_item('Users', iPage === Page.Users, pages[Page.Users]);
+                    ks.is_item_clicked(function () {
+                        ks.navigate_to('Users', pages[Page.Users]);
+                        return false;
+                    });
+                }
 
-                ks.nav_item('requests', iPage === Page.Requests, pages[Page.Requests], function () {
-                    ks.text('Requests', 'd-inline mr-1');
-                    if (requestCount.count) {
-                        ks.text(requestCount.count.toString(), 'badge badge-primary badge-pill');
-                    }
-                });
-                ks.is_item_clicked(function () {
-                    ks.navigate_to('Approval requests', pages[Page.Requests]);
-                    return false;
-                });
+                if (user.can_approve) {
+                    ks.nav_item('requests', iPage === Page.Requests, pages[Page.Requests], function () {
+                        ks.text('Requests', 'd-inline mr-1');
+                        if (requestCount.count) {
+                            ks.text(requestCount.count.toString(), 'badge badge-primary badge-pill');
+                        }
+                    });
+                    ks.is_item_clicked(function () {
+                        ks.navigate_to('Approval requests', pages[Page.Requests]);
+                        return false;
+                    });
+                }
 
-                ks.nav_item('Admin', iPage === Page.Users,  pages[Page.Admin]);
-                ks.is_item_clicked(function () {
-                    ks.navigate_to('Admin', pages[Page.Admin]);
-                    return false;
-                });
+                if (user.can_admin) {
+                    ks.nav_item('Admin', iPage === Page.Users, pages[Page.Admin]);
+                    ks.is_item_clicked(function () {
+                        ks.navigate_to('Admin', pages[Page.Admin]);
+                        return false;
+                    });
+                }
             });
 
             ks.nav_item('Logout', false, '/logout');
@@ -140,7 +201,7 @@ ks.run(function () {
     isPageSwap = false;
 });
 
-function page_home() {    
+function page_home() {
     let state = ks.local_persist('page_home', {
         devices: <Device[]>null,
     });
@@ -152,7 +213,7 @@ function page_home() {
         return; // wait for devices
     }
 
-    ks.h5('My devices', 'mb-2');        
+    ks.h5('My devices', 'mb-2');
     ks.row('devices', function () {
         ks.set_next_item_class_name('mb-3');
         ks.column('devices', 12, function () {
@@ -160,7 +221,7 @@ function page_home() {
             ks.table('devices', function () {
                 ks.table_body(function () {
                     for (let i = 0; i < state.devices.length; ++i) {
-                        device_row(state.devices[i], true);
+                        device_row(state.devices[i]);
                     }
                 });
             });
@@ -188,7 +249,7 @@ function deviceIcon(type: DeviceType): string {
     }
 }
 
-function device_row(d: Device, showSecurityCheckLink: boolean) {
+function device_row(d: Device) {
     let icon: string;
     let iconSize = '1rem';
     switch (d.type) {
@@ -214,6 +275,7 @@ function device_row(d: Device, showSecurityCheckLink: boolean) {
 
     ks.table_row(function () {
         ks.table_cell(d.name);
+        ks.table_cell(d.serialNumber);
         ks.table_cell(function () {
             let i = ks.icon(icon);
             i.style.width = '18px';
@@ -223,16 +285,18 @@ function device_row(d: Device, showSecurityCheckLink: boolean) {
         ks.table_cell(d.os);
         ks.table_cell(function () {
             ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
-        });
+        }).style.width = '1%';
 
-        if (showSecurityCheckLink) {
+        if (user.can_secure) {
             ks.table_cell(function () {
-                ks.set_next_item_class_name('text-nowrap');
-                ks.anchor('Security check', pages[Page.SecurityCheck] + '/' + d.id);
-                ks.is_item_clicked(function () {
-                    ks.navigate_to('Security check', pages[Page.SecurityCheck] + '/' + d.id);
-                    return false;
-                });
+                if (d.status != DeviceStatus.Approved) {
+                    ks.set_next_item_class_name('text-nowrap');
+                    ks.anchor('Security check', pages[Page.SecurityCheck] + '/' + d.id);
+                    ks.is_item_clicked(function () {
+                        ks.navigate_to('Security check', pages[Page.SecurityCheck] + '/' + d.id);
+                        return false;
+                    });
+                }
             }).style.width = '1%';
         }
     });
@@ -304,7 +368,7 @@ function header_breadcrumbs(items: string[], proc: (i: number) => void) {
 
 abstract class API {
 
-    static Identity = API.getUrlFactory('/api/Identity');   
+    static Identity = API.getUrlFactory('/api/Identity');
     static Import = API.getUrlFactory('/api/Import');
     static Devices = API.getUrlFactory('/api/Devices');
     static Faculties = API.getUrlFactory('/api/Faculties');

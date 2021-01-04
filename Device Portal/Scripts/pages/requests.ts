@@ -1,8 +1,15 @@
-﻿function page_requests(parameters: string) {
+﻿class SecurityCheckSubmitted {
+    id: number;
+    userName: string;
+    userFullName: string;
+    deviceName: string;
+}
+
+function page_requests(parameters: string) {
     let state = ks.local_persist('page_requests', {
         device: <Device>null,
         security_check: <SecurityCheck>null,
-        checks: <SecurityCheck[]>[],
+        checks: <SecurityCheckSubmitted[]>[],
         search: { name: '', institute: '' },
     });
     if (isPageSwap) {
@@ -10,9 +17,13 @@
         state.search.name = '';
         state.search.institute = '';
 
-        GET_ONCE('security_checks', API.SecurityCheck()).done((checks: SecurityCheck[]) => {
+        // TODO sort
+        GET_ONCE('security_checks', API.SecurityCheck('Submitted')).then((checks: SecurityCheckSubmitted[]) => {
             state.checks = checks;
             ks.refresh();
+        }, (fail) => {
+            if (fail.status === 403) { ks.navigate_to('Users', pages[Page.Home]) }
+            else { contextModal.showWarning(fail.responseText); }
         });
         return; // wait for security checks
     }
@@ -44,7 +55,6 @@
         ks.text('Firstname Lastname', 'mt-n3 mb-3 text-muted');
     }
 
-
     if (!state.device) {
         ks.set_next_item_class_name('bg-white border');
         ks.table('devices', function () {
@@ -53,8 +63,8 @@
                     let c = state.checks[i];
 
                     ks.table_row(function () {
-                        ks.table_cell(c.userName); // TODO User fullname
-                        ks.table_cell(c.userName);
+                        ks.table_cell(c.userFullName);
+                        ks.table_cell(c.deviceName);
                         ks.table_cell(function () {
                             ks.set_next_item_class_name('text-nowrap');
                             ks.anchor('View', pages[Page.Requests] + '/' + c.id);
@@ -84,7 +94,26 @@
             });
         }
 
-        ks.button('Reject', ks.no_op, 'danger mr-2');
-        ks.button('Approve', ks.no_op, 'success');
+        ks.button('Reject', update_check_status.bind(this, DeviceStatus.Rejected), 'danger mr-2');
+        ks.button('Approve', update_check_status.bind(this, DeviceStatus.Approved), 'success');
+
+        function update_check_status(status: DeviceStatus) {
+            state.security_check.status = status;
+            state.device.status = status;
+            PUT_JSON(API.SecurityCheck(`${state.security_check.id}/Status`), state.security_check).then(function () {
+                // Remove entry from submission list
+                const index = state.checks.findIndex(c => c.id == state.security_check.id);
+                state.checks.splice(index, 1);
+
+                // Update request counter in top nav
+                ks.local_persist<{ count: number }>('request count').count--;
+
+                contextModal.showSuccess('Succesfully saved change.');
+                ks.navigate_to('Requests', pages[Page.Requests]);
+            }, function (fail) {
+                contextModal.showWarning(fail.responseText);
+                ks.navigate_to('Requests', pages[Page.Requests]);
+            });
+        }
     }
 }

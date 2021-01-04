@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DevicePortal.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DevicePortal.Controllers
 {
@@ -22,17 +23,47 @@ namespace DevicePortal.Controllers
 
         // GET: api/SecurityChecks
         [HttpGet]
+        [Authorize(Policy = AppPolicies.ApproverOnly)]
         public async Task<ActionResult<IEnumerable<SecurityCheck>>> GetSecurityChecks()
         {
-            return await _context.SecurityChecks.Include(c => c.Questions).ToListAsync();
+            return await _context.SecurityChecks.ToListAsync();
         }
+
+        // GET: api/SecurityChecks/Submitted
+        [Authorize(Policy = AppPolicies.ApproverOnly)]
+        [HttpGet("Submitted")]
+        public async Task<ActionResult> GetSecurityChecksSubmitted()
+        {
+            var checks = await _context.SecurityChecks
+                .Where(c => c.Status == DeviceStatus.Submitted)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.UserName,
+                    UserFullName = c.User.Name,
+                    DeviceName = c.Device.Name,
+                })
+                .ToListAsync();
+            return Ok(checks);
+        }
+
         // GET: api/SecurityChecks/Count
         [HttpGet("Count")]
+        [Authorize(Policy = AppPolicies.ApproverOnly)]
         public async Task<ActionResult<int>> GetSecurityCheckCount()
         {
             return await _context.SecurityChecks.CountAsync();
         }
 
+        // GET: api/SecurityChecks/Submitted/Count
+        [HttpGet("Submitted/Count")]
+        [Authorize(Policy = AppPolicies.ApproverOnly)]
+        public async Task<ActionResult<int>> GetSecurityCheckCountSubmitted()
+        {
+            return await _context.SecurityChecks.Where(c => c.Status == DeviceStatus.Submitted).CountAsync();
+        }
+
+        // TODO Policy
         // GET: api/SecurityChecks/5
         [HttpGet("{id}")]
         public async Task<ActionResult<SecurityCheck>> GetSecurityCheck(int id)
@@ -50,6 +81,7 @@ namespace DevicePortal.Controllers
             return securityCheck;
         }
 
+        // TODO Policy
         // GET: api/SecurityCheck/Device/5
         [HttpGet("Device/{id}")]
         public async Task<ActionResult<SecurityCheck>> GetSecurityCheckDevice(int id)
@@ -69,6 +101,7 @@ namespace DevicePortal.Controllers
 
         // PUT: api/SecurityChecks/5
         [HttpPut("{id}")]
+        [Authorize(Policy = AppPolicies.AuthorizedOnly)]
         public async Task<IActionResult> PutSecurityCheck(int id, SecurityCheck securityCheck)
         {
             if (id != securityCheck.Id)
@@ -101,6 +134,40 @@ namespace DevicePortal.Controllers
             securityCheck.Status = DeviceStatus.Submitted;
             securityCheck.StatusEffectiveDate = DateTime.Now;
             _context.Entry(securityCheck).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        // PUT: api/SecurityChecks/5/Status
+        [HttpPut("{id}/Status")]
+        [Authorize(Policy = AppPolicies.ApproverOnly)]
+        public async Task<IActionResult> PutSecurityCheckStatus(int id, SecurityCheck securityCheck)
+        {
+            if (id != securityCheck.Id)
+            {
+                return BadRequest();
+            }
+            if (!SecurityCheckExists(id))
+            {
+                return NotFound();
+            }
+            if (!_context.SecurityChecks.Any(c => c.Id == id && c.Status == DeviceStatus.Submitted))
+            {
+                return BadRequest("Expected security check status to be submitted.");
+            }
+            
+            var device = await _context.Devices.FindAsync(securityCheck.DeviceId);
+            if (device == null)
+            {
+                return NotFound();
+            }
+
+            device.Status = securityCheck.Status;
+            device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = DateTime.Now;
+
+            _context.UpdateProperties(device, d => d.Status, d => d.StatusEffectiveDate);
+            _context.UpdateProperties(securityCheck, c => c.Status, c => c.StatusEffectiveDate);            
             await _context.SaveChangesAsync();
 
             return NoContent();

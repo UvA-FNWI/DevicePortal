@@ -230,7 +230,7 @@ function page_users(parameters: string) {
                 ks.table('devices', function () {
                     ks.table_body(function () {
                         for (let i = 0; i < state.devices.length; ++i) {
-                            device_row(state.devices[i], false);
+                            device_row(state.devices[i]);
                         }
                     });
                 });

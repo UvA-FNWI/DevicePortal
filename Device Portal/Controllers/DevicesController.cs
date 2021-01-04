@@ -99,7 +99,7 @@ namespace DevicePortal.Controllers
         [HttpPost]
         public async Task<ActionResult<Device>> PostDevice(Device device)
         {
-            device.Status = DeviceStatus.Submitted;
+            device.Status = DeviceStatus.Unsecure;
             device.Origin = DeviceOrigin.User;
             device.UserName = User.GetUserName();
             _context.Devices.Add(device);

@@ -35,6 +35,7 @@ namespace DevicePortal.Data
         Approved,
         Denied,
         Submitted,
+        Unsecure,
     }
 
     public class Device : IEntity
@@ -47,6 +48,7 @@ namespace DevicePortal.Data
         public string OS { get; set; }
         public DeviceType Type { get; set; }
         public DeviceStatus Status { get; set; }
+        public DateTime StatusEffectiveDate { get; set; }
         public DeviceOrigin Origin { get; set; }
 
         [ForeignKey("User")]
