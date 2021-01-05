@@ -63,15 +63,16 @@ class ActiveUser {
     }
 }
 let user: ActiveUser;
-
+let init = false;
 ks.run(function () {
-    if (!user) {
+    if (!init) {
+        init = true;
         GET(API.Identity()).done((claims: { type: string, value: string; }[]) => {
             if (claims && claims.length) {
                 user = new ActiveUser(claims);
                 ks.refresh();
             } else {
-                //window.location.href = '/signin-oidc';
+                contextModal.showWarning("Not logged in");
             }
         });
         return;
@@ -170,6 +171,7 @@ ks.run(function () {
             ks.is_item_clicked(function () {
                 GET(API.Identity('exit')).always(function () {
                     window.location.reload();
+                    // window.location.replace("https://login.uva.nl/adfs/ls/?wa=wsignout1.0");
                 });
                 return false;
             });

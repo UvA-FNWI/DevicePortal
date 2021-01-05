@@ -28,13 +28,6 @@ namespace DevicePortal.Controllers
             return new JsonResult(claims);
         }
 
-        [HttpGet("enter")]
-        public async Task<IActionResult> Enter()
-        {
-            //await HttpContext.SignInAsync();
-            return Ok();
-        }
-
         [HttpGet("exit")]
         public async Task<IActionResult> Exit() 
         {            

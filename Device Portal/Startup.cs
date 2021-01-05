@@ -48,12 +48,13 @@ namespace DevicePortal
             .AddCookie()
             .AddOpenIdConnect(options =>
             {
+                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+
                 // Local
                 //options.Authority = "https://localhost:5001";
                 //options.ClientId = "device_portal";
                 //options.ClientSecret = "secret";
 
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 // Surfconext test
                 options.Prompt = "login";
                 options.Authority = Configuration["OpenID:Authority"];
