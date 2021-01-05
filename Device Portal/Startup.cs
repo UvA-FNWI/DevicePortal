@@ -53,6 +53,7 @@ namespace DevicePortal
                 //options.ClientId = "device_portal";
                 //options.ClientSecret = "secret";
 
+                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 // Surfconext test
                 options.Prompt = "login";
                 options.Authority = Configuration["OpenID:Authority"];

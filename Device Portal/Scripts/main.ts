@@ -67,8 +67,12 @@ let user: ActiveUser;
 ks.run(function () {
     if (!user) {
         GET(API.Identity()).done((claims: { type: string, value: string; }[]) => {
-            user = new ActiveUser(claims);
-            ks.refresh();
+            if (claims && claims.length) {
+                user = new ActiveUser(claims);
+                ks.refresh();
+            } else {
+                //window.location.href = '/signin-oidc';
+            }
         });
         return;
     }

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace DevicePortal.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController, Authorize]
+    [ApiController]
     public class IdentityController : ControllerBase
     {
         private OpenIdConnectHandler handler;
@@ -21,15 +21,23 @@ namespace DevicePortal.Controllers
             this.handler = handler;
         }
 
-        [HttpGet]
+        [HttpGet, AllowAnonymous]
         public IActionResult Get()
         {
-            return new JsonResult(from c in User.Claims select new { c.Type, c.Value });
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToArray();
+            return new JsonResult(claims);
+        }
+
+        [HttpGet("enter")]
+        public async Task<IActionResult> Enter()
+        {
+            //await HttpContext.SignInAsync();
+            return Ok();
         }
 
         [HttpGet("exit")]
         public async Task<IActionResult> Exit() 
-        {
+        {            
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Ok();
         }
