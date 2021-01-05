@@ -178,6 +178,7 @@ namespace DevicePortal.Controllers
             deviceTable.Columns.Add("Name");
             deviceTable.Columns.Add("Type", typeof(int));
             deviceTable.Columns.Add("OS");
+            deviceTable.Columns.Add("SerialNumber");
             deviceTable.Columns.Add("Origin", typeof(int));
             deviceTable.Columns.Add("Status", typeof(int));
             foreach (var device in devicesToAdd)
@@ -190,6 +191,7 @@ namespace DevicePortal.Controllers
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Type", "Type"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("OS", "OS"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("SerialNumber", "SerialNumber"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Origin", "Origin"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Status", "Status"));
             sqlBulk.DestinationTableName = "dbo.Devices";
