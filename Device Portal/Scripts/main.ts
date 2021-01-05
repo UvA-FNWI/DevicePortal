@@ -226,11 +226,8 @@ function page_home() {
         ks.column('devices', 12, function () {
             ks.set_next_item_class_name('bg-white border');
             ks.table('devices', function () {
-                ks.table_body(function () {
-                    for (let i = 0; i < state.devices.length; ++i) {
-                        device_row(state.devices[i]);
-                    }
-                });
+                device_table_head();
+                device_table_body(state.devices);                
             });
 
             ks.group('right', 'd-flex', function () {
@@ -256,55 +253,71 @@ function deviceIcon(type: DeviceType): string {
     }
 }
 
-function device_row(d: Device) {
-    let icon: string;
-    let iconSize = '1rem';
-    switch (d.type) {
-        case DeviceType.Mobile:
-            icon = 'fa fa-mobile text-center';
-            iconSize = '1.35rem';
-            break;
-
-        case DeviceType.Tablet:
-            icon = 'fa fa-tablet text-center';
-            iconSize = '1.2rem';
-            break;
-
-        case DeviceType.Laptop:
-            icon = 'fa fa-laptop text-center';
-            iconSize = '1.1rem';
-            break;
-
-        default:
-            icon = 'fa fa-desktop text-center';
-            break;
-    }
-
-    ks.table_row(function () {
-        ks.table_cell(d.name);
-        ks.table_cell(d.serialNumber);
-        ks.table_cell(function () {
-            let i = ks.icon(icon);
-            i.style.width = '18px';
-            i.style.fontSize = iconSize;
-            ks.text(' ' + deviceNames[d.type], 'd-inline ml-1');
+function device_table_head() {
+    ks.table_head(function () {
+        ks.table_row(function () {
+            ks.table_cell('Name');
+            ks.table_cell('Serial number');
+            ks.table_cell('Type');
+            ks.table_cell('OS');
+            ks.table_cell('Status');
+            ks.table_cell('');
         });
-        ks.table_cell(d.os);
-        ks.table_cell(function () {
-            ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
-        }).style.width = '1%';
+    });
+}
+function device_table_body(devices: Device[]) {
+    ks.table_body(function () {
+        for (let d of devices) {
+            let icon: string;
+            let iconSize = '1rem';
+            switch (d.type) {
+                case DeviceType.Mobile:
+                    icon = 'fa fa-mobile text-center';
+                    iconSize = '1.35rem';
+                    break;
 
-        if (user.can_secure) {
-            ks.table_cell(function () {
-                if (d.status != DeviceStatus.Approved) {
-                    ks.set_next_item_class_name('text-nowrap');
-                    ks.anchor('Security check', pages[Page.SecurityCheck] + '/' + d.id);
-                    ks.is_item_clicked(function () {
-                        ks.navigate_to('Security check', pages[Page.SecurityCheck] + '/' + d.id);
-                        return false;
-                    });
+                case DeviceType.Tablet:
+                    icon = 'fa fa-tablet text-center';
+                    iconSize = '1.2rem';
+                    break;
+
+                case DeviceType.Laptop:
+                    icon = 'fa fa-laptop text-center';
+                    iconSize = '1.1rem';
+                    break;
+
+                default:
+                    icon = 'fa fa-desktop text-center';
+                    break;
+            }
+
+            ks.table_row(function () {
+                ks.table_cell(d.name);
+                ks.table_cell(d.serialNumber);
+                ks.table_cell(function () {
+                    let i = ks.icon(icon);
+                    i.style.width = '18px';
+                    i.style.fontSize = iconSize;
+                    ks.text(' ' + deviceNames[d.type], 'd-inline ml-1');
+                });
+                ks.table_cell(d.os);
+                ks.table_cell(function () {
+                    ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
+                }).style.width = '1%';
+
+                if (user.can_secure) {
+                    ks.table_cell(function () {
+                        if (d.status != DeviceStatus.Approved) {
+                            ks.set_next_item_class_name('text-nowrap');
+                            ks.anchor('Security check', pages[Page.SecurityCheck] + '/' + d.id);
+                            ks.is_item_clicked(function () {
+                                ks.navigate_to('Security check', pages[Page.SecurityCheck] + '/' + d.id);
+                                return false;
+                            });
+                        }
+                    }).style.width = '1%';
                 }
-            }).style.width = '1%';
+            });
         }
     });
 }
