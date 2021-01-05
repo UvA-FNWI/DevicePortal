@@ -27,6 +27,12 @@ namespace DevicePortal.Controllers
             var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToArray();
             return new JsonResult(claims);
         }
+        
+        [HttpGet("enter")]
+        public IActionResult Enter()
+        {
+            return Redirect("~/"); // Redirect to root
+        }
 
         [HttpGet("exit")]
         public async Task<IActionResult> Exit() 

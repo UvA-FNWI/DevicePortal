@@ -71,12 +71,13 @@ ks.run(function () {
             if (claims && claims.length) {
                 user = new ActiveUser(claims);
                 ks.refresh();
-            } else {
-                contextModal.showWarning("Not logged in");
+            } else if (window.location.href.indexOf('enter') == -1) {
+                // Trigger login screen if front-end loaded from cache
+                window.location.href = "./api/identity/enter";
             }
         });
-        return;
     }
+    if (!user) { return; }
 
     // Global modals, run before any pages
     contextModal.run();
