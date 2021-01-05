@@ -66,34 +66,34 @@ namespace DevicePortal.Controllers
         }
 
         // PUT: api/Devices/5        
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> PutDevice(int id, Device device)
-        //{
-        //    if (id != device.Id)
-        //    {
-        //        return BadRequest();
-        //    }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutDevice(int id, Device device)
+        {
+            if (id != device.Id)
+            {
+                return BadRequest();
+            }
 
-        //    _context.Entry(device).State = EntityState.Modified;
+            _context.UpdateProperties(device, d => d.Name, d => d.OS);
+            
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!DeviceExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
 
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateConcurrencyException)
-        //    {
-        //        if (!DeviceExists(id))
-        //        {
-        //            return NotFound();
-        //        }
-        //        else
-        //        {
-        //            throw;
-        //        }
-        //    }
-
-        //    return NoContent();
-        //}
+            return NoContent();
+        }
 
         // POST: api/Devices
         [HttpPost]

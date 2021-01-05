@@ -80,7 +80,7 @@ namespace DevicePortal.Controllers
 
             Dictionary<string, User> userMap = _context.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
-            Dictionary<string, Device> deviceMap = _context.Devices.ToDictionary(d => d.Name);
+            Dictionary<string, Device> deviceMap = _context.Devices.ToDictionary(d => d.DeviceId);
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
             foreach (var line in monthlyReportParsed.lines)
@@ -89,7 +89,7 @@ namespace DevicePortal.Controllers
 
                 var device = new Device
                 {                   
-                    Name = line[iDeviceName],
+                    DeviceId = line[iDeviceName],
                     UserName = line[iUserName],
                     SerialNumber = serialMap.TryGetValue(line[iDeviceName], out string serial) ? serial : line[iDeviceName],
                     Origin = DeviceOrigin.DataExport,
@@ -125,7 +125,7 @@ namespace DevicePortal.Controllers
                         userMap.Add(user.UserName, user);
                     }
 
-                    if (deviceMap.TryGetValue(device.Name, out Device existing))
+                    if (deviceMap.TryGetValue(device.DeviceId, out Device existing))
                     {
                         if (existing.UserName != device.UserName ||
                             existing.SerialNumber != device.SerialNumber) 
@@ -175,7 +175,7 @@ namespace DevicePortal.Controllers
             // Bulk insert devices
             var deviceTable = new System.Data.DataTable();
             deviceTable.Columns.Add("UserName");
-            deviceTable.Columns.Add("Name");
+            deviceTable.Columns.Add("DeviceId");
             deviceTable.Columns.Add("Type", typeof(int));
             deviceTable.Columns.Add("OS");
             deviceTable.Columns.Add("SerialNumber");
@@ -183,12 +183,12 @@ namespace DevicePortal.Controllers
             deviceTable.Columns.Add("Status", typeof(int));
             foreach (var device in devicesToAdd)
             {
-                deviceTable.Rows.Add(device.UserName, device.Name, device.Type, device.OS, device.Origin, device.Status);
+                deviceTable.Rows.Add(device.UserName, device.DeviceId, device.Type, device.OS, device.Origin, device.Status);
             }
 
             sqlBulk.ColumnMappings.Clear();
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("DeviceId", "DeviceId"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Type", "Type"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("OS", "OS"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("SerialNumber", "SerialNumber"));

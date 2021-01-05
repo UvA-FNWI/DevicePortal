@@ -14,6 +14,7 @@ deviceNames[DeviceType.Desktop] = 'Desktop';
 class Device {
     id: number;
     name = '';
+    deviceId: string;
     serialNumber: string;
     type: DeviceType;
     os = '';
@@ -39,6 +40,7 @@ statusColors[DeviceStatus.Unsecure] = 'warning';
 function page_device(parameters: string) {
     let state = ks.local_persist('page_device', {
         selected: -1,
+        os: '',
         device: <Device>null,
         options: [
             { type: DeviceType.Mobile, icon: 'fa fa-mobile' },
@@ -46,6 +48,7 @@ function page_device(parameters: string) {
             { type: DeviceType.Laptop, icon: 'fa fa-laptop' },
             { type: DeviceType.Desktop, icon: 'fa fa-desktop' },
         ],
+        update: false,
     });
 
     if (isPageSwap) {
@@ -62,7 +65,9 @@ function page_device(parameters: string) {
         }
         if (state.device.id !== deviceId && deviceId) {
             GET_ONCE('device', API.Devices(deviceId)).done((d: Device) => {
+                state.update = true;
                 state.device = d;
+                state.os = d.os;
                 let mask = d.type;
                 state.selected = -1;
                 while (mask) {
@@ -85,16 +90,19 @@ function page_device(parameters: string) {
             let o = state.options[i];
 
             ks.column(i.toString(), '12 col-md-3 col-sm-6 col-xs-12', function () {
-                ks.set_next_item_class_name('shadow-sm border-0 p-3 align-items-center cursor-pointer ' +
-                    (state.selected === i ? 'bg-primary text-light' : 'bg-white'));
+                ks.set_next_item_class_name('shadow-sm border-0 p-3 align-items-center ' +
+                    (state.selected === i ? 'bg-primary text-light' : 'bg-white') +
+                    (state.update ? '' : ' cursor-pointer'));
                 ks.card('card', function () {
                     ks.icon(o.icon).style.fontSize = '5rem';
                     ks.text(deviceNames[o.type]);
                 });
-                ks.is_item_clicked(function () {
-                    state.selected = i;
-                    ks.refresh();
-                });
+                if (!state.update) {
+                    ks.is_item_clicked(function () {
+                        state.selected = i;
+                        ks.refresh();
+                    });
+                }
             });
         }
 
@@ -111,30 +119,42 @@ function page_device(parameters: string) {
                 });
 
                 ks.text('Operating system', 'mt-2 mb-1');
-                ks.set_next_input_validation(state.device.os?.length > 0, '', 'This is a required field.');
+                ks.set_next_input_validation(state.os?.length > 0, '', 'This is a required field.');
                 ks.combo('Operating system', function () {
-                    ks.selectable('##none', !state.device.os);
+                    ks.selectable('##none', !state.os);
                     for (let i = 0; i < operatingSystems.length; ++i) {
-                        ks.selectable(operatingSystems[i], state.device.os === operatingSystems[i]);
+                        ks.selectable(operatingSystems[i], state.os === operatingSystems[i]);
                         ks.is_item_clicked(function () {
-                            state.device.os = operatingSystems[i];
+                            state.os = operatingSystems[i];
                         });
                     }
-                });
-
+                }).disabled = state.update && !!state.device.os;
+                
                 ks.group('right', 'd-flex', function () {
                     ks.set_next_item_class_name('ml-auto');
-                    ks.button('Add', ks.no_op);
+                    ks.button(state.update ? 'Update' : 'Add', ks.no_op);
                 });
 
                 if (ks.current_form_submitted() && state.selected >= 0 && !this.getElementsByClassName('is-invalid').length) {
                     ks.cancel_current_form_submission();
                     state.device.type = state.options[state.selected].type;
-                    POST_JSON(API.Devices(), state.device).then(() => {
-                        ks.navigate_to('Home', '/');
-                    }, fail => {
-                        contextModal.showWarning(fail.responseText);
-                    });                    
+                    state.device.os = state.os;
+
+                    if (state.update) {
+                        PUT_JSON(API.Devices(state.device.id), state.device).then(() => {
+                            contextModal.showSuccess('Changes successfully saved.');
+                            ks.navigate_to('Home', '/');
+                        }, fail => {
+                            contextModal.showWarning(fail.responseText);
+                        });                    
+                    } else {
+                        POST_JSON(API.Devices(), state.device).then(() => {
+                            contextModal.showSuccess('Device successfully added.');
+                            ks.navigate_to('Home', '/');
+                        }, fail => {
+                            contextModal.showWarning(fail.responseText);
+                        });                    
+                    }
                 }
             });
         });

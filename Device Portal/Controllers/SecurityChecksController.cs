@@ -42,6 +42,7 @@ namespace DevicePortal.Controllers
                     c.UserName,
                     UserFullName = c.User.Name,
                     DeviceName = c.Device.Name,
+                    c.Device.DeviceId,
                 })
                 .ToListAsync();
             return Ok(checks);

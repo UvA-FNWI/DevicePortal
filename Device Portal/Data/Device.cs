@@ -43,6 +43,7 @@ namespace DevicePortal.Data
         public int Id { get; set; }
 
         public string Name { get; set; }
+        public string DeviceId { get; set; }
         public string SerialNumber { get; set; }
         [JsonPropertyName("os")]
         public string OS { get; set; }

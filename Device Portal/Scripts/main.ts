@@ -226,8 +226,9 @@ function page_home() {
         ks.column('devices', 12, function () {
             ks.set_next_item_class_name('bg-white border');
             ks.table('devices', function () {
-                device_table_head();
-                device_table_body(state.devices);                
+                const edit_device = true;
+                device_table_head(edit_device);
+                device_table_body(state.devices, edit_device);                
             });
 
             ks.group('right', 'd-flex', function () {
@@ -253,19 +254,21 @@ function deviceIcon(type: DeviceType): string {
     }
 }
 
-function device_table_head() {
+function device_table_head(edit_device = false) {
     ks.table_head(function () {
         ks.table_row(function () {
             ks.table_cell('Name');
+            ks.table_cell('DeviceId');
             ks.table_cell('Serial number');
             ks.table_cell('Type');
             ks.table_cell('OS');
-            ks.table_cell('Status');
-            ks.table_cell('');
+            ks.table_cell('Status').style.width = '1%';
+            ks.table_cell('').style.width = '1%';
+            if (edit_device) { ks.table_cell(''); }
         });
     });
 }
-function device_table_body(devices: Device[]) {
+function device_table_body(devices: Device[], edit_device = false) {
     ks.table_body(function () {
         for (let d of devices) {
             let icon: string;
@@ -293,6 +296,7 @@ function device_table_body(devices: Device[]) {
 
             ks.table_row(function () {
                 ks.table_cell(d.name);
+                ks.table_cell(d.deviceId);
                 ks.table_cell(d.serialNumber);
                 ks.table_cell(function () {
                     let i = ks.icon(icon);
@@ -303,7 +307,7 @@ function device_table_body(devices: Device[]) {
                 ks.table_cell(d.os);
                 ks.table_cell(function () {
                     ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
-                }).style.width = '1%';
+                });
 
                 if (user.can_secure) {
                     ks.table_cell(function () {
@@ -315,7 +319,17 @@ function device_table_body(devices: Device[]) {
                                 return false;
                             });
                         }
-                    }).style.width = '1%';
+                    });
+                }
+                if (edit_device) {
+                    ks.set_next_item_class_name('cursor-pointer');
+                    ks.table_cell(function () {
+                        ks.icon('fa fa-pencil');
+                    });
+                    ks.is_item_clicked(function () {
+                        ks.navigate_to('Device', pages[Page.Device] + '/' + d.id);
+                        return false;
+                    });
                 }
             });
         }
