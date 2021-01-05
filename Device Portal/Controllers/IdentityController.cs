@@ -16,7 +16,7 @@ namespace DevicePortal.Controllers
     public class IdentityController : ControllerBase
     {
         private OpenIdConnectHandler handler;
-        public IdentityController(OpenIdConnectHandler handler) 
+        public IdentityController(OpenIdConnectHandler handler)
         {
             this.handler = handler;
         }
@@ -27,16 +27,22 @@ namespace DevicePortal.Controllers
             var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToArray();
             return new JsonResult(claims);
         }
-        
-        [HttpGet("enter")]
+
+        [HttpGet("enter"), AllowAnonymous]
         public IActionResult Enter()
         {
-            return Redirect("~/"); // Redirect to root
+            return new ChallengeResult(
+                OpenIdConnectDefaults.AuthenticationScheme,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    RedirectUri = Url.Page("/Index")
+                });
         }
 
         [HttpGet("exit")]
-        public async Task<IActionResult> Exit() 
-        {            
+        public async Task<IActionResult> Exit()
+        {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Ok();
         }
