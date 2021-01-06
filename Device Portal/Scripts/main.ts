@@ -227,7 +227,7 @@ function page_home() {
             ks.set_next_item_class_name('bg-white border');
             ks.table('devices', function () {
                 const edit_device = true;
-                device_table_head(edit_device);
+                device_table_head(user.can_secure, edit_device);
                 device_table_body(state.devices, edit_device);                
             });
 
@@ -254,7 +254,7 @@ function deviceIcon(type: DeviceType): string {
     }
 }
 
-function device_table_head(edit_device = false) {
+function device_table_head(can_secure: boolean, edit_device: boolean) {
     ks.table_head(function () {
         ks.table_row(function () {
             ks.table_cell('Name');
@@ -263,8 +263,8 @@ function device_table_head(edit_device = false) {
             ks.table_cell('Type');
             ks.table_cell('OS');
             ks.table_cell('Status').style.width = '1%';
-            ks.table_cell('').style.width = '1%';
-            if (edit_device) { ks.table_cell(''); }
+            if (can_secure) { ks.table_cell('').style.width = '1%'; }
+            if (edit_device) { ks.table_cell('').style.width = '1%'; }
         });
     });
 }

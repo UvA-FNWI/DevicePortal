@@ -228,7 +228,7 @@ function page_users(parameters: string) {
             ks.column('devices', 12, function () {
                 ks.set_next_item_class_name('bg-white border');
                 ks.table('devices', function () {
-                    device_table_head();
+                    device_table_head(false, false);
                     device_table_body(state.devices);                    
                 });
             });

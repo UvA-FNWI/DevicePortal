@@ -78,6 +78,8 @@ function page_device(parameters: string) {
             });
             return; // wait for device
         }
+    } else if (parameters === 'add') {
+        state.update = false;
     } else if (!parameters) {
         ks.navigate_to('Home', '/');
         return;
