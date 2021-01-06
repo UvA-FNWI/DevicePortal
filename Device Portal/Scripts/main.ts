@@ -228,7 +228,7 @@ function page_home() {
             ks.table('devices', function () {
                 const edit_device = true;
                 device_table_head(user.can_secure, edit_device);
-                device_table_body(state.devices, edit_device);                
+                device_table_body(state.devices, user.can_secure, edit_device);                
             });
 
             ks.group('right', 'd-flex', function () {
@@ -268,7 +268,7 @@ function device_table_head(can_secure: boolean, edit_device: boolean) {
         });
     });
 }
-function device_table_body(devices: Device[], edit_device = false) {
+function device_table_body(devices: Device[], can_secure: boolean, edit_device: boolean) {
     ks.table_body(function () {
         for (let d of devices) {
             let icon: string;
@@ -309,7 +309,7 @@ function device_table_body(devices: Device[], edit_device = false) {
                     ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
                 });
 
-                if (user.can_secure) {
+                if (can_secure) {
                     ks.table_cell(function () {
                         if (d.status != DeviceStatus.Approved) {
                             ks.set_next_item_class_name('text-nowrap');
