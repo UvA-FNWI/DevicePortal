@@ -10,12 +10,14 @@
         question: string;
         answer: boolean;
         explanation: string;
+        recommendation: string;
         mask: DeviceType;
     }[] = [];
 }
 
 class SecurityQuestion {
     text: string;
+    recommendation: string;
     mask: DeviceType;
 }
 
@@ -65,6 +67,7 @@ function page_security_check(parameters: string) {
                         answer: undefined,
                         explanation: '',
                         question: q.text,
+                        recommendation: q.recommendation,
                         mask: q.mask,
                     };
                 });
@@ -92,7 +95,19 @@ function page_security_check(parameters: string) {
 
             ks.push_id(i.toString());
 
-            ks.text(q.question, 'font-weight-bold mb-1');
+            if (!q.recommendation) { ks.set_next_item_class_name('mb-1'); }
+            ks.text(q.question, 'font-weight-bold');
+
+            if (q.recommendation) {
+                let g = ks.group('recommendation', 'text-muted mb-1', ks.no_op);
+                if (!g.children.length) {
+                    let div = document.createElement("DIV");
+                    div.innerHTML = q.recommendation;
+                    g.appendChild(div);
+                    ks.mark_persist(div);
+                }
+            }
+
             ks.group('radios', 'mb-3', function () {
                 ks.set_next_item_class_name('custom-control-inline');
                 ks.radio_button('Yes', q.answer === true, function () {

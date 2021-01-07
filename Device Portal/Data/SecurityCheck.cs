@@ -45,6 +45,7 @@ namespace DevicePortal.Data
         public int Id { get; set; }
 
         public string Text { get; set; }
+        public string Recommendation { get; set; }
         public DeviceType Mask { get; set; }
     }
 }
