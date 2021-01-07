@@ -15,14 +15,14 @@ namespace DevicePortal
 
         public static string GetFullName(this ClaimsPrincipal claimsPrincipal)
         {
-            string giveName = "";
+            string givenName = "";
             string familyName = "";
             foreach (var claim in claimsPrincipal.Claims) 
             {
-                if (claim.Type == "give_name") { giveName = claim.Value; }
+                if (claim.Type == "given_name") { givenName = claim.Value; }
                 else if (claim.Type == "family_name") { familyName = claim.Value; }
             }
-            return $"{giveName} {familyName}".Trim();
+            return $"{givenName} {familyName}".Trim();
         }
     }
 }
