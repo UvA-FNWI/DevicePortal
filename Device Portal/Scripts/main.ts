@@ -24,8 +24,6 @@ let pages = [
 let iPage = Page.Home;
 let contextModal = new ContextualModal();
 
-let operatingSystems = ['Windows', 'Linux', 'macOS', 'iOS', 'Android'];
-
 class ActiveUser {
     user_name: string;
     first_name: string;
@@ -304,7 +302,7 @@ function device_table_body(devices: Device[], can_secure: boolean, edit_device: 
                     i.style.fontSize = iconSize;
                     ks.text(' ' + deviceNames[d.type], 'd-inline ml-1');
                 });
-                ks.table_cell(d.os);
+                ks.table_cell(osNames[d.os_type]);
                 ks.table_cell(function () {
                     ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
                 });

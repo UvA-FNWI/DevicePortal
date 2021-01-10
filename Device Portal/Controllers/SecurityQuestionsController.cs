@@ -24,7 +24,7 @@ namespace DevicePortal.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SecurityQuestions>>> GetSecurityQuestions()
         {
-            return await _context.SecurityQuestions.ToListAsync();
+            return await _context.SecurityQuestions.Include(q => q.Recommendations).ToListAsync();
         }
 
         // GET: api/SecurityQuestions/5

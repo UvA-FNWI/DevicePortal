@@ -37,7 +37,7 @@
 class ContextualModal {
     id = '####contextual_modal';
     header: string;
-    css_class: 'bg-warning' | 'bg-success';
+    css_class: 'warning' | 'success';
     icon_class: 'fa-exclamation-triangle text-warning' | 'fa-check-circle-o text-success';
     str_or_proc: string | Function = '';
     el: HTMLElement;
@@ -45,26 +45,27 @@ class ContextualModal {
     showSuccess(str_or_proc: string | Function, size?: ks.Modal_Size) {
         this.header = 'Success';
         this.str_or_proc = str_or_proc;
-        this.css_class = 'bg-success'
+        this.css_class = 'success';
         this.icon_class = 'fa-check-circle-o text-success';
 
         ks.refresh(this.el);
+        this.update_size(size);
         ks.open_popup(this.id);
     }
     showWarning(str_or_proc: string | Function, size?: ks.Modal_Size) {
         this.header = 'Warning';
         this.str_or_proc = str_or_proc;
-        this.css_class = 'bg-warning'
+        this.css_class = 'warning';
         this.icon_class = 'fa-exclamation-triangle text-warning';
 
         ks.refresh(this.el);
+        this.update_size(size);
         ks.open_popup(this.id);
     }
 
     run() {
         let modal = this;
         modal.el = ks.popup_modal(modal.id, function () {
-            ks.set_next_item_class_name(modal.css_class);
             ks.set_next_item_class_name('text-center px-4 py-5');
             ks.modal_body(function () {
                 ks.icon(`fa ${modal.icon_class} mb-2`).style.fontSize = '2.25rem';
@@ -77,7 +78,7 @@ class ContextualModal {
                 ks.set_next_item_class_name('mt-4');
                 ks.button('Close', function () {
                     ks.close_current_popup();
-                }, 'warning');
+                }, modal.css_class);
             });
         }, true, false, true);
     }

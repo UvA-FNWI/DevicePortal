@@ -11,13 +11,30 @@ deviceNames[DeviceType.Tablet] = 'Tablet';
 deviceNames[DeviceType.Laptop] = 'Laptop';
 deviceNames[DeviceType.Desktop] = 'Desktop';
 
+enum OSType {
+    Android = 1 << 0,
+    iOS = 1 << 1,
+    Linux = 1 << 2,
+    MacOS = 1 << 3,
+    Windows = 1 << 4,
+    All = (1 << 5) - 1,
+}
+let osNames = {};
+osNames[OSType.Android] = 'Android';
+osNames[OSType.iOS] = 'iOS';
+osNames[OSType.Linux] = 'Linux';
+osNames[OSType.MacOS] = 'MacOS';
+osNames[OSType.Windows] = 'Windows';
+let osTypeCount = Object.keys(osNames).length;
+
 class Device {
     id: number;
     name = '';
     deviceId: string;
     serialNumber: string;
     type: DeviceType;
-    os = '';
+    os_type: OSType;
+    os_version: string;
     status = DeviceStatus.Unsecure;
 }
 enum DeviceStatus {
@@ -40,7 +57,7 @@ statusColors[DeviceStatus.Unsecure] = 'warning';
 function page_device(parameters: string) {
     let state = ks.local_persist('page_device', {
         selected: -1,
-        os: '',
+        os_type: <OSType>0,
         device: <Device>null,
         options: [
             { type: DeviceType.Mobile, icon: 'fa fa-mobile' },
@@ -67,7 +84,7 @@ function page_device(parameters: string) {
             GET_ONCE('device', API.Devices(deviceId)).done((d: Device) => {
                 state.update = true;
                 state.device = d;
-                state.os = d.os;
+                state.os_type = d.os_type;
                 let mask = d.type;
                 state.selected = -1;
                 while (mask) {
@@ -121,16 +138,20 @@ function page_device(parameters: string) {
                 });
 
                 ks.text('Operating system', 'mt-2 mb-1');
-                ks.set_next_input_validation(state.os?.length > 0, '', 'This is a required field.');
+                ks.set_next_input_validation(!!state.os_type, '', 'This is a required field.');
                 ks.combo('Operating system', function () {
-                    ks.selectable('##none', !state.os);
-                    for (let i = 0; i < operatingSystems.length; ++i) {
-                        ks.selectable(operatingSystems[i], state.os === operatingSystems[i]);
+                    ks.selectable('##none', !state.os_type);
+                    ks.is_item_clicked(function () {
+                        state.os_type = 0;
+                    });
+                    for (let i = 0; i < osTypeCount; ++i) {
+                        let type: OSType = 1 << i;
+                        ks.selectable(osNames[type], state.os_type === type);
                         ks.is_item_clicked(function () {
-                            state.os = operatingSystems[i];
+                            state.os_type = type;
                         });
                     }
-                }).disabled = state.update && !!state.device.os;
+                }).disabled = state.update && !!state.device.os_type;
                 
                 ks.group('right', 'd-flex', function () {
                     ks.set_next_item_class_name('ml-auto');
@@ -140,7 +161,7 @@ function page_device(parameters: string) {
                 if (ks.current_form_submitted() && state.selected >= 0 && !this.getElementsByClassName('is-invalid').length) {
                     ks.cancel_current_form_submission();
                     state.device.type = state.options[state.selected].type;
-                    state.device.os = state.os;
+                    state.device.os_type = state.os_type;
 
                     if (state.update) {
                         PUT_JSON(API.Devices(state.device.id), state.device).then(() => {

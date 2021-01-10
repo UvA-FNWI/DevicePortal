@@ -45,7 +45,24 @@ namespace DevicePortal.Data
         public int Id { get; set; }
 
         public string Text { get; set; }
-        public string Recommendation { get; set; }
         public DeviceType Mask { get; set; }
+
+        public HashSet<SecurityRecommendation> Recommendations { get; set;}
+    }
+
+    [Table("SecurityRecommendations")]
+    public class SecurityRecommendation
+    {
+        public int Id { get; set; }
+
+        public int Order { get; set; }
+
+        public string Content { get; set; }
+        [JsonPropertyName("os_type")]
+        public OS_Type OS_Type { get; set;} 
+
+        public int SecurityQuestionsId { get; set; }
+        [JsonIgnore]
+        public SecurityQuestions SecurityQuestion { get; set; }
     }
 }

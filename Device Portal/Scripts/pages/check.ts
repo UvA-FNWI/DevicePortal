@@ -10,15 +10,21 @@
         question: string;
         answer: boolean;
         explanation: string;
-        recommendation: string;
+        recommendations: SecurityRecommendation[];
         mask: DeviceType;
     }[] = [];
 }
 
 class SecurityQuestion {
     text: string;
-    recommendation: string;
     mask: DeviceType;
+    recommendations: SecurityRecommendation[];
+}
+
+class SecurityRecommendation {
+    order: number;
+    content: string;
+    os_type: OSType;
 }
 
 function page_security_check(parameters: string) {
@@ -30,6 +36,9 @@ function page_security_check(parameters: string) {
     if (isPageSwap) {
         state.security_check = null;
         GET_ONCE('questions', API.SecurityQuestions()).done((result: SecurityQuestion[]) => {
+            for (let i = 0; i < result.length; ++i) {
+                result[i].recommendations.sort((a, b) => a.order - b.order);
+            }
             state.questions = result;
             ks.refresh();
         });
@@ -52,26 +61,24 @@ function page_security_check(parameters: string) {
                 }),
                 GET(API.SecurityCheck(`Device/${deviceId}`)).then((c: SecurityCheck) => {
                     // Allow user to edit existing submission, otherwise start new request
-                    if (c.status === DeviceStatus.Submitted) {
-                        state.security_check = c;
-                    } else { security_check_not_found(); }
-                }, security_check_not_found)).always(function () {
+                    state.security_check = c.status === DeviceStatus.Submitted ? c : new SecurityCheck();
+                }, () => {
+                    state.security_check = new SecurityCheck();
+                })).always(function () {
                     if (state.device && state.security_check) { state.security_check.deviceId = state.device.id; }
-                    ks.refresh();
-                });
 
-            function security_check_not_found() {
-                state.security_check = new SecurityCheck();
-                state.security_check.questions = state.questions.map(q => {
-                    return {
-                        answer: undefined,
-                        explanation: '',
-                        question: q.text,
-                        recommendation: q.recommendation,
-                        mask: q.mask,
-                    };
+                    state.security_check.questions = state.questions.map(q => {
+                        return {
+                            answer: undefined,
+                            explanation: '',
+                            question: q.text,
+                            recommendations: q.recommendations,
+                            mask: q.mask,
+                        };
+                    });
+                    ks.
+                        refresh();
                 });
-            }
 
             return; // wait for get device & security check
         }
@@ -95,14 +102,20 @@ function page_security_check(parameters: string) {
 
             ks.push_id(i.toString());
 
-            if (!q.recommendation) { ks.set_next_item_class_name('mb-1'); }
+            if (!q.recommendations?.length) { ks.set_next_item_class_name('mb-1'); }
             ks.text(q.question, 'font-weight-bold');
 
-            if (q.recommendation) {
+            if (q.recommendations?.length) {
                 let g = ks.group('recommendation', 'text-muted mb-1', ks.no_op);
                 if (!g.children.length) {
                     let div = document.createElement("DIV");
-                    div.innerHTML = q.recommendation;
+                    let html = '';
+                    for (let k = 0; k < q.recommendations.length; ++k) {
+                        if (state.device.os_type & q.recommendations[k].os_type) {
+                            html += q.recommendations[k].content;
+                        }
+                    }
+                    div.innerHTML = html;
                     g.appendChild(div);
                     ks.mark_persist(div);
                 }
