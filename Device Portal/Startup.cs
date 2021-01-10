@@ -70,6 +70,46 @@ namespace DevicePortal
                 options.ClaimActions.Add(new JsonKeyClaimAction("uids", null, "uids"));
                 options.ResponseType = OpenIdConnectResponseType.Code;
                 options.SaveTokens = true;
+
+                options.Events = new OpenIdConnectEvents()
+                {
+                    // Create or update user info in db after login
+                    OnUserInformationReceived = async (context) => 
+                    {
+                        var db = context.HttpContext.RequestServices.GetRequiredService<PortalContext>();
+                        var departmentService = context.HttpContext.RequestServices.GetRequiredService<DepartmentService>();
+
+                        string userId = null;
+                        if (context.User.RootElement.TryGetProperty("uids", out var value))
+                        {
+                            userId = value[0].GetString();
+                        }
+                        if (string.IsNullOrEmpty(userId)) { return; }
+                        
+                        var user = await db.Users.FindAsync(userId);
+                        if (user == null)
+                        {
+                            string givenName = context.User.RootElement.TryGetProperty("given_name", out value) ?
+                                value.GetString() : "";
+                            string familyName = context.User.RootElement.TryGetProperty("family_name", out value) ?
+                                value.GetString() : "";
+                            
+                            user = new User()
+                            {
+                                Faculty = "FNWI",
+                                Name = $"{givenName} {familyName}".Trim(),
+                                UserName = userId,
+                            };
+                            db.Users.Add(user);
+                        }
+                        else { db.Update(user); }
+
+                        var department = (await departmentService.GetDepartments(userId)).FirstOrDefault();
+                        user.Department = department?.Name;
+                        user.CanManage = department?.IsManager ?? false; 
+                        await db.SaveChangesAsync();
+                    }
+                };
             });
 
             services.AddAuthorization(options => 
@@ -77,6 +117,7 @@ namespace DevicePortal
                 options.AddPolicy(AppPolicies.AdminOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanAdmin));
                 options.AddPolicy(AppPolicies.ApproverOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanApprove));
                 options.AddPolicy(AppPolicies.AuthorizedOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanSecure));
+                options.AddPolicy(AppPolicies.ManagerOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanManage));
             });
 
             string clientId = Configuration["AzureAD:ClientID"];
@@ -97,6 +138,8 @@ namespace DevicePortal
 
             services.AddControllers();
             services.AddRazorPages();
+            services.AddHttpClient();
+            services.AddScoped<DepartmentService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -114,7 +157,7 @@ namespace DevicePortal
             }
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-
+            
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
@@ -127,38 +170,36 @@ namespace DevicePortal
                 endpoints.MapFallbackToPage("/Index");
             });
         }
-
+       
         class ClaimsTransformer : IClaimsTransformation
         {
             private readonly PortalContext _context;
+            private readonly DepartmentService _departmentService;
 
-            public ClaimsTransformer(PortalContext context) 
+            public ClaimsTransformer(PortalContext context, DepartmentService departmentService) 
             {
                 _context = context;
+                _departmentService = departmentService;
             }
 
             public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal) 
             {
                 var userId = principal.GetUserName();
-                var user = await _context.Users.FindAsync(userId);
-                if (user == null) 
-                {
-                    user = new User()
+                var user = await _context.Users
+                    .Where(u => u.UserName == userId)
+                    .Select(u => new 
                     {
-                        // TODO Get from datanose API
-                        Faculty = "",
-                        Institute = "",
-
-                        Name = principal.GetFullName(),
-                        UserName = userId,
-                    };
-                    _context.Users.Add(user);
-                    await _context.SaveChangesAsync();
-                }
-
+                        u.CanAdmin,
+                        u.CanApprove,
+                        u.CanManage,
+                        u.CanSecure,
+                    })
+                    .SingleAsync();
+                                 
                 var identity = (ClaimsIdentity)principal.Identity;                
                 if (user.CanSecure || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanSecure)); }
                 if (user.CanApprove || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanApprove)); }
+                if (user.CanManage || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanManage)); }
                 if (user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanAdmin)); }
                 return principal;
             }
@@ -170,11 +211,13 @@ namespace DevicePortal
         public const string AdminOnly = "AdminOnly";
         public const string ApproverOnly = "ApproverOnly";
         public const string AuthorizedOnly = "AuthorizedOnly";
+        public const string ManagerOnly = "ManagerOnly";
     }
     public static class AppClaims
     {
         public const string CanSecure = "CanSecure";
         public const string CanApprove = "CanApprove";
+        public const string CanManage = "CanManage";
         public const string CanAdmin = "CanAdmin";
     }
     public static class AppClaimTypes

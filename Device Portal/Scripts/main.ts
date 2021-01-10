@@ -27,9 +27,10 @@ let contextModal = new ContextualModal();
 class ActiveUser {
     user_name: string;
     first_name: string;
-    last_name: string;
+    last_name: string;    
     can_secure: boolean;
     can_approve: boolean;
+    can_manage: boolean;
     can_admin: boolean;
     page_access: { [key: number]: boolean } = {};
 
@@ -42,6 +43,7 @@ class ActiveUser {
                 case 'https://secure.datanose.nl/claims/permission':
                     if (claim.value == "CanSecure") { this.can_secure = true; }
                     if (claim.value == "CanApprove") { this.can_approve = true; }
+                    if (claim.value == "CanManage") { this.can_manage = true; }
                     if (claim.value == "CanAdmin") { this.can_admin = true; }
                     break;
             }
@@ -54,10 +56,12 @@ class ActiveUser {
         this.page_access[Page.Requests] = this.can_approve;
         this.page_access[Page.SecurityCheck] = this.can_approve || this.can_secure;
 
+        // Manage
+        this.page_access[Page.Users] = this.can_manage;
+
         // Admin
-        this.page_access[Page.Admin] = this.can_admin;
         this.page_access[Page.Faculty] = this.can_admin;
-        this.page_access[Page.Users] = this.can_admin;
+        this.page_access[Page.Admin] = this.can_admin;
     }
 }
 let user: ActiveUser;
@@ -128,7 +132,7 @@ ks.run(function () {
                     return false;
                 });
 
-                if (user.can_admin) {
+                if (user.page_access[Page.Faculty]) {
                     ks.nav_item('Faculty', iPage === Page.Faculty, pages[Page.Faculty]);
                     ks.is_item_clicked(function () {
                         ks.navigate_to('Faculty', pages[Page.Faculty]);
@@ -136,7 +140,7 @@ ks.run(function () {
                     });
                 }
 
-                if (user.can_admin) {
+                if (user.page_access[Page.Users]) {
                     ks.nav_item('Users', iPage === Page.Users, pages[Page.Users]);
                     ks.is_item_clicked(function () {
                         ks.navigate_to('Users', pages[Page.Users]);
@@ -144,7 +148,7 @@ ks.run(function () {
                     });
                 }
 
-                if (user.can_approve) {
+                if (user.page_access[Page.Requests]) {
                     ks.nav_item('requests', iPage === Page.Requests, pages[Page.Requests], function () {
                         ks.text('Requests', 'd-inline mr-1');
                         if (requestCount.count) {
@@ -157,7 +161,7 @@ ks.run(function () {
                     });
                 }
 
-                if (user.can_admin) {
+                if (user.page_access[Page.Admin]) {
                     ks.nav_item('Admin', iPage === Page.Users, pages[Page.Admin]);
                     ks.is_item_clicked(function () {
                         ks.navigate_to('Admin', pages[Page.Admin]);

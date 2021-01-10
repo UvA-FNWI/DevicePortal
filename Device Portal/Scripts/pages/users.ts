@@ -24,8 +24,8 @@ function page_users(parameters: string) {
         $.when(
             GET(API.Users()).done((users) => {
                 for (let i = 0; i < users.length; ++i) {
-                    users[i].nameLowerCase = users[i].name.toLowerCase();
-                    users[i].instituteLowerCase = users[i].institute.toLowerCase();
+                    users[i].nameLowerCase = users[i].name ? users[i].name.toLowerCase() : '';
+                    users[i].instituteLowerCase = users[i].institute ? users[i].institute.toLowerCase() : '';
                 }
                 users.sort((a, b) => sort_string(a.name, b.name));
                 state.users = users;

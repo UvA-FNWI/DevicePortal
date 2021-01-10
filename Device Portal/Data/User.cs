@@ -10,6 +10,7 @@ namespace DevicePortal.Data
     {
         [Key]
         public string UserName { get; set; }
+        public string ObjectId { get; set; }
         public string Email { get; set; }
         public string Name { get; set; }
         public string Faculty { get; set; }
@@ -18,6 +19,7 @@ namespace DevicePortal.Data
 
         public bool CanSecure { get; set; }
         public bool CanApprove { get; set; }
+        public bool CanManage { get; set; }
         public bool CanAdmin { get; set; }
 
         public HashSet<SecurityCheck> SecurityChecks { get; set; }
