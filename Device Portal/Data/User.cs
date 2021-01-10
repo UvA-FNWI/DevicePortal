@@ -10,9 +10,11 @@ namespace DevicePortal.Data
     {
         [Key]
         public string UserName { get; set; }
+        public string Email { get; set; }
         public string Name { get; set; }
         public string Faculty { get; set; }
         public string Institute { get; set; }
+        public string Department { get; set; }
 
         public bool CanSecure { get; set; }
         public bool CanApprove { get; set; }

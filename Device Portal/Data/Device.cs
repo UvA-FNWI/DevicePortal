@@ -38,6 +38,16 @@ namespace DevicePortal.Data
         Unsecure,
     }
 
+    public enum OS_Type 
+    {
+        Android = 1 << 0,
+        iOS = 1 << 1,
+        Linux = 1 << 2,
+        MacOS = 1 << 3,
+        Windows = 1 << 4,
+        All = (1 << 5) - 1,
+    }   
+
     public class Device : IEntity
     {
         public int Id { get; set; }
@@ -45,8 +55,11 @@ namespace DevicePortal.Data
         public string Name { get; set; }
         public string DeviceId { get; set; }
         public string SerialNumber { get; set; }
-        [JsonPropertyName("os")]
-        public string OS { get; set; }
+        [JsonPropertyName("os_type")]
+        public OS_Type OS_Type { get; set; }
+        [JsonPropertyName("os_version")]
+        public string  OS_Version { get; set; }
+
         public DeviceType Type { get; set; }
         public DeviceStatus Status { get; set; }
         public DateTime StatusEffectiveDate { get; set; }

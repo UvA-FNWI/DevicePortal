@@ -26,74 +26,53 @@ namespace DevicePortal.Controllers
         [HttpPost]
         public IActionResult Import()
         {
-            if (Request.Form.Files.Count != 2)
+            if (Request.Form.Files.Count != 1)
             {
-                return BadRequest("Unexpected file count");
+                return BadRequest("Unexpected file count. Expected data file.");
             }
 
-            var monthlyReport = Request.Form.Files.FirstOrDefault(f => f.FileName.Contains("Maandrapportage"));
-            var secureSelfReport = Request.Form.Files.FirstOrDefault(f => !f.FileName.Contains("Maandrapportage"));
-            var monthlyReportParsed = CsvParser.Parse(monthlyReport);
-            var secureSelfReportParsed = CsvParser.Parse(secureSelfReport);
+            var deviceExportFile = Request.Form.Files[0];
+            var deviceExport = CsvParser.Parse(deviceExportFile);
 
-            int iFaculty = -1, iInstitute = -1, iUserName = -1, iUserFullName = -1, iDeviceName = -1, iDeviceType = -1, iLinkedTo = -1;
-            for (int i = 0; i < monthlyReportParsed.header.Count; ++i)
+            int iInstitute = -1, iUserName = -1, iUserEmail = -1, iBrand = -1, iBrandType = -1, iDeviceId = -1, iDeviceType = -1, iDeviceOS = -1, iSerial = -1;
+            for (int i = 0; i < deviceExport.header.Count; ++i)
             {
-                switch (monthlyReportParsed.header[i])
+                switch (deviceExport.header[i])
                 {
-                    case "Computer-nummer": iDeviceName = i; break;
-                    case "Faculteit": if (iFaculty == -1) { iFaculty = i; } break; // duplicate entry in sheet
-                    case "Gebruikersnaam/Kamer": iUserName = i; break;
-                    case "Persoon/Gebouw": iUserFullName = i; break;
-                    case "Soort": iDeviceType = i; break;
-                    case "Klantorganisatie": iInstitute = i; break;
-                    case "Gekoppeld aan": iLinkedTo = i; break;
+                    case "naam": iDeviceId = i; break;
+                    case "serienummer": iSerial = i; break;
+                    case "login_gebruiker": iUserName = i; break;
+                    case "email": iUserEmail = i; break;
+                    case "soort": iDeviceType = i; break;
+                    case "klantorganisatie": iInstitute = i; break;
+                    case "besturingssysteem": iDeviceOS = i; break;
+                    case "merk": iBrand = i; break;
+                    case "type": iBrandType = i; break;
                 }
             }
-            if (iFaculty == -1 || iInstitute == -1 || iUserName == -1 || iDeviceName == -1 || iDeviceType == -1 || iLinkedTo == -1)
+            if (iInstitute == -1 || iUserName == -1 || iDeviceId == -1 || iDeviceType == -1)
             {
                 return BadRequest("Invalid Maandrapportage file. Incorrect headers.");
             }
 
-            int iSerial = -1, iObjectId = -1;
-            for (int i = 0; i < secureSelfReportParsed.header.Count; ++i)
-            {
-                switch (secureSelfReportParsed.header[i])
-                {
-                    case "Object ID": iObjectId = i; break;                    
-                    case "Serienummer (Algemene gegevens)": iSerial = i; break;
-                }
-            }
-            if (iSerial == -1 || iObjectId == -1)
-            {
-                return BadRequest("Invalid Self Service file. Incorrect headers.");
-            }
-
-            Dictionary<string, string> serialMap = new Dictionary<string, string>();
-            foreach (var line in secureSelfReportParsed.lines) 
-            {
-                if (!string.IsNullOrEmpty(line[iSerial])) 
-                {
-                    serialMap.Add(line[iObjectId], line[iSerial]);
-                }
-            }
-
+            DateTime now = DateTime.Now;
+            string facultyPrefix = "UvA/FNWI";
             Dictionary<string, User> userMap = _context.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
             Dictionary<string, Device> deviceMap = _context.Devices.ToDictionary(d => d.DeviceId);
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
-            foreach (var line in monthlyReportParsed.lines)
+            foreach (var line in deviceExport.lines)
             {
-                if (line[iLinkedTo] != "Persoon") { continue; }
-
                 var device = new Device
-                {                   
-                    DeviceId = line[iDeviceName],
+                {
+                    Name = $"{line[iBrand]} {line[iBrandType]}".Trim(),
+                    DeviceId = line[iDeviceId],
                     UserName = line[iUserName],
-                    SerialNumber = serialMap.TryGetValue(line[iDeviceName], out string serial) ? serial : line[iDeviceName],
+                    SerialNumber = line[iSerial],
                     Origin = DeviceOrigin.DataExport,
-                    Status = DeviceStatus.Denied,
+                    Status = DeviceStatus.Unsecure,
+                    StatusEffectiveDate = now,
                 };
 
                 string deviceType = line[iDeviceType];
@@ -102,9 +81,15 @@ namespace DevicePortal.Controllers
                 else if (deviceType.StartsWith("Tablet")) { device.Type = DeviceType.Tablet; }
                 else if (deviceType.StartsWith("Mobiel")) { device.Type = DeviceType.Mobile; }
 
-                if (deviceType.EndsWith("Apple")) { device.OS = "macOS"; }
-                else if (deviceType.EndsWith("Windows")) { device.OS = "Windows"; }
-                else if (deviceType.EndsWith("Linux")) { device.OS = "Linux"; }
+                string deviceOs = line[iDeviceOS];
+                foreach (string prefix in osTypeMap.Keys) 
+                {
+                    if (deviceType.StartsWith(prefix)) 
+                    { 
+                        device.OS_Type = osTypeMap[prefix];
+                        device.OS_Version = deviceOs[prefix.Length..];
+                    }
+                }
 
                 if (!string.IsNullOrEmpty(device.UserName))
                 {
@@ -112,14 +97,14 @@ namespace DevicePortal.Controllers
                     {
                         var user = new User()
                         {
-                            Faculty = line[iFaculty]["UvA/".Length..],
-                            Institute = line[iInstitute].Length > line[iFaculty].Length ?
-                                line[iInstitute][(line[iFaculty].Length + 1)..] : // + 1 for /
-                                "", // Institute could equal Faculty
-                            Name = line[iUserFullName],
-                            UserName = device.UserName,
-                            CanApprove = false,
-                            CanSecure = false,
+                            UserName = device.UserName,                            
+                            Faculty = "FNWI",
+                            Institute =  line[iInstitute].Length > facultyPrefix.Length ?
+                                line[iInstitute][(facultyPrefix.Length + 1)..] : // + 1 for /
+                                "FNWI", // Institute could equal Faculty
+                            Department = instituteDepartmentMap.TryGetValue(line[iInstitute], out string dep) ?
+                                dep : "",                            
+                            Email = line[iUserEmail],                            
                         };
                         usersToAdd.Add(user);
                         userMap.Add(user.UserName, user);
@@ -128,7 +113,7 @@ namespace DevicePortal.Controllers
                     if (deviceMap.TryGetValue(device.DeviceId, out Device existing))
                     {
                         if (existing.UserName != device.UserName ||
-                            existing.SerialNumber != device.SerialNumber) 
+                            existing.SerialNumber != device.SerialNumber)
                         {
                             existing.UserName = device.UserName;
                             existing.SerialNumber = device.SerialNumber;
@@ -138,7 +123,7 @@ namespace DevicePortal.Controllers
                     else { devicesToAdd.Add(device); }
                 }
             }
-            if (devicesToUpdate.Any()) 
+            if (devicesToUpdate.Any())
             {
                 _context.Devices.UpdateRange(devicesToUpdate);
                 _context.SaveChanges();
@@ -151,21 +136,34 @@ namespace DevicePortal.Controllers
 
             // Bulk insert users
             var userTable = new System.Data.DataTable();
+            userTable.Columns.Add("UserName");
+            userTable.Columns.Add("Email");
+            userTable.Columns.Add("Name");
             userTable.Columns.Add("Faculty");
             userTable.Columns.Add("Institute");
-            userTable.Columns.Add("Name");
-            userTable.Columns.Add("UserName");
+            userTable.Columns.Add("Department");
             userTable.Columns.Add("CanSecure");
             userTable.Columns.Add("CanApprove");
             userTable.Columns.Add("CanAdmin");
             foreach (var user in usersToAdd)
             {
-                userTable.Rows.Add(user.Faculty, user.Institute, user.Name, user.UserName, user.CanSecure, user.CanApprove, user.CanAdmin);
+                userTable.Rows.Add(
+                    user.UserName, 
+                    user.Email,
+                    user.Name,
+                    user.Faculty, 
+                    user.Institute, 
+                    user.Department,
+                    user.CanSecure, 
+                    user.CanApprove, 
+                    user.CanAdmin);
             }
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Email", "Email"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Faculty", "Faculty"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Institute", "Institute"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Department", "Department"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanSecure", "CanSecure"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanApprove", "CanApprove"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanAdmin", "CanAdmin"));
@@ -175,25 +173,41 @@ namespace DevicePortal.Controllers
             // Bulk insert devices
             var deviceTable = new System.Data.DataTable();
             deviceTable.Columns.Add("UserName");
+            deviceTable.Columns.Add("Name");
             deviceTable.Columns.Add("DeviceId");
-            deviceTable.Columns.Add("Type", typeof(int));
-            deviceTable.Columns.Add("OS");
             deviceTable.Columns.Add("SerialNumber");
-            deviceTable.Columns.Add("Origin", typeof(int));
+            deviceTable.Columns.Add("OS_Type", typeof(int));
+            deviceTable.Columns.Add("OS_Version");
+            deviceTable.Columns.Add("Type", typeof(int));
             deviceTable.Columns.Add("Status", typeof(int));
+            deviceTable.Columns.Add("StatusEffectiveDate");
+            deviceTable.Columns.Add("Origin", typeof(int));
             foreach (var device in devicesToAdd)
             {
-                deviceTable.Rows.Add(device.UserName, device.DeviceId, device.Type, device.OS, device.Origin, device.Status);
+                deviceTable.Rows.Add(
+                    device.UserName, 
+                    device.Name,
+                    device.DeviceId, 
+                    device.SerialNumber, 
+                    device.OS_Type, 
+                    device.OS_Version,
+                    device.Type,
+                    device.Status,
+                    device.StatusEffectiveDate,
+                    device.Origin);
             }
 
             sqlBulk.ColumnMappings.Clear();
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("DeviceId", "DeviceId"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Type", "Type"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("OS", "OS"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("SerialNumber", "SerialNumber"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Origin", "Origin"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("OS_Type", "OS_Type"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("OS_Version", "OS_Version"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Type", "Type"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Status", "Status"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("StatusEffectiveDate", "StatusEffectiveDate"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Origin", "Origin"));
             sqlBulk.DestinationTableName = "dbo.Devices";
             sqlBulk.WriteToServer(deviceTable);
             sqlBulk.Close();
@@ -201,6 +215,52 @@ namespace DevicePortal.Controllers
 
             return Ok();
         }
+
+        private readonly Dictionary<string, OS_Type> osTypeMap = new Dictionary<string, OS_Type>()
+        {
+            {  "Android", OS_Type.Android },
+            { "iOS", OS_Type.iOS },
+            { "macOS", OS_Type.MacOS },
+            { "OS X", OS_Type.MacOS },
+            { "Win 10 ", OS_Type.Windows },
+            { "Win 7", OS_Type.Windows },
+            { "Windows", OS_Type.Windows },
+        };
+        private readonly Dictionary<string, string> instituteDepartmentMap = new Dictionary<string, string>()
+        {
+            { "UvA/FNWI/Secretariaat FNWI", "FB" },
+            { "UvA/FNWI/ICT-voorzieningen FNWI", "FB" },
+            { "UvA/FNWI/Inst. voor Interdisciplinaire Studies", "IIS" },
+            { "UvA/FNWI/College of Life Sciences", "CoLS" },
+            { "UvA/FNWI/IBED", "IBED" },
+            { "UvA/FNWI/Personeelszaken FNWI", "FB" },
+            { "UvA/FNWI/Projectmanagement FNWI", "FB" },
+            { "UvA/FNWI/KDV", "KDV" },
+            { "UvA/FNWI/Staf overig FNWI", "FB" },
+            { "UvA/FNWI/ILLC", "ILLC" },
+            { "UvA/FNWI/IoP", "IoP" },
+            { "UvA/FNWI/Education Service Centre", "ESC" },
+            { "UvA/FNWI/Projectenbureau FNWI", "FB" },
+            { "UvA/FNWI/WZI", "WZI" },
+            { "UvA/FNWI/API", "API" },
+            { "UvA/FNWI/College of Sciences", "CoSS" },
+            { "UvA/FNWI/Voorlichting & Communicatie FNWI", "FB" },
+            { "UvA/FNWI/Bestuurszaken FNWI", "FB" },
+            { "UvA/FNWI/Technologie Centrum FNWI", "FB" },
+            { "UvA/FNWI/HEF", "HEF" },
+            { "UvA/FNWI", "FB" },
+            { "UvA/FNWI/Graduate School of Life and Earth Sciences", "GSLES" },
+            { "UvA/FNWI/Marktontwikkeling FNWI", "FB" },
+            { "UvA/FNWI/Planning & Control FNWI", "FB" },
+            { "UvA/FNWI/Graduate School of Informatics", "GSI" },
+            { "UvA/FNWI/Gebouwen, Arbo & Milieu FNWI", "FB" },
+            { "UvA/FNWI/SILS", "SILS" },
+            { "UvA/FNWI/College of Informatics", "CoI" },
+            { "UvA/FNWI/HIMS", "HIMS" },
+            { "UvA/FNWI/IVI", "IVI" },
+            { "UvA/FNWI/Directie FNWI", "FB" },
+            { "UvA/FNWI/ITF", "ITFA" },
+        };
     }
 
     public static class CsvParser
