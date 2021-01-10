@@ -1,4 +1,5 @@
 ﻿using DevicePortal.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -23,7 +24,7 @@ namespace DevicePortal.Controllers
             _context = portalContext;
         }
 
-        [HttpPost]
+        [HttpPost, Authorize(Policy = AppPolicies.AdminOnly)]
         public IActionResult Import()
         {
             if (Request.Form.Files.Count != 1)

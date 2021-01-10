@@ -8,14 +8,24 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevicePortal.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DevicePortal.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
+    [ApiController, Authorize(Policy = AppPolicies.AdminOnly)]
     public class IntuneController : ControllerBase
     {
         public static ClientCredentialProvider authProvider;
+
+        private readonly PortalContext _context;
+
+        public IntuneController(PortalContext context) 
+        {
+            _context = context;
+        }
 
         [HttpGet("me")]
         public async Task<ActionResult> GetMe() 
@@ -59,6 +69,35 @@ namespace DevicePortal.Controllers
             var graphClient = GetGraphClient();
             var devices = await graphClient.Users[userId].ManagedDevices.Request().GetAsync();
             return Ok(devices);
+        }            
+
+        [HttpGet("users/sync")]
+        public async Task<ActionResult> GetUsers()
+        {
+            var graphClient = GetGraphClient();
+            var users = await _context.Users.ToListAsync();
+            foreach (var user in users) 
+            {
+                if (string.IsNullOrEmpty(user.Email)) { continue; }
+
+                var info = await graphClient.Users.Request()
+                    .Filter($"userPrincipalName eq '{user.Email}'")
+                    .Select("displayName, id")                
+                    .GetAsync();
+
+                if (info.Any()) 
+                {
+                    user.ObjectId = info[0].Id;
+                    user.Name = info[0].DisplayName;
+
+                    var entry = _context.Entry(user);
+                    entry.Property(u => u.ObjectId).IsModified = true;
+                    entry.Property(u => u.Name).IsModified = true;
+                }
+            }
+            await _context.SaveChangesAsync();
+
+            return Ok();
         }
 
         private static GraphServiceClient GetGraphClient() 
