@@ -68,17 +68,25 @@ function page_security_check(parameters: string) {
                 })).always(function () {
                     if (state.device && state.security_check) { state.security_check.deviceId = state.device.id; }
 
-                    state.security_check.questions = state.questions.map(q => {
-                        return {
-                            answer: undefined,
-                            explanation: '',
-                            question: q.text,
-                            recommendations: q.recommendations,
-                            mask: q.mask,
-                        };
-                    });
-                    ks.
-                        refresh();
+                    // Recommendations are not save in submitted questions
+                    if (state.security_check.id) {
+                        if (state.security_check.questions.length === state.questions.length) {
+                            for (let i = 0; i < state.questions.length; ++i) {
+                                state.security_check.questions[i].recommendations = state.questions[i].recommendations;
+                            }
+                        }
+                    } else {
+                        state.security_check.questions = state.questions.map(q => {
+                            return {
+                                answer: undefined,
+                                explanation: '',
+                                question: q.text,
+                                recommendations: q.recommendations,
+                                mask: q.mask,
+                            };
+                        });
+                    }                    
+                    ks.refresh();
                 });
 
             return; // wait for get device & security check
