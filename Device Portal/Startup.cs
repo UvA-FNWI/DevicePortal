@@ -118,6 +118,9 @@ namespace DevicePortal
                 options.AddPolicy(AppPolicies.ApproverOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanApprove));
                 options.AddPolicy(AppPolicies.AuthorizedOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanSecure));
                 options.AddPolicy(AppPolicies.ManagerOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanManage));
+                options.AddPolicy(AppPolicies.SecurityCheckAccess,
+                    policy => policy.RequireAssertion(context => context.User.HasClaim(AppClaimTypes.Permission, AppClaims.CanSecure) ||
+                                                                 context.User.HasClaim(AppClaimTypes.Permission, AppClaims.CanApprove)));
             });
 
             string clientId = Configuration["AzureAD:ClientID"];
@@ -212,6 +215,8 @@ namespace DevicePortal
         public const string ApproverOnly = "ApproverOnly";
         public const string AuthorizedOnly = "AuthorizedOnly";
         public const string ManagerOnly = "ManagerOnly";
+
+        public const string SecurityCheckAccess = "SecurityCheckAccess";
     }
     public static class AppClaims
     {

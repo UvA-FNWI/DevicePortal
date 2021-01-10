@@ -52,7 +52,7 @@ function page_requests(parameters: string) {
         ks.navigate_to('Requests', pages[Page.Requests]);
     });
     if (state.device) {
-        ks.text('Firstname Lastname', 'mt-n3 mb-3 text-muted');
+        ks.text(state.security_check.userDisplayName, 'mt-n3 mb-3 text-muted');
     }
 
     if (!state.device) {

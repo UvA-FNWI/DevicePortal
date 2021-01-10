@@ -1,6 +1,7 @@
 ﻿class SecurityCheck {
     id: number;
     userName: string;
+    userDisplayName: string;
     deviceId: number;
     device: Device;
     submissionDate: string;

@@ -64,25 +64,43 @@ namespace DevicePortal.Controllers
             return await _context.SecurityChecks.Where(c => c.Status == DeviceStatus.Submitted).CountAsync();
         }
 
-        // TODO Policy
+        [Authorize(Policy = AppPolicies.SecurityCheckAccess)]
         // GET: api/SecurityChecks/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<SecurityCheck>> GetSecurityCheck(int id)
+        public async Task<ActionResult> GetSecurityCheck(int id)
         {
             var securityCheck = await _context.SecurityChecks
-                .Include(c => c.Questions)
-                .Include(d => d.Device)
-                .FirstOrDefaultAsync(c => c.Id == id);
+                .Where(c => c.Id == id)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.UserName,
+                    UserDisplayName = c.User.Name,
+                    c.DeviceId,
+                    c.Device,
+                    c.SubmissionDate,
+                    c.Status,
+                    c.StatusEffectiveDate,
+                    c.Questions,
+                }).FirstOrDefaultAsync();
+
+            string userId = User.GetUserName();
+            if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanApprove) &&
+                User.HasClaim(AppClaimTypes.Permission, AppClaims.CanSecure) &&
+                userId != securityCheck.UserName) 
+            {
+                return Forbid();
+            }
 
             if (securityCheck == null)
             {
                 return NotFound();
             }
 
-            return securityCheck;
+            return Ok(securityCheck);
         }
 
-        // TODO Policy
+        [Authorize(Policy = AppPolicies.SecurityCheckAccess)]
         // GET: api/SecurityCheck/Device/5
         [HttpGet("Device/{id}")]
         public async Task<ActionResult<SecurityCheck>> GetSecurityCheckDevice(int id)
@@ -100,9 +118,9 @@ namespace DevicePortal.Controllers
             return securityCheck;
         }
 
+        [Authorize(Policy = AppPolicies.AuthorizedOnly)]
         // PUT: api/SecurityChecks/5
         [HttpPut("{id}")]
-        [Authorize(Policy = AppPolicies.AuthorizedOnly)]
         public async Task<IActionResult> PutSecurityCheck(int id, SecurityCheck securityCheck)
         {
             if (id != securityCheck.Id)
@@ -140,9 +158,9 @@ namespace DevicePortal.Controllers
             return NoContent();
         }
 
+        [Authorize(Policy = AppPolicies.ApproverOnly)]
         // PUT: api/SecurityChecks/5/Status
         [HttpPut("{id}/Status")]
-        [Authorize(Policy = AppPolicies.ApproverOnly)]
         public async Task<IActionResult> PutSecurityCheckStatus(int id, SecurityCheck securityCheck)
         {
             if (id != securityCheck.Id)
@@ -174,6 +192,7 @@ namespace DevicePortal.Controllers
             return NoContent();
         }
 
+        [Authorize(Policy = AppPolicies.AuthorizedOnly)]
         // POST: api/SecurityChecks
         [HttpPost]
         public async Task<ActionResult<SecurityCheck>> PostSecurityCheck(SecurityCheck securityCheck)
