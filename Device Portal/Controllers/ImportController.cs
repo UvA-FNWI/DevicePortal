@@ -85,7 +85,7 @@ namespace DevicePortal.Controllers
                 string deviceOs = line[iDeviceOS];
                 foreach (string prefix in osTypeMap.Keys) 
                 {
-                    if (deviceType.StartsWith(prefix)) 
+                    if (deviceOs.StartsWith(prefix)) 
                     { 
                         device.OS_Type = osTypeMap[prefix];
                         device.OS_Version = deviceOs[prefix.Length..];
@@ -219,7 +219,7 @@ namespace DevicePortal.Controllers
 
         private readonly Dictionary<string, OS_Type> osTypeMap = new Dictionary<string, OS_Type>()
         {
-            {  "Android", OS_Type.Android },
+            { "Android", OS_Type.Android },
             { "iOS", OS_Type.iOS },
             { "macOS", OS_Type.MacOS },
             { "OS X", OS_Type.MacOS },
