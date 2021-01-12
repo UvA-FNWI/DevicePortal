@@ -38,7 +38,7 @@ class ActiveUser {
         for (let claim of claims) {
             switch (claim.type) {
                 case 'uids': this.user_name = claim.value; break;
-                case 'give_name': this.first_name = claim.value; break;
+                case 'given_name': this.first_name = claim.value; break;
                 case 'family_name': this.last_name = claim.value; break;
                 case 'https://secure.datanose.nl/claims/permission':
                     if (claim.value == "CanSecure") { this.can_secure = true; }
@@ -170,13 +170,16 @@ ks.run(function () {
                 }
             });
 
-            ks.nav_item('Logout', false, '/logout');
-            ks.is_item_clicked(function () {
-                GET(API.Identity('exit')).always(function () {
-                    window.location.reload();
-                    // window.location.replace("https://login.uva.nl/adfs/ls/?wa=wsignout1.0");
+            ks.text(user.first_name.substr(0, 1) + '. ' + user.last_name, 'ml-auto');
+            ks.unordered_list('right', 'navbar-nav', function () {
+                ks.nav_item('Logout', false, '/logout');
+                ks.is_item_clicked(function () {
+                    GET(API.Identity('exit')).always(function () {
+                        window.location.reload();
+                        // window.location.replace("https://login.uva.nl/adfs/ls/?wa=wsignout1.0");
+                    });
+                    return false;
                 });
-                return false;
             });
         });
     });
