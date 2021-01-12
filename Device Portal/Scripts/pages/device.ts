@@ -34,7 +34,7 @@ class Device {
     serialNumber: string;
     type: DeviceType;
     os_type: OSType;
-    os_version: string;
+    os_version: string = '';
     status = DeviceStatus.Unsecure;
 }
 enum DeviceStatus {
@@ -57,7 +57,6 @@ statusColors[DeviceStatus.Unsecure] = 'warning';
 function page_device(parameters: string) {
     let state = ks.local_persist('page_device', {
         selected: -1,
-        os_type: <OSType>0,
         device: <Device>null,
         options: [
             { type: DeviceType.Mobile, icon: 'fa fa-mobile' },
@@ -84,7 +83,7 @@ function page_device(parameters: string) {
             GET_ONCE('device', API.Devices(deviceId)).done((d: Device) => {
                 state.update = true;
                 state.device = d;
-                state.os_type = d.os_type;
+                if (state.device.os_version == null) { state.device.os_version = ''; }
                 let mask = d.type;
                 state.selected = -1;
                 while (mask) {
@@ -138,20 +137,26 @@ function page_device(parameters: string) {
                 });
 
                 ks.text('Operating system', 'mt-2 mb-1');
-                ks.set_next_input_validation(!!state.os_type, '', 'This is a required field.');
+                ks.set_next_input_validation(!!state.device.os_type, '', 'This is a required field.');
                 ks.combo('Operating system', function () {
-                    ks.selectable('##none', !state.os_type);
+                    ks.selectable('##none', !state.device.os_type);
                     ks.is_item_clicked(function () {
-                        state.os_type = 0;
+                        state.device.os_type = 0;
                     });
                     for (let i = 0; i < osTypeCount; ++i) {
                         let type: OSType = 1 << i;
-                        ks.selectable(osNames[type], state.os_type === type);
+                        ks.selectable(osNames[type], state.device.os_type === type);
                         ks.is_item_clicked(function () {
-                            state.os_type = type;
+                            state.device.os_type = type;
                         });
                     }
                 }).disabled = state.update && !!state.device.os_type;
+
+                ks.text('Version', 'mt-2 mb-1');
+                ks.set_next_input_validation(!!state.device.os_version.length, '', 'This is a required field.');
+                ks.input_text('version', state.device.os_version, 'Version', function (val) {
+                    state.device.os_version = val;
+                });
                 
                 ks.group('right', 'd-flex', function () {
                     ks.set_next_item_class_name('ml-auto');
@@ -161,7 +166,6 @@ function page_device(parameters: string) {
                 if (ks.current_form_submitted() && state.selected >= 0 && !this.getElementsByClassName('is-invalid').length) {
                     ks.cancel_current_form_submission();
                     state.device.type = state.options[state.selected].type;
-                    state.device.os_type = state.os_type;
 
                     if (state.update) {
                         PUT_JSON(API.Devices(state.device.id), state.device).then(() => {
