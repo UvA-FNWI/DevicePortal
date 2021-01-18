@@ -28,7 +28,14 @@ function page_faculty(parameters: string) {
             ks.column(i.toString(), '12 col-md-6 px-2', function () {
                 ks.group(inst.name, 'card mb-3', function () {
                     ks.group('body', 'card-body', function () {
-                        ks.h5(inst.name, 'card-title');
+                        let url = pages[Page.Institute] + '/' + inst.name;
+                        ks.anchor(inst.name, url, function () {
+                            ks.h5(inst.name, 'card-title');
+                        });
+                        ks.is_item_clicked(function (_, ev) {
+                            ks.navigate_to(inst.name, url);
+                            ev.stopPropagation();
+                        });
 
                         ks.group('devices', 'mb-2', function () {
                             ks.icon('fa fa-microchip mr-1 d-inline-block').style.width = '16px';

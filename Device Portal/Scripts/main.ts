@@ -93,7 +93,7 @@ ks.run(function () {
     for (let i = 0; i < pages.length; ++i) {
         if (pathname.indexOf(pages[i]) === 0) {
             iPage = i;
-            parameters = window.location.pathname.substring(pages[i].length + 1);
+            parameters = decodeURIComponent(window.location.pathname.substring(pages[i].length + 1));
             break;
         }
     }
