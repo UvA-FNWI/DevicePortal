@@ -91,6 +91,10 @@ namespace DevicePortal.Controllers
                         device.OS_Version = deviceOs[prefix.Length..];
                     }
                 }
+                if (device.OS_Type == 0 && device.Type == DeviceType.Tablet) 
+                {
+                    device.OS_Type = line[iBrand].Contains("Apple") ? OS_Type.iOS : OS_Type.Android;
+                }
 
                 if (!string.IsNullOrEmpty(device.UserName))
                 {
