@@ -131,7 +131,7 @@ namespace DevicePortal
                 .WithTenantId(tentantId)
                 .WithClientSecret(clientSecret)
                 .Build();
-            IntuneController.authProvider = new ClientCredentialProvider(confidentialClientApplication);
+            IntuneService.authProvider = new ClientCredentialProvider(confidentialClientApplication);
 
             services.AddDbContext<PortalContext>(options =>
             {
@@ -142,6 +142,7 @@ namespace DevicePortal
             services.AddControllers();
             services.AddRazorPages();
             services.AddHttpClient();
+            services.AddScoped<IntuneService>();
             services.AddScoped<DepartmentService>();
         }
 

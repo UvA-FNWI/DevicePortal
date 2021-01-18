@@ -14,10 +14,12 @@ namespace DevicePortal.Controllers
     public class DevicesController : ControllerBase
     {
         private readonly PortalContext _context;
+        private readonly IntuneService _intuneService;
 
-        public DevicesController(PortalContext context)
+        public DevicesController(PortalContext context, IntuneService intuneService)
         {
             _context = context;
+            _intuneService = intuneService;
         }
 
         // GET: api/Devices
@@ -39,8 +41,12 @@ namespace DevicePortal.Controllers
         public async Task<ActionResult<IEnumerable<Device>>> GetMyDevices()
         {
             string userId = User.GetUserName();
-            if (string.IsNullOrEmpty(userId)) { return BadRequest("UserId not availaable"); }
+            if (string.IsNullOrEmpty(userId)) { return BadRequest("UserId not available"); }
 
+            var user = _context.Users.Find(userId);
+            if (user == null) { return NotFound(); }
+
+            await _intuneService.SyncManagedDevicecUser(user.UserName, user.ObjectId);
             return await _context.Devices.Where(d => d.UserName == userId).ToListAsync();
         }
 

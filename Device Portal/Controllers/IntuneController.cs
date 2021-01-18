@@ -18,91 +18,55 @@ namespace DevicePortal.Controllers
     [ApiController, Authorize(Policy = AppPolicies.AdminOnly)]
     public class IntuneController : ControllerBase
     {
-        public static ClientCredentialProvider authProvider;
-
+        private readonly IntuneService _intuneService;
         private readonly PortalContext _context;
 
-        public IntuneController(PortalContext context) 
+        public IntuneController(PortalContext context, IntuneService intuneService)
         {
             _context = context;
-        }
-
-        [HttpGet("me")]
-        public async Task<ActionResult> GetMe() 
-        {
-            var graphClient = GetGraphClient();
-            var me = await graphClient.Me.Request().GetAsync();
-            return Ok(me);
-        }
-
-        // https://docs.microsoft.com/en-us/graph/api/device-list?view=graph-rest-1.0&tabs=http
-        [HttpGet("devices")]
-        public async Task<ActionResult> GetDevices()
-        {
-            var graphClient = GetGraphClient();
-            var devices = await graphClient.Devices.Request().GetAsync();
-            return Ok(devices);
-        }
-
-        // https://docs.microsoft.com/en-us/graph/api/resources/intune-devices-manageddeviceoverview?view=graph-rest-1.0
-        [HttpGet("overview")]
-        public async Task<ActionResult> GetOverview()
-        {
-            var graphClient = GetGraphClient();
-            var devices = await graphClient.DeviceManagement.ManagedDeviceOverview.Request().GetAsync();
-            return Ok(devices);
+            _intuneService = intuneService;
         }
 
         // https://docs.microsoft.com/en-us/graph/api/intune-devices-manageddevice-list?view=graph-rest-1.0
         [HttpGet("managedDevices")]
-        public async Task<ActionResult> GetManagedDevices() 
+        public async Task<ActionResult> GetManagedDevices()
         {
-            var graphClient = GetGraphClient();
-            var devices = await graphClient.DeviceManagement.ManagedDevices.Request().GetAsync();
-            return Ok(devices);
+            return Ok(await _intuneService.GetManagedDevices());
         }
 
         // https://docs.microsoft.com/en-us/graph/api/intune-devices-manageddevice-list?view=graph-rest-1.0
         [HttpGet("managedDevices/{userId}")]
         public async Task<ActionResult> GetManagedDevices(string userId)
         {
-            var graphClient = GetGraphClient();
-            var devices = await graphClient.Users[userId].ManagedDevices.Request().GetAsync();
-            return Ok(devices);
-        }            
-
-        [HttpGet("users/sync")]
-        public async Task<ActionResult> GetUsers()
-        {
-            var graphClient = GetGraphClient();
-            var users = await _context.Users.ToListAsync();
-            foreach (var user in users) 
+            try
             {
-                if (string.IsNullOrEmpty(user.Email)) { continue; }
-
-                var info = await graphClient.Users.Request()
-                    .Filter($"userPrincipalName eq '{user.Email}'")
-                    .Select("displayName, id")                
-                    .GetAsync();
-
-                if (info.Any()) 
-                {
-                    user.ObjectId = info[0].Id;
-                    user.Name = info[0].DisplayName;
-
-                    var entry = _context.Entry(user);
-                    entry.Property(u => u.ObjectId).IsModified = true;
-                    entry.Property(u => u.Name).IsModified = true;
-                }
+                return Ok(await _intuneService.GetManagedDevicesUser(userId));
             }
-            await _context.SaveChangesAsync();
+            catch { return NotFound(); }
+        }
 
+        [HttpGet("managedDevices/{userName}/sync")]
+        public async Task<ActionResult> GetManagedDevicesSyncUser(string userName)
+        {
+            var user = await _context.Users.FindAsync(userName);
+            if (user == null) { return NotFound(); }
+
+            await _intuneService.SyncManagedDevicecUser(user.UserName, user.ObjectId);
             return Ok();
         }
 
-        private static GraphServiceClient GetGraphClient() 
+        [HttpGet("managedDevices/sync")]
+        public async Task<ActionResult> GetManagedDevicesSync()
         {
-            return new GraphServiceClient(authProvider);
+            await _intuneService.SyncManagedDevices();
+            return Ok();
+        }
+
+        [HttpGet("users/sync")]
+        public async Task<ActionResult> GetUsersSync()
+        {
+            await _intuneService.SyncUsers();
+            return Ok();
         }
     }
 }

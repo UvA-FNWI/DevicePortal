@@ -315,7 +315,7 @@ function device_row(d: Device, can_secure: boolean, edit_device: boolean) {
             let i = ks.icon(icon);
             i.style.width = '18px';
             i.style.fontSize = iconSize;
-            ks.text(' ' + deviceNames[d.type], 'd-inline ml-1');
+            ks.text(' ' + (deviceNames[d.type] || ""), 'd-inline ml-1');
         });
         ks.table_cell(osNames[d.os_type]);
         ks.table_cell(function () {
@@ -324,7 +324,7 @@ function device_row(d: Device, can_secure: boolean, edit_device: boolean) {
 
         if (can_secure) {
             ks.table_cell(function () {
-                if (d.status != DeviceStatus.Approved) {
+                if (d.status != DeviceStatus.Approved && (d.deviceOrigin === DeviceOrigin.DataExport || d.deviceOrigin === DeviceOrigin.User)) {
                     ks.set_next_item_class_name('text-nowrap');
                     ks.anchor('Security check', pages[Page.SecurityCheck] + '/' + d.id);
                     ks.is_item_clicked(function () {

@@ -33,6 +33,7 @@ class Device {
     nameLowerCase: string; // Note: used on institue page for performance
     deviceId: string;
     deviceIdLowerCase: string;  // Note: used on institue page for performance
+    deviceOrigin: DeviceOrigin;
     serialNumber: string;
     serialNumberLowerCase: string;   // Note: used on institue page for performance
     type: DeviceType;
@@ -40,6 +41,15 @@ class Device {
     os_version: string = '';
     status = DeviceStatus.Unsecure;
 }
+enum DeviceOrigin {
+    DataExport,
+    Intune,
+    User,
+}
+let originNames = {};
+originNames[DeviceOrigin.DataExport] = "CMDB";
+originNames[DeviceOrigin.Intune] = "Intune";
+originNames[DeviceOrigin.User] = "User";
 enum DeviceStatus {
     Approved,
     Rejected,
