@@ -74,7 +74,7 @@ namespace DevicePortal.Controllers
                 return BadRequest();
             }
 
-            _context.UpdateProperties(device, d => d.Name, d => d.OS_Version);
+            _context.UpdateProperties(device, d => d.Name, d=> d.OS_Type, d => d.OS_Version);
             
             try
             {
