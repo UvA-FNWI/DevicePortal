@@ -60,6 +60,7 @@ namespace DevicePortal.Controllers
             string facultyPrefix = "UvA/FNWI";
             Dictionary<string, User> userMap = _context.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
+            List<User> usersToUpdate = new List<User>();
             Dictionary<string, Device> deviceMap = _context.Devices.ToDictionary(d => d.DeviceId);
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
@@ -98,18 +99,26 @@ namespace DevicePortal.Controllers
 
                 if (!string.IsNullOrEmpty(device.UserName))
                 {
-                    if (!userMap.ContainsKey(device.UserName))
+                    if (userMap.TryGetValue(device.UserName, out var user))
                     {
-                        var user = new User()
+                        if (user.Email != line[iUserEmail]) 
                         {
-                            UserName = device.UserName,                            
+                            user.Email = line[iUserEmail];
+                            usersToUpdate.Add(user);
+                        }
+                    }
+                    else
+                    {
+                        user = new User()
+                        {
+                            UserName = device.UserName,
                             Faculty = "FNWI",
-                            Institute =  line[iInstitute].Length > facultyPrefix.Length ?
+                            Institute = line[iInstitute].Length > facultyPrefix.Length ?
                                 line[iInstitute][(facultyPrefix.Length + 1)..] : // + 1 for /
                                 "FNWI", // Institute could equal Faculty
                             Department = instituteDepartmentMap.TryGetValue(line[iInstitute], out string dep) ?
-                                dep : "",                            
-                            Email = line[iUserEmail],                            
+                                dep : "",
+                            Email = line[iUserEmail],
                         };
                         usersToAdd.Add(user);
                         userMap.Add(user.UserName, user);
@@ -127,6 +136,11 @@ namespace DevicePortal.Controllers
                     }
                     else { devicesToAdd.Add(device); }
                 }
+            }
+            if (usersToUpdate.Any()) 
+            {
+                _context.Users.UpdateRange(usersToUpdate);
+                _context.SaveChanges();
             }
             if (devicesToUpdate.Any())
             {
