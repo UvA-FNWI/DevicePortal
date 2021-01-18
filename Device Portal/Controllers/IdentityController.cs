@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace DevicePortal.Controllers
@@ -44,6 +45,20 @@ namespace DevicePortal.Controllers
         public async Task<IActionResult> Exit()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return Ok();
+        }
+
+        [HttpGet("impersonate/{userId}"), Authorize(AppPolicies.AdminOnly)]
+        public ActionResult Impersonate(string userId) 
+        {
+            CookieOptions option = new CookieOptions()
+            {
+                Secure = true,
+                HttpOnly = true,
+                Expires = DateTime.Now.AddMinutes(15)
+            };            
+            Response.Cookies.Append("DevicePortal_Impersonate", userId, option);
+
             return Ok();
         }
     }

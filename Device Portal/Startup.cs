@@ -139,6 +139,7 @@ namespace DevicePortal
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"), so => so.EnableRetryOnFailure());
             });
 
+            services.AddHttpContextAccessor();
             services.AddControllers();
             services.AddRazorPages();
             services.AddHttpClient();
@@ -178,12 +179,12 @@ namespace DevicePortal
         class ClaimsTransformer : IClaimsTransformation
         {
             private readonly PortalContext _context;
-            private readonly DepartmentService _departmentService;
+            private readonly IHttpContextAccessor _httpContext;
 
-            public ClaimsTransformer(PortalContext context, DepartmentService departmentService) 
+            public ClaimsTransformer(PortalContext context, IHttpContextAccessor httpContext) 
             {
                 _context = context;
-                _departmentService = departmentService;
+                _httpContext = httpContext;
             }
 
             public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal) 
@@ -199,8 +200,42 @@ namespace DevicePortal
                         u.CanSecure,
                     })
                     .SingleAsync();
-                                 
+
                 var identity = (ClaimsIdentity)principal.Identity;                
+                if (user.CanAdmin) 
+                {
+                    string impersonationId = _httpContext.HttpContext.Request.Cookies["DevicePortal_Impersonate"];
+                    if (!string.IsNullOrEmpty(impersonationId)) 
+                    {
+                        var userImpersonate = await _context.Users
+                            .Where(u => u.UserName == userId)
+                            .Select(u => new
+                            {                            
+                                u.CanAdmin,
+                                u.CanApprove,
+                                u.CanManage,
+                                u.CanSecure,
+                            })
+                            .FirstOrDefaultAsync();
+                        if (userImpersonate != null) 
+                        {
+                            user = userImpersonate;
+
+                            var claim = identity.Claims.FirstOrDefault(c => c.Type == "uids");
+                            identity.RemoveClaim(claim);
+                            identity.AddClaim(new Claim(claim.Type, impersonationId));
+
+                            claim = identity.Claims.FirstOrDefault(c => c.Type == "given_name");
+                            identity.RemoveClaim(claim);
+                            identity.AddClaim(new Claim(claim.Type, impersonationId));
+
+                            claim = identity.Claims.FirstOrDefault(c => c.Type == "family_name");
+                            identity.RemoveClaim(claim);
+                            identity.AddClaim(new Claim(claim.Type, ""));
+                        }
+                    }
+                }
+                
                 if (user.CanSecure || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanSecure)); }
                 if (user.CanApprove || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanApprove)); }
                 if (user.CanManage || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanManage)); }
