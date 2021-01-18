@@ -324,7 +324,7 @@ function device_row(d: Device, can_secure: boolean, edit_device: boolean) {
 
         if (can_secure) {
             ks.table_cell(function () {
-                if (d.status != DeviceStatus.Approved && (d.deviceOrigin === DeviceOrigin.DataExport || d.deviceOrigin === DeviceOrigin.User)) {
+                if (d.status != DeviceStatus.Approved && (d.origin === DeviceOrigin.DataExport || d.origin === DeviceOrigin.User)) {
                     ks.set_next_item_class_name('text-nowrap');
                     ks.anchor('Security check', pages[Page.SecurityCheck] + '/' + d.id);
                     ks.is_item_clicked(function () {

@@ -33,7 +33,7 @@ class Device {
     nameLowerCase: string; // Note: used on institue page for performance
     deviceId: string;
     deviceIdLowerCase: string;  // Note: used on institue page for performance
-    deviceOrigin: DeviceOrigin;
+    origin: DeviceOrigin;
     serialNumber: string;
     serialNumberLowerCase: string;   // Note: used on institue page for performance
     type: DeviceType;
