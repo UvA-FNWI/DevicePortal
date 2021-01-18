@@ -229,7 +229,11 @@ function page_users(parameters: string) {
                 ks.set_next_item_class_name('bg-white border');
                 ks.table('devices', function () {
                     device_table_head(false, false);
-                    device_table_body(state.devices, false, false);                    
+                    ks.table_body(function () {
+                        for (let i = 0; i < state.devices.length; ++i) {
+                            device_row(state.devices[i], false, false);
+                        }
+                    });
                 });
             });
         });

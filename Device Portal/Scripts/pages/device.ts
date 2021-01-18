@@ -30,8 +30,11 @@ let osTypeCount = Object.keys(osNames).length;
 class Device {
     id: number;
     name = '';
+    nameLowerCase: string; // Note: used on institue page for performance
     deviceId: string;
+    deviceIdLowerCase: string;  // Note: used on institue page for performance
     serialNumber: string;
+    serialNumberLowerCase: string;   // Note: used on institue page for performance
     type: DeviceType;
     os_type: OSType;
     os_version: string = '';

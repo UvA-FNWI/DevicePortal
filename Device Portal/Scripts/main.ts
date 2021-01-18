@@ -6,6 +6,7 @@ enum Page {
     SecurityCheck,
     Users,
     Faculty,
+    Institute,
     Requests,
     Admin,
     Home, // Make sure this is last since it's pattern matches all paths
@@ -16,6 +17,7 @@ let pages = [
     '/securitycheck',
     '/users',
     '/faculty',
+    '/institute',
     '/requests',
     '/admin',
     '/',
@@ -61,6 +63,7 @@ class ActiveUser {
 
         // Admin
         this.page_access[Page.Faculty] = this.can_admin;
+        this.page_access[Page.Institute] = this.can_admin;
         this.page_access[Page.Admin] = this.can_admin;
     }
 }
@@ -90,7 +93,7 @@ ks.run(function () {
     for (let i = 0; i < pages.length; ++i) {
         if (pathname.indexOf(pages[i]) === 0) {
             iPage = i;
-            parameters = pathname.substring(pages[i].length + 1);
+            parameters = window.location.pathname.substring(pages[i].length + 1);
             break;
         }
     }
@@ -187,25 +190,28 @@ ks.run(function () {
     ks.group(pages[iPage], 'container my-3', function () {
         switch (iPage) {
             case Page.Device:
-                page_device(parameters);
+                page_device.call(this, parameters);
                 break;
             case Page.SecurityCheck:
-                page_security_check(parameters);
+                page_security_check.call(this, parameters);
                 break;
             case Page.Users:
-                page_users(parameters);
+                page_users.call(this, parameters);
                 break;
             case Page.Faculty:
-                page_faculty(parameters);
+                page_faculty.call(this, parameters);
+                break;
+            case Page.Institute:
+                page_institute.call(this, parameters);
                 break;
             case Page.Requests:
-                page_requests(parameters);
+                page_requests.call(this, parameters);
                 break;
             case Page.Admin:
-                page_admin();
+                page_admin.call(this);
                 break;
             default:
-                page_home();
+                page_home.call(this);
                 break;
         }
     });
@@ -233,7 +239,11 @@ function page_home() {
             ks.table('devices', function () {
                 const edit_device = true;
                 device_table_head(user.can_secure, edit_device);
-                device_table_body(state.devices, user.can_secure, edit_device);                
+                ks.table_body(function () {
+                    for (let i = 0; i < state.devices.length; ++i) {
+                        device_row(state.devices[i], user.can_secure, edit_device);
+                    }
+                });
             });
 
             ks.group('right', 'd-flex', function () {
@@ -263,7 +273,7 @@ function device_table_head(can_secure: boolean, edit_device: boolean) {
     ks.table_head(function () {
         ks.table_row(function () {
             ks.table_cell('Name');
-            ks.table_cell('DeviceId');
+            ks.table_cell('Device ID');
             ks.table_cell('Serial number');
             ks.table_cell('Type');
             ks.table_cell('OS');
@@ -273,69 +283,65 @@ function device_table_head(can_secure: boolean, edit_device: boolean) {
         });
     });
 }
-function device_table_body(devices: Device[], can_secure: boolean, edit_device: boolean) {
-    ks.table_body(function () {
-        for (let d of devices) {
-            let icon: string;
-            let iconSize = '1rem';
-            switch (d.type) {
-                case DeviceType.Mobile:
-                    icon = 'fa fa-mobile text-center';
-                    iconSize = '1.35rem';
-                    break;
+function device_row(d: Device, can_secure: boolean, edit_device: boolean) {
+    let icon: string;
+    let iconSize = '1rem';
+    switch (d.type) {
+        case DeviceType.Mobile:
+            icon = 'fa fa-mobile text-center';
+            iconSize = '1.35rem';
+            break;
 
-                case DeviceType.Tablet:
-                    icon = 'fa fa-tablet text-center';
-                    iconSize = '1.2rem';
-                    break;
+        case DeviceType.Tablet:
+            icon = 'fa fa-tablet text-center';
+            iconSize = '1.2rem';
+            break;
 
-                case DeviceType.Laptop:
-                    icon = 'fa fa-laptop text-center';
-                    iconSize = '1.1rem';
-                    break;
+        case DeviceType.Laptop:
+            icon = 'fa fa-laptop text-center';
+            iconSize = '1.1rem';
+            break;
 
-                default:
-                    icon = 'fa fa-desktop text-center';
-                    break;
-            }
+        default:
+            icon = 'fa fa-desktop text-center';
+            break;
+    }
 
-            ks.table_row(function () {
-                ks.table_cell(d.name);
-                ks.table_cell(d.deviceId);
-                ks.table_cell(d.serialNumber);
-                ks.table_cell(function () {
-                    let i = ks.icon(icon);
-                    i.style.width = '18px';
-                    i.style.fontSize = iconSize;
-                    ks.text(' ' + deviceNames[d.type], 'd-inline ml-1');
-                });
-                ks.table_cell(osNames[d.os_type]);
-                ks.table_cell(function () {
-                    ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
-                });
+    ks.table_row(function () {
+        ks.table_cell(d.name);
+        ks.table_cell(d.deviceId);
+        ks.table_cell(d.serialNumber);
+        ks.table_cell(function () {
+            let i = ks.icon(icon);
+            i.style.width = '18px';
+            i.style.fontSize = iconSize;
+            ks.text(' ' + deviceNames[d.type], 'd-inline ml-1');
+        });
+        ks.table_cell(osNames[d.os_type]);
+        ks.table_cell(function () {
+            ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
+        });
 
-                if (can_secure) {
-                    ks.table_cell(function () {
-                        if (d.status != DeviceStatus.Approved) {
-                            ks.set_next_item_class_name('text-nowrap');
-                            ks.anchor('Security check', pages[Page.SecurityCheck] + '/' + d.id);
-                            ks.is_item_clicked(function () {
-                                ks.navigate_to('Security check', pages[Page.SecurityCheck] + '/' + d.id);
-                                return false;
-                            });
-                        }
-                    });
-                }
-                if (edit_device) {
-                    ks.set_next_item_class_name('cursor-pointer');
-                    ks.table_cell(function () {
-                        ks.icon('fa fa-pencil');
-                    });
+        if (can_secure) {
+            ks.table_cell(function () {
+                if (d.status != DeviceStatus.Approved) {
+                    ks.set_next_item_class_name('text-nowrap');
+                    ks.anchor('Security check', pages[Page.SecurityCheck] + '/' + d.id);
                     ks.is_item_clicked(function () {
-                        ks.navigate_to('Device', pages[Page.Device] + '/' + d.id);
+                        ks.navigate_to('Security check', pages[Page.SecurityCheck] + '/' + d.id);
                         return false;
                     });
                 }
+            });
+        }
+        if (edit_device) {
+            ks.set_next_item_class_name('cursor-pointer');
+            ks.table_cell(function () {
+                ks.icon('fa fa-pencil');
+            });
+            ks.is_item_clicked(function () {
+                ks.navigate_to('Device', pages[Page.Device] + '/' + d.id);
+                return false;
             });
         }
     });
@@ -411,6 +417,7 @@ abstract class API {
     static Import = API.getUrlFactory('/api/Import');
     static Devices = API.getUrlFactory('/api/Devices');
     static Faculties = API.getUrlFactory('/api/Faculties');
+    static Institute = API.getUrlFactory('/api/Institute');
     static SecurityQuestions = API.getUrlFactory('/api/SecurityQuestions');
     static SecurityCheck = API.getUrlFactory('/api/SecurityChecks');
     static Users = API.getUrlFactory('/api/Users');
