@@ -61,5 +61,12 @@ namespace DevicePortal.Controllers
 
             return Ok();
         }
+
+        [HttpGet("impersonate/end"), Authorize(AppPolicies.AdminOnly)]
+        public ActionResult ImpersonateEnd()
+        {
+            Response.Cookies.Delete("DevicePortal_Impersonate");
+            return Ok();
+        }
     }
 }
