@@ -136,9 +136,9 @@ ks.run(function () {
                 });
 
                 if (user.page_access[Page.Faculty]) {
-                    ks.nav_item('Faculty', iPage === Page.Faculty, pages[Page.Faculty]);
+                    ks.nav_item('Institutes', iPage === Page.Faculty, pages[Page.Faculty]);
                     ks.is_item_clicked(function () {
-                        ks.navigate_to('Faculty', pages[Page.Faculty]);
+                        ks.navigate_to('Institutes', pages[Page.Faculty]);
                         return false;
                     });
                 }
@@ -283,7 +283,7 @@ function device_table_head(can_secure: boolean, edit_device: boolean) {
         });
     });
 }
-function device_row(d: Device, can_secure: boolean, edit_device: boolean) {
+function device_row(d: Device, can_secure: boolean, edit_device: boolean, user: boolean = false) {
     let icon: string;
     let iconSize = '1rem';
     switch (d.type) {
@@ -307,7 +307,8 @@ function device_row(d: Device, can_secure: boolean, edit_device: boolean) {
             break;
     }
 
-    ks.table_row(function () {
+    ks.table_row(function () {                
+        if (user) { ks.table_cell(d.user); }
         ks.table_cell(d.name);
         ks.table_cell(d.deviceId);
         ks.table_cell(d.serialNumber);

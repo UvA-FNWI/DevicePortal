@@ -40,6 +40,10 @@ class Device {
     os_type: OSType;
     os_version: string = '';
     status = DeviceStatus.Unsecure;
+
+    user: string; // Note(Joshua): only available in institute/devices
+    userLowerCase: string; // Note: used on institue page for performance
+    userName: string;
 }
 enum DeviceOrigin {
     DataExport,

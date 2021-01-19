@@ -1,4 +1,5 @@
 ﻿class DeviceSearchParams {
+    user = '';
     name = '';
     deviceId = '';
     serialNr = '';
@@ -24,6 +25,7 @@ function page_institute(parameters: string) {
                     d.nameLowerCase = d.name ? d.name.toLowerCase() : '';
                     d.deviceIdLowerCase = d.deviceId ? d.deviceId.toLowerCase() : '';
                     d.serialNumberLowerCase = d.serialNumber ? d.serialNumber.toLowerCase() : '';
+                    d.userLowerCase = d.user ? d.user.toLowerCase() : '';
                 }
                 devices.sort((a, b) => sort_string(a.name, b.name));
                 state.devices = devices;
@@ -40,6 +42,7 @@ function page_institute(parameters: string) {
 
     let count = 0;
     let search = new DeviceSearchParams();
+    search.user = state.search.user.toLowerCase();
     search.name = state.search.name.toLowerCase();
     search.deviceId = state.search.deviceId.toLowerCase();
     search.serialNr = state.search.serialNr.toLowerCase();
@@ -58,6 +61,16 @@ function page_institute(parameters: string) {
     ks.table('devices', function () {
         ks.table_head(function () {
             ks.table_row(function () {
+                ks.table_cell(function () {
+                    ks.set_next_item_class_name('form-control-sm');
+                    ks.input_text('user', state.search.user, 'User', function (str) {
+                        state.search.user = str;
+                        range.reset();
+                        ks.refresh();
+                    });
+                    ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                }, ks.Sort_Order.asc);
+
                 ks.table_cell(function () {
                     ks.set_next_item_class_name('form-control-sm');
                     ks.input_text('name', state.search.name, 'Name', function (str) {
@@ -167,18 +180,18 @@ function page_institute(parameters: string) {
             let countdown = range.i_end - range.i_start;
             for (let i = range.i_start; countdown > 0; ++i) {
                 if (!device_search_match(search, state.devices[i])) { continue; }
-
-                device_row(state.devices[i], false, false);
+                device_row(state.devices[i], false, false, true);
                 --countdown;
             }
         });
     }, function (i_head, order) {
-            if (i_head === 0) { state.devices.sort((a, b) => order * sort_string(a.name, b.name)); }
-            if (i_head === 1) { state.devices.sort((a, b) => order * sort_string(a.deviceId, b.deviceId)); }
-            if (i_head === 2) { state.devices.sort((a, b) => order * sort_string(a.serialNumber, b.serialNumber)); }
-            if (i_head === 3) { state.devices.sort((a, b) => order * (a.type - b.type)); }
-            if (i_head === 4) { state.devices.sort((a, b) => order * (a.os_type - b.os_type)); }
-            if (i_head === 5) { state.devices.sort((a, b) => order * (a.status - b.status)); }
+            if (i_head === 0) { state.devices.sort((a, b) => order * sort_string(a.user, b.user)); }
+            if (i_head === 1) { state.devices.sort((a, b) => order * sort_string(a.name, b.name)); }
+            if (i_head === 2) { state.devices.sort((a, b) => order * sort_string(a.deviceId, b.deviceId)); }
+            if (i_head === 3) { state.devices.sort((a, b) => order * sort_string(a.serialNumber, b.serialNumber)); }
+            if (i_head === 4) { state.devices.sort((a, b) => order * (a.type - b.type)); }
+            if (i_head === 5) { state.devices.sort((a, b) => order * (a.os_type - b.os_type)); }
+            if (i_head === 6) { state.devices.sort((a, b) => order * (a.status - b.status)); }
     });
 
     ks.set_next_item_class_name('ml-1');
@@ -186,7 +199,8 @@ function page_institute(parameters: string) {
 }
 
 function device_search_match(p: DeviceSearchParams, d: Device) {
-    return (!p.name || d.nameLowerCase.indexOf(p.name) >= 0) &&
+    return (!p.user || d.userLowerCase.indexOf(p.user) >= 0) &&
+           (!p.name || d.nameLowerCase.indexOf(p.name) >= 0) &&
            (!p.deviceId || d.deviceIdLowerCase.indexOf(p.deviceId) >= 0) &&
            (!p.serialNr || d.serialNumberLowerCase.indexOf(p.serialNr) >= 0) &&
            (p.type & d.type) &&

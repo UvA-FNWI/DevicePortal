@@ -21,9 +21,27 @@ namespace DevicePortal.Controllers
 
         // GET: api/Institute/{name}/Devices
         [HttpGet("{name}/Devices")]
-        public async Task<ActionResult<IEnumerable<Device>>> GetDevices(string name)
+        public async Task<ActionResult> GetDevices(string name)
         {
-            return await db.Devices.Where(d => d.User.Institute == name).ToListAsync();
+            var devices = await db.Devices
+                .Where(d => d.User.Institute == name)
+                .Select(d => new 
+                {
+                    d.DeviceId,
+                    d.Id,
+                    d.Name,
+                    d.Origin,
+                    os_type = d.OS_Type,
+                    os_version = d.OS_Version,
+                    d.SerialNumber,
+                    d.Status,
+                    d.StatusEffectiveDate,
+                    d.Type,
+                    User = d.User.Name,
+                    d.UserName                    
+                })
+                .ToListAsync();
+            return Ok(devices);
         }
     }
 }
