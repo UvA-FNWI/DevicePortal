@@ -198,6 +198,7 @@ namespace DevicePortal
                         u.CanApprove,
                         u.CanManage,
                         u.CanSecure,
+                        u.Name,
                     })
                     .SingleAsync();
 
@@ -208,30 +209,36 @@ namespace DevicePortal
                     if (!string.IsNullOrEmpty(impersonationId)) 
                     {
                         var userImpersonate = await _context.Users
-                            .Where(u => u.UserName == userId)
+                            .Where(u => u.UserName == impersonationId)
                             .Select(u => new
                             {                            
                                 u.CanAdmin,
                                 u.CanApprove,
                                 u.CanManage,
                                 u.CanSecure,
+                                u.Name,
                             })
                             .FirstOrDefaultAsync();
                         if (userImpersonate != null) 
                         {
                             user = userImpersonate;
+                            identity.AddClaim(new Claim(AppClaimTypes.Impersonation, "true"));
 
                             var claim = identity.Claims.FirstOrDefault(c => c.Type == "uids");
                             identity.RemoveClaim(claim);
                             identity.AddClaim(new Claim(claim.Type, impersonationId));
 
-                            claim = identity.Claims.FirstOrDefault(c => c.Type == "given_name");
-                            identity.RemoveClaim(claim);
-                            identity.AddClaim(new Claim(claim.Type, impersonationId));
+                            if (!string.IsNullOrEmpty(user.Name)) 
+                            {
+                                string[] parts = user.Name.Split(' ');
+                                claim = identity.Claims.FirstOrDefault(c => c.Type == "given_name");
+                                identity.RemoveClaim(claim);
+                                identity.AddClaim(new Claim(claim.Type, parts[0]));
 
-                            claim = identity.Claims.FirstOrDefault(c => c.Type == "family_name");
-                            identity.RemoveClaim(claim);
-                            identity.AddClaim(new Claim(claim.Type, ""));
+                                claim = identity.Claims.FirstOrDefault(c => c.Type == "family_name");
+                                identity.RemoveClaim(claim);
+                                identity.AddClaim(new Claim(claim.Type, parts.Length > 1 ? parts[1] : "Impersonate"));
+                            }
                         }
                     }
                 }
@@ -264,5 +271,6 @@ namespace DevicePortal
     public static class AppClaimTypes
     {
         public static string Permission = "https://secure.datanose.nl/claims/permission";
+        public static string Impersonation = "https://secure.datanose.nl/claims/impersonation";
     }
 }

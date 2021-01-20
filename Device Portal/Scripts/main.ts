@@ -34,6 +34,8 @@ class ActiveUser {
     can_approve: boolean;
     can_manage: boolean;
     can_admin: boolean;
+    impersonating: boolean;
+
     page_access: { [key: number]: boolean } = {};
 
     constructor(claims: { type: string, value: string; }[]) {
@@ -47,6 +49,9 @@ class ActiveUser {
                     if (claim.value == "CanApprove") { this.can_approve = true; }
                     if (claim.value == "CanManage") { this.can_manage = true; }
                     if (claim.value == "CanAdmin") { this.can_admin = true; }
+                    break;
+                case 'https://secure.datanose.nl/claims/impersonation':
+                    if (claim.value == "true") { this.impersonating = true; }
                     break;
             }
         }
@@ -175,14 +180,24 @@ ks.run(function () {
 
             ks.text(user.first_name.substr(0, 1) + '. ' + user.last_name, 'ml-auto');
             ks.unordered_list('right', 'navbar-nav', function () {
-                ks.nav_item('Logout', false, '/logout');
-                ks.is_item_clicked(function () {
-                    GET(API.Identity('exit')).always(function () {
-                        window.location.reload();
-                        // window.location.replace("https://login.uva.nl/adfs/ls/?wa=wsignout1.0");
+                if (user.impersonating) {
+                    ks.nav_item('End impersonation', false, '');
+                    ks.is_item_clicked(function () {
+                        GET(API.Identity('impersonation/end')).always(function () {
+                            window.location.reload();
+                        });
+                        return false;
                     });
-                    return false;
-                });
+                } else {
+                    ks.nav_item('Logout', false, '/logout');
+                    ks.is_item_clicked(function () {
+                        GET(API.Identity('exit')).always(function () {
+                            window.location.reload();
+                            // window.location.replace("https://login.uva.nl/adfs/ls/?wa=wsignout1.0");
+                        });
+                        return false;
+                    });
+                }
             });
         });
     });
@@ -372,6 +387,22 @@ function page_admin() {
                     fd.append('my_file' + i, files[i]);
                 }
                 xhr.send(fd);
+            }
+        });
+    });
+
+    ks.h5('Impersonate', 'mb-2 mt-2');
+    ks.form('impersonate', '', true, function () {
+        let userName;
+        ks.input_text('UserName', '', 'UserName', function (val) {
+            userName = val;
+        });
+        ks.button('Impersonate', function () {
+            if (userName) {
+                GET(API.Identity('impersonate/' + userName)).then(function () {
+                    ks.navigate_to('Home', pages[Page.Home]);
+                    window.location.reload();
+                });
             }
         });
     });
