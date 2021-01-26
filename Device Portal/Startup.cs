@@ -211,6 +211,7 @@ namespace DevicePortal
             services.AddHttpClient();
             services.AddScoped<IntuneService>();
             services.AddScoped<DepartmentService>();
+            services.AddSingleton<NotificationService>();
             services.AddHostedService<NotificationService>();
         }
 
