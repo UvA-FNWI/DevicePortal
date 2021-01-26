@@ -65,10 +65,10 @@ class ActiveUser {
 
         // Manage
         this.page_access[Page.Users] = this.can_manage;
+        this.page_access[Page.Faculty] = this.can_manage;
+        this.page_access[Page.Institute] = this.can_manage;
 
         // Admin
-        this.page_access[Page.Faculty] = this.can_admin;
-        this.page_access[Page.Institute] = this.can_admin;
         this.page_access[Page.Admin] = this.can_admin;
     }
 }

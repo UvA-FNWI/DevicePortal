@@ -5,11 +5,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using DevicePortal.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DevicePortal.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
+    [ApiController, Authorize(Policy = AppPolicies.ManagerOnly)]
     public class DepartmentController : ControllerBase
     {
         private readonly PortalContext db;
