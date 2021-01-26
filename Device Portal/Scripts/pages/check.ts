@@ -33,6 +33,8 @@ function page_security_check(parameters: string) {
         questions: <SecurityQuestion[]>[],
         security_check: <SecurityCheck>null,
         device: <Device>null,
+        refresh_recommendations: true,
+        loaded_os_type: <OSType>0,
     });
     if (isPageSwap) {
         state.security_check = null;
@@ -56,6 +58,8 @@ function page_security_check(parameters: string) {
             $.when(
                 GET(API.Devices(deviceId)).then(d => {
                     state.device = d;
+                    state.loaded_os_type = d.os_type;
+                    if (state.device.os_version == null) { state.device.os_version = ''; }
                 }, fail => {
                     if (fail.status === 404) { contextModal.showWarning("Device not found"); }
                     ks.navigate_to('Users', pages[Page.Home])
@@ -105,6 +109,38 @@ function page_security_check(parameters: string) {
     });
 
     ks.form('security', '', false, function () {
+        ks.set_next_item_class_name('mb-3');
+        ks.row('os', function () {
+            ks.group('type', 'col-auto mr-2', function () {
+                ks.text('Operating system', 'mb-1');
+                ks.set_next_input_validation(!!state.device.os_type, '', 'This is a required field.');
+                ks.combo('Operating system', function () {
+                    ks.selectable('##none', !state.device.os_type);
+                    ks.is_item_clicked(function () {
+                        state.device.os_type = 0;
+                        ks.refresh();
+                    });
+                    for (let i = 0; i < osTypeCount; ++i) {
+                        let type: OSType = 1 << i;
+                        ks.selectable(osNames[type], state.device.os_type === type);
+                        ks.is_item_clicked(function () {
+                            state.device.os_type = type;
+                            state.refresh_recommendations = true;
+                            ks.refresh();
+                        });
+                    }
+                }).disabled = !!(state.loaded_os_type & (OSType.Android | OSType.iOS));
+            });
+
+            ks.group('version', 'col col-md-6', function () {
+                ks.text('Version', 'mb-1');
+                ks.set_next_input_validation(!!state.device.os_version.length, '', 'This is a required field.');
+                ks.input_text('version', state.device.os_version, 'Version', function (val) {
+                    state.device.os_version = val;
+                });
+            });
+        });
+
         for (let i = 0; i < state.security_check.questions.length; ++i) {
             let q = state.security_check.questions[i];
             if (!(q.mask & state.device.type)) { continue; }
@@ -116,7 +152,9 @@ function page_security_check(parameters: string) {
 
             if (q.recommendations?.length) {
                 let g = ks.group('recommendation', 'text-muted mb-1', ks.no_op);
-                if (!g.children.length) {
+                if (state.refresh_recommendations) {
+                    while (g.children.length) { g.removeChild(g.children[0]); }
+
                     let div = document.createElement("DIV");
                     let html = '';
                     for (let k = 0; k < q.recommendations.length; ++k) {
@@ -155,6 +193,7 @@ function page_security_check(parameters: string) {
 
             ks.pop_id();
         }
+        state.refresh_recommendations = false;
 
         ks.button('Submit', ks.no_op);
 
@@ -162,17 +201,18 @@ function page_security_check(parameters: string) {
             if (this.getElementsByClassName('is-invalid').length) {
                 ks.cancel_current_form_submission();
             } else {
-                if (state.security_check.id) {
-                    PUT_JSON(API.SecurityCheck(state.security_check.id), state.security_check).then(function () {
-                        ks.navigate_to('Home', '/');
-                        state.device.status = DeviceStatus.Submitted;
-                    }, function (error) { contextModal.showWarning(error.responseText); });
-                } else {
-                    POST_JSON(API.SecurityCheck(), state.security_check).then(function () {
-                        ks.navigate_to('Home', '/');
-                        state.device.status = DeviceStatus.Submitted;
-                    }, function (error) { contextModal.showWarning(error.responseText); });
-                }
+                let xhrDevice = PUT_JSON(API.Devices(state.device.id), state.device);
+
+                let xhrCheck = state.security_check.id ?
+                    PUT_JSON(API.SecurityCheck(state.security_check.id), state.security_check) :
+                    POST_JSON(API.SecurityCheck(), state.security_check);
+
+                $.when(xhrDevice, xhrCheck).done(function () {
+                    ks.navigate_to('Home', '/');
+                    state.device.status = DeviceStatus.Submitted;
+                }).fail(function (error) {
+                    contextModal.showWarning(error.responseText);
+                });
             }
         }
     });

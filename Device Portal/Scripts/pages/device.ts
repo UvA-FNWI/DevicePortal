@@ -82,6 +82,7 @@ function page_device(parameters: string) {
             { type: DeviceType.Desktop, icon: 'fa fa-desktop' },
         ],
         update: false,
+        loaded_os_type: <OSType>0,
     });
 
     if (isPageSwap) {
@@ -100,6 +101,7 @@ function page_device(parameters: string) {
             GET_ONCE('device', API.Devices(deviceId)).done((d: Device) => {
                 state.update = true;
                 state.device = d;
+                state.loaded_os_type = d.os_type;
                 if (state.device.os_version == null) { state.device.os_version = ''; }
                 let mask = d.type;
                 state.selected = -1;
@@ -167,7 +169,7 @@ function page_device(parameters: string) {
                             state.device.os_type = type;
                         });
                     }
-                }).disabled = state.update && !!state.device.os_type;
+                }).disabled = state.update && !!(state.loaded_os_type & (OSType.Android | OSType.iOS));
 
                 ks.text('Version', 'mt-2 mb-1');
                 ks.set_next_input_validation(!!state.device.os_version.length, '', 'This is a required field.');
