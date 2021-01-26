@@ -211,6 +211,7 @@ namespace DevicePortal
             services.AddHttpClient();
             services.AddScoped<IntuneService>();
             services.AddScoped<DepartmentService>();
+            services.AddHostedService<NotificationService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
