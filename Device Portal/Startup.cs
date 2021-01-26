@@ -79,34 +79,96 @@ namespace DevicePortal
                         var db = context.HttpContext.RequestServices.GetRequiredService<PortalContext>();
                         var departmentService = context.HttpContext.RequestServices.GetRequiredService<DepartmentService>();
 
-                        string userId = null;
+                        string userName = null;
                         if (context.User.RootElement.TryGetProperty("uids", out var value))
                         {
-                            userId = value[0].GetString();
+                            userName = value[0].GetString();
                         }
-                        if (string.IsNullOrEmpty(userId)) { return; }
+                        if (string.IsNullOrEmpty(userName)) { return; }
                         
-                        var user = await db.Users.FindAsync(userId);
+                        int facultyId = db.Faculties.Select(f => f.Id).First();
+                        var departmentMap = db.Departments.ToDictionary(d => d.Name);
+                        var departmentRights = await departmentService.GetDepartments(userName);
+
+                        var user = await db.Users.FindAsync(userName);
                         if (user == null)
                         {
                             string givenName = context.User.RootElement.TryGetProperty("given_name", out value) ?
                                 value.GetString() : "";
                             string familyName = context.User.RootElement.TryGetProperty("family_name", out value) ?
                                 value.GetString() : "";
-                            
+
                             user = new User()
                             {
-                                Faculty = "FNWI",
+                                FacultyId = facultyId,
                                 Name = $"{givenName} {familyName}".Trim(),
-                                UserName = userId,
+                                UserName = userName,
                             };
+
+                            foreach (var right in departmentRights)
+                            {
+                                var userDepartment = new User_Department()
+                                {
+                                    UserName = user.UserName,                                    
+                                    CanManage = right.IsManager,
+                                };
+                                if (departmentMap.TryGetValue(right.Name, out var department))
+                                {
+                                    userDepartment.DepartmentId = department.Id;   
+                                }
+                                else
+                                {
+                                    userDepartment.Department = new Department { Name = right.Name, FacultyId = facultyId };
+                                    departmentMap.Add(right.Name, userDepartment.Department);
+                                }                                
+                                user.Departments.Add(userDepartment);
+                            }
                             db.Users.Add(user);
                         }
-                        else { db.Update(user); }
+                        else 
+                        {
+                            var rightsMap = departmentRights.ToDictionary(r => r.Name);
 
-                        var department = (await departmentService.GetDepartments(userId)).FirstOrDefault();
-                        user.Department = department?.Name;
-                        user.CanManage = department?.IsManager ?? false; 
+                            // Update or remove current department from user
+                            var userDepartments = db.Users_Departments
+                                .Include(ud => ud.Department)
+                                .Where(ud => ud.UserName == userName)
+                                .ToArray();
+                            foreach (var ud in userDepartments)
+                            {
+                                if (rightsMap.TryGetValue(ud.Department.Name, out var right))
+                                {
+                                    ud.CanManage = right.IsManager;
+                                }
+                                else { db.Users_Departments.Remove(ud); }
+                            }
+
+                            // Add new departments to user
+                            var currentDepartments = userDepartments.Select(ud => ud.Department.Name).ToHashSet();
+                            foreach (var right in departmentRights) 
+                            {
+                                if (!currentDepartments.Contains(right.Name))
+                                {
+                                    var user_department = new User_Department()
+                                    {
+                                        UserName = user.UserName,
+                                        CanManage = right.IsManager,
+                                    };
+                                    if (departmentMap.TryGetValue(right.Name, out var department))
+                                    {
+                                        user_department.DepartmentId = department.Id;
+                                    }
+                                    else
+                                    {
+                                        user_department.Department = new Department { Name = right.Name, FacultyId = facultyId };
+                                        departmentMap.Add(right.Name, user_department.Department);
+                                    }
+                                    db.Users_Departments.Add(user_department);
+                                }
+                            }
+                        }
+
+                    
                         await db.SaveChangesAsync();
                     }
                 };
@@ -114,10 +176,14 @@ namespace DevicePortal
 
             services.AddAuthorization(options => 
             {
-                options.AddPolicy(AppPolicies.AdminOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanAdmin));
-                options.AddPolicy(AppPolicies.ApproverOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanApprove));
-                options.AddPolicy(AppPolicies.AuthorizedOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanSecure));
-                options.AddPolicy(AppPolicies.ManagerOnly, policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanManage));
+                options.AddPolicy(AppPolicies.AdminOnly, 
+                    policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanAdmin));
+                options.AddPolicy(AppPolicies.ApproverOnly, 
+                    policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanApprove));
+                options.AddPolicy(AppPolicies.AuthorizedOnly, 
+                    policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanSecure));
+                options.AddPolicy(AppPolicies.ManagerOnly, 
+                    policy => policy.RequireClaim(AppClaimTypes.Permission, AppClaims.CanManage));
                 options.AddPolicy(AppPolicies.SecurityCheckAccess,
                     policy => policy.RequireAssertion(context => context.User.HasClaim(AppClaimTypes.Permission, AppClaims.CanSecure) ||
                                                                  context.User.HasClaim(AppClaimTypes.Permission, AppClaims.CanApprove)));
@@ -196,7 +262,7 @@ namespace DevicePortal
                     {
                         u.CanAdmin,
                         u.CanApprove,
-                        u.CanManage,
+                        CanManage = u.Departments.Any(d => d.CanManage),
                         u.CanSecure,
                         u.Name,
                     })
@@ -214,7 +280,7 @@ namespace DevicePortal
                             {                            
                                 u.CanAdmin,
                                 u.CanApprove,
-                                u.CanManage,
+                                CanManage = u.Departments.Any(d => d.CanManage),
                                 u.CanSecure,
                                 u.Name,
                             })

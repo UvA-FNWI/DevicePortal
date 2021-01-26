@@ -10,16 +10,26 @@
 
 function page_institute(parameters: string) {
     let state = ks.local_persist('page_device', {
+        institute: <Institute>null,
         devices: <Device[]>null,
         search: new DeviceSearchParams(),
     });
 
-    let institute: string;
+    let instituteId: number;
     if (parameters) {
         let parts = parameters.split('/');
-        institute = parts[0];
+        instituteId = parseInt(parts[0]);
+    }
+    if (!isNaN(instituteId)) {
+        // TODO $.when
+        if (!state.institute) {
+            GET_ONCE('institute', API.Institutes(instituteId)).done(institute => {
+                state.institute = institute;
+                ks.refresh();
+            });
+        }
         if (!state.devices) {
-            GET_ONCE('devices', API.Institute(institute) + '/Devices').done((devices: Device[]) => {
+            GET_ONCE('devices', API.Institutes(instituteId) + '/Devices').done((devices: Device[]) => {
                 for (let i = 0; i < devices.length; ++i) {
                     let d = devices[i];
                     d.nameLowerCase = d.name ? d.name.toLowerCase() : '';
@@ -38,7 +48,11 @@ function page_institute(parameters: string) {
         return;
     }
 
-    header_breadcrumbs([institute], ks.no_op);
+    if (state.institute) {
+        header_breadcrumbs(['Faculty', state.institute.name], function () {
+            ks.navigate_to('Faculty', pages[Page.Faculty]);
+        });
+    }
 
     let count = 0;
     let search = new DeviceSearchParams();
@@ -185,13 +199,13 @@ function page_institute(parameters: string) {
             }
         });
     }, function (i_head, order) {
-            if (i_head === 0) { state.devices.sort((a, b) => order * sort_string(a.user, b.user)); }
-            if (i_head === 1) { state.devices.sort((a, b) => order * sort_string(a.name, b.name)); }
-            if (i_head === 2) { state.devices.sort((a, b) => order * sort_string(a.deviceId, b.deviceId)); }
-            if (i_head === 3) { state.devices.sort((a, b) => order * sort_string(a.serialNumber, b.serialNumber)); }
-            if (i_head === 4) { state.devices.sort((a, b) => order * (a.type - b.type)); }
-            if (i_head === 5) { state.devices.sort((a, b) => order * (a.os_type - b.os_type)); }
-            if (i_head === 6) { state.devices.sort((a, b) => order * (a.status - b.status)); }
+        if (i_head === 0) { state.devices.sort((a, b) => order * sort_string(a.user, b.user)); }
+        if (i_head === 1) { state.devices.sort((a, b) => order * sort_string(a.name, b.name)); }
+        if (i_head === 2) { state.devices.sort((a, b) => order * sort_string(a.deviceId, b.deviceId)); }
+        if (i_head === 3) { state.devices.sort((a, b) => order * sort_string(a.serialNumber, b.serialNumber)); }
+        if (i_head === 4) { state.devices.sort((a, b) => order * (a.type - b.type)); }
+        if (i_head === 5) { state.devices.sort((a, b) => order * (a.os_type - b.os_type)); }
+        if (i_head === 6) { state.devices.sort((a, b) => order * (a.status - b.status)); }
     });
 
     ks.set_next_item_class_name('ml-1');
@@ -200,10 +214,10 @@ function page_institute(parameters: string) {
 
 function device_search_match(p: DeviceSearchParams, d: Device) {
     return (!p.user || d.userLowerCase.indexOf(p.user) >= 0) &&
-           (!p.name || d.nameLowerCase.indexOf(p.name) >= 0) &&
-           (!p.deviceId || d.deviceIdLowerCase.indexOf(p.deviceId) >= 0) &&
-           (!p.serialNr || d.serialNumberLowerCase.indexOf(p.serialNr) >= 0) &&
-           (p.type & d.type) &&
-           (d.os_type === 0 || (p.os_type & d.os_type)) &&
-           (p.status < 0 || p.status == d.status);
+        (!p.name || d.nameLowerCase.indexOf(p.name) >= 0) &&
+        (!p.deviceId || d.deviceIdLowerCase.indexOf(p.deviceId) >= 0) &&
+        (!p.serialNr || d.serialNumberLowerCase.indexOf(p.serialNr) >= 0) &&
+        (p.type & d.type) &&
+        (d.os_type === 0 || (p.os_type & d.os_type)) &&
+        (p.status < 0 || p.status == d.status);
 }

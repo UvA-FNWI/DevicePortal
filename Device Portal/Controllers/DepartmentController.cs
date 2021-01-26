@@ -10,21 +10,29 @@ namespace DevicePortal.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class InstituteController : ControllerBase
+    public class DepartmentController : ControllerBase
     {
         private readonly PortalContext db;
 
-        public InstituteController(PortalContext context)
+        public DepartmentController(PortalContext context)
         {
             db = context;
         }
 
-        // GET: api/Institute/{name}/Devices
-        [HttpGet("{name}/Devices")]
-        public async Task<ActionResult> GetDevices(string name)
+        // GET: api/Department/{id}
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Department>> GetDepartment(int id) 
+        {
+            if (!db.Departments.Any(d => d.Id == id)) { return NotFound(); }
+            return await db.Departments.FirstAsync(d => d.Id == id);
+        }
+
+        // GET: api/Department/{id}/Devices
+        [HttpGet("{id}/Devices")]
+        public async Task<ActionResult> GetDevices(int id)
         {
             var devices = await db.Devices
-                .Where(d => d.User.Institute == name)
+                .Where(d => d.DepartmentId == id && !string.IsNullOrEmpty(d.UserName))
                 .Select(d => new 
                 {
                     d.DeviceId,
@@ -40,7 +48,7 @@ namespace DevicePortal.Controllers
                     User = d.User.Name,
                     d.UserName                    
                 })
-                .ToListAsync();
+                .ToArrayAsync();
             return Ok(devices);
         }
     }

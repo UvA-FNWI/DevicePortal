@@ -36,11 +36,14 @@ namespace DevicePortal.Controllers
             else 
             {
                 var userId = User.GetUserName();
-                string department = _context.Users
+                var departmentIds = _context.Users
                     .Where(u => u.UserName == userId)
-                    .Select(u => u.Department)
-                    .FirstOrDefault();
-                return await _context.Users.Where(u => u.Department == department).ToListAsync();
+                    .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
+                    .ToHashSet();
+                return await _context.Users
+                    .Where(u => u.Departments.Any(d => departmentIds.Contains(d.DepartmentId)))
+                    .ToArrayAsync();
+                    
             }
         }
                 
@@ -48,7 +51,9 @@ namespace DevicePortal.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetUser(string id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users
+                .Include(u => u.Departments)
+                .FirstOrDefaultAsync(u => u.UserName == id);
 
             if (user == null)
             {
@@ -57,11 +62,11 @@ namespace DevicePortal.Controllers
             if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
             {
                 string userId = User.GetUserName();
-                string department = _context.Users
+                var departmentIds = _context.Users
                     .Where(u => u.UserName == userId)
-                    .Select(u => u.Department)
-                    .FirstOrDefault();
-                if (user.Department != department) { return Forbid(); }
+                    .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
+                    .ToHashSet();
+                if (!user.Departments.Any(d => departmentIds.Contains(d.DepartmentId))) { return Forbid(); }
             }
 
             return user;
@@ -88,11 +93,11 @@ namespace DevicePortal.Controllers
             if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
             {
                 string userId = User.GetUserName();
-                string department = _context.Users
+                var departmentIds = _context.Users
                     .Where(u => u.UserName == userId)
-                    .Select(u => u.Department)
-                    .FirstOrDefault();
-                if (user.Department != department) { return Forbid(); }
+                    .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
+                    .ToHashSet();
+                if (!user.Departments.Any(d => departmentIds.Contains(d.DepartmentId))) { return Forbid(); }
             }
             
             var entry = _context.Entry(user);

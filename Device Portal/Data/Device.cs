@@ -69,6 +69,9 @@ namespace DevicePortal.Data
         public string UserName { get; set; }
         public User User { get; set; }
 
+        public int DepartmentId { get; set; }
+        public Department Department { get; set; }
+
         [JsonIgnore]
         public HashSet<SecurityCheck> SecurityChecks { get; set; }
     }

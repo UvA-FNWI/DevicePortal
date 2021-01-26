@@ -1,4 +1,5 @@
 ﻿using DevicePortal.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 namespace DevicePortal.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
+    [ApiController, Authorize(Policy = AppPolicies.ManagerOnly)]
     public class FacultiesController : ControllerBase
     {
         private readonly PortalContext _context;
@@ -25,37 +26,42 @@ namespace DevicePortal.Controllers
         public async Task<ActionResult> GetOverview()
         {
             var users = await _context.Users
-                .Where(u => !string.IsNullOrEmpty(u.Institute))
+                .Where(u => u.Departments.Any())
                 .Select(u => new
                 {
-                    u.Institute,
+                    Departments = u.Departments.Select(d => d.Department),
                     Completed = u.Devices.Any(d => d.Status == DeviceStatus.Approved),
                     Devices = u.Devices.Count,
                 }).ToArrayAsync();
 
-            var result = new Dictionary<string, Institute>();
+            var result = new Dictionary<int, Department>();
             foreach (var user in users)
             {
-                if (!result.TryGetValue(user.Institute, out Institute inst))
+                foreach (var department in user.Departments) 
                 {
-                    inst = new Institute
+                    if (!result.TryGetValue(department.Id, out Department dep))
                     {
-                        Name = user.Institute,
-                        Devices = 0,
-                        Users = 0,
-                        UsersCompleted = 0,
-                    };
-                    result.Add(inst.Name, inst);
+                        dep = new Department
+                        {
+                            Id = department.Id,
+                            Name = department.Name,
+                            Devices = 0,
+                            Users = 0,
+                            UsersCompleted = 0,
+                        };
+                        result.Add(dep.Id, dep);
+                    }
+                    dep.Users++;
+                    dep.Devices += user.Devices;
+                    if (user.Completed) { ++dep.UsersCompleted; }
                 }
-                inst.Users++;
-                inst.Devices += user.Devices;
-                if (user.Completed) { ++inst.UsersCompleted; }
             }
             return Ok(result.Values);
         }
 
-        class Institute 
+        class Department 
         { 
+            public int Id { get; set; }
             public string Name { get; set; }
             public int Users { get; set; }
             public int UsersCompleted { get; set; }

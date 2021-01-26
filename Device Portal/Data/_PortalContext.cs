@@ -20,9 +20,12 @@ namespace DevicePortal.Data
             ChangeTracker.LazyLoadingEnabled = false;
             ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
         }
+        public DbSet<Faculty> Faculties { get; set; }
+        public DbSet<Department> Departments { get; set; }
+        public DbSet<User_Department> Users_Departments { get; set; }
 
-        public DbSet<Device> Devices { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<Device> Devices { get; set; }
         public DbSet<SecurityCheck> SecurityChecks { get; set; }
         public DbSet<SecurityCheckQuestions> SecurityCheckAnswers { get; set; }
         public DbSet<SecurityQuestions> SecurityQuestions { get; set; }
@@ -37,34 +40,56 @@ namespace DevicePortal.Data
 
             var user = modelBuilder.Entity<User>();
             user.HasIndex(u => u.UserName);
-            user.HasIndex(u => u.Faculty);
-            user.HasIndex(u => u.Institute);
+
+            var user_department = modelBuilder.Entity<User_Department>();
+            user_department.HasKey(ud => new { ud.UserName, ud.DepartmentId });
+            user_department
+                .HasOne(u => u.User)
+                .WithMany(u => u.Departments)
+                .HasForeignKey(ud => ud.UserName);
+            user_department
+                .HasOne(d => d.Department)
+                .WithMany(d => d.Users)
+                .HasForeignKey(ud => ud.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            //var department = modelBuilder.Entity<Department>();
+            //department
+            //    .HasMany(d => d.Devices)
+            //    .WithOne(d => d.Department)
+            //    .OnDelete(DeleteBehavior.Restrict);
         }
 
         public void Seed() 
         {
-            if (SecurityQuestions.Any()) { return; }
-
-            List<SecurityQuestions> questions = new List<SecurityQuestions>();
-            void AddQuestion(string text, DeviceType mask) 
-            {
-                questions.Add(new Data.SecurityQuestions()
-                {
-                    Text = text,
-                    Mask = mask,
-                });
+            if (!Faculties.Any())
+            { 
+                Faculties.Add(new Faculty { Name = "FNWI" });
+                SaveChanges();
             }
-            AddQuestion("Does the device have encrypted storage?", DeviceType.All);
-            AddQuestion("Are local accounts only accessible with strong passwords?", DeviceType.All);
-            AddQuestion("Does the device have a strong access code(minimum 6 characters) other than the SIM card PIN code?", DeviceType.Mobile | DeviceType.Tablet);
-            AddQuestion("The OS and all applications are maintained by a supplier or community, and are up to date including security updates.", DeviceType.All);
-            AddQuestion("Applicable anti malware and antivirus solutions are present, active and up to date.", DeviceType.All);
-            AddQuestion("Local (application) firewall is active and alerts the user to unusual behaviour.", DeviceType.Desktop | DeviceType.Laptop);
-            AddQuestion("Laptop or desktop should be automatically locked after a pre-set period of inactivity after a maximum of 15 minutes and phones or tablets after 5 minutes.", DeviceType.Desktop | DeviceType.Laptop);
-            AddQuestion("Remote wipe, lock, or effective data protection measures to prevent loss of setting information in the event of theft should be in place.", DeviceType.All);
 
-            SecurityQuestions.AddRange(questions);
-            SaveChanges();
+            if (!SecurityQuestions.Any()) 
+            {
+                List<SecurityQuestions> questions = new List<SecurityQuestions>();
+                void AddQuestion(string text, DeviceType mask) 
+                {
+                    questions.Add(new Data.SecurityQuestions()
+                    {
+                        Text = text,
+                        Mask = mask,
+                    });
+                }
+                AddQuestion("Does the device have encrypted storage?", DeviceType.All);
+                AddQuestion("Are local accounts only accessible with strong passwords?", DeviceType.All);
+                AddQuestion("Does the device have a strong access code(minimum 6 characters) other than the SIM card PIN code?", DeviceType.Mobile | DeviceType.Tablet);
+                AddQuestion("The OS and all applications are maintained by a supplier or community, and are up to date including security updates.", DeviceType.All);
+                AddQuestion("Applicable anti malware and antivirus solutions are present, active and up to date.", DeviceType.All);
+                AddQuestion("Local (application) firewall is active and alerts the user to unusual behaviour.", DeviceType.Desktop | DeviceType.Laptop);
+                AddQuestion("Laptop or desktop should be automatically locked after a pre-set period of inactivity after a maximum of 15 minutes and phones or tablets after 5 minutes.", DeviceType.Desktop | DeviceType.Laptop);
+                AddQuestion("Remote wipe, lock, or effective data protection measures to prevent loss of setting information in the event of theft should be in place.", DeviceType.All);
+                SecurityQuestions.AddRange(questions);
+                SaveChanges();
+            }
         }
 
         public void UpdateProperties<T>(T entity, params Expression<Func<T, object>>[] properties) where T : class, IEntity, new()

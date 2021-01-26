@@ -35,7 +35,7 @@ namespace DevicePortal.Controllers
             var deviceExportFile = Request.Form.Files[0];
             var deviceExport = CsvParser.Parse(deviceExportFile);
 
-            int iInstitute = -1, iUserName = -1, iUserEmail = -1, iBrand = -1, iBrandType = -1, iDeviceId = -1, iDeviceType = -1, iDeviceOS = -1, iSerial = -1;
+            int iDepartment = -1, iUserName = -1, iUserEmail = -1, iBrand = -1, iBrandType = -1, iDeviceId = -1, iDeviceType = -1, iDeviceOS = -1, iSerial = -1;
             for (int i = 0; i < deviceExport.header.Count; ++i)
             {
                 switch (deviceExport.header[i])
@@ -45,19 +45,21 @@ namespace DevicePortal.Controllers
                     case "login_gebruiker": iUserName = i; break;
                     case "email": iUserEmail = i; break;
                     case "soort": iDeviceType = i; break;
-                    case "klantorganisatie": iInstitute = i; break;
+                    case "klantorganisatie": iDepartment = i; break;
                     case "besturingssysteem": iDeviceOS = i; break;
                     case "merk": iBrand = i; break;
                     case "type": iBrandType = i; break;
                 }
             }
-            if (iInstitute == -1 || iUserName == -1 || iDeviceId == -1 || iDeviceType == -1)
+            if (iDepartment == -1 || iUserName == -1 || iDeviceId == -1 || iDeviceType == -1)
             {
                 return BadRequest("Invalid Maandrapportage file. Incorrect headers.");
             }
 
-            DateTime now = DateTime.Now;
-            string facultyPrefix = "UvA/FNWI";
+            var faculty = _context.Faculties.FirstOrDefault();
+            var departmentMap = _context.Departments.ToDictionary(d => d.Name);
+
+            DateTime now = DateTime.Now;            
             Dictionary<string, User> userMap = _context.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
             List<User> usersToUpdate = new List<User>();
@@ -66,6 +68,14 @@ namespace DevicePortal.Controllers
             List<Device> devicesToUpdate = new List<Device>();
             foreach (var line in deviceExport.lines)
             {
+                string departmentName = instituteDepartmentMap.TryGetValue(line[iDepartment], out departmentName) ?
+                           departmentName : line[iDepartment];
+                if (!departmentMap.TryGetValue(departmentName, out Department department))
+                {
+                    department = new Department { Name = departmentName, FacultyId = faculty.Id };
+                    departmentMap.Add(departmentName, department);
+                }
+
                 var device = new Device
                 {
                     Name = $"{line[iBrand]} {line[iBrandType]}".Trim(),
@@ -75,6 +85,7 @@ namespace DevicePortal.Controllers
                     Origin = DeviceOrigin.DataExport,
                     Status = DeviceStatus.Unsecure,
                     StatusEffectiveDate = now,
+                    Department = department,
                 };
 
                 string deviceType = line[iDeviceType];
@@ -84,15 +95,15 @@ namespace DevicePortal.Controllers
                 else if (deviceType.StartsWith("Mobiel")) { device.Type = DeviceType.Mobile; }
 
                 string deviceOs = line[iDeviceOS];
-                foreach (string prefix in osTypeMap.Keys) 
+                foreach (string prefix in osTypeMap.Keys)
                 {
-                    if (deviceOs.StartsWith(prefix)) 
-                    { 
+                    if (deviceOs.StartsWith(prefix))
+                    {
                         device.OS_Type = osTypeMap[prefix];
                         device.OS_Version = deviceOs[prefix.Length..];
                     }
                 }
-                if (device.OS_Type == 0 && device.Type == DeviceType.Tablet) 
+                if (device.OS_Type == 0 && device.Type == DeviceType.Tablet)
                 {
                     device.OS_Type = line[iBrand].Contains("Apple") ? OS_Type.iOS : OS_Type.Android;
                 }
@@ -101,7 +112,7 @@ namespace DevicePortal.Controllers
                 {
                     if (userMap.TryGetValue(device.UserName, out var user))
                     {
-                        if (user.Email != line[iUserEmail]) 
+                        if (user.Email != line[iUserEmail])
                         {
                             user.Email = line[iUserEmail];
                             usersToUpdate.Add(user);
@@ -112,12 +123,8 @@ namespace DevicePortal.Controllers
                         user = new User()
                         {
                             UserName = device.UserName,
-                            Faculty = "FNWI",
-                            Institute = line[iInstitute].Length > facultyPrefix.Length ?
-                                line[iInstitute][(facultyPrefix.Length + 1)..] : // + 1 for /
-                                "FNWI", // Institute could equal Faculty
-                            Department = instituteDepartmentMap.TryGetValue(line[iInstitute], out string dep) ?
-                                dep : "",
+                            FacultyId = faculty.Id,                            
+                            Departments = new HashSet<User_Department>() { new User_Department { Department = department } },
                             Email = line[iUserEmail],
                         };
                         usersToAdd.Add(user);
@@ -136,8 +143,9 @@ namespace DevicePortal.Controllers
                     }
                     else { devicesToAdd.Add(device); }
                 }
+                else { devicesToAdd.Add(device); }
             }
-            if (usersToUpdate.Any()) 
+            if (usersToUpdate.Any())
             {
                 _context.Users.UpdateRange(usersToUpdate);
                 _context.SaveChanges();
@@ -154,40 +162,38 @@ namespace DevicePortal.Controllers
             using var sqlBulk = new SqlBulkCopy(_context.Database.GetDbConnection() as SqlConnection);
 
             // Bulk insert users
-            var userTable = new System.Data.DataTable();
-            userTable.Columns.Add("UserName");
-            userTable.Columns.Add("Email");
-            userTable.Columns.Add("Name");
-            userTable.Columns.Add("Faculty");
-            userTable.Columns.Add("Institute");
-            userTable.Columns.Add("Department");
-            userTable.Columns.Add("CanSecure");
-            userTable.Columns.Add("CanApprove");
-            userTable.Columns.Add("CanAdmin");
-            foreach (var user in usersToAdd)
-            {
-                userTable.Rows.Add(
-                    user.UserName, 
-                    user.Email,
-                    user.Name,
-                    user.Faculty, 
-                    user.Institute, 
-                    user.Department,
-                    user.CanSecure, 
-                    user.CanApprove, 
-                    user.CanAdmin);
-            }
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Email", "Email"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Faculty", "Faculty"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Institute", "Institute"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Department", "Department"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanSecure", "CanSecure"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanApprove", "CanApprove"));
-            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanAdmin", "CanAdmin"));
-            sqlBulk.DestinationTableName = "dbo.Users";
-            sqlBulk.WriteToServer(userTable);
+            //var userTable = new System.Data.DataTable();
+            //userTable.Columns.Add("UserName");
+            //userTable.Columns.Add("Email");
+            //userTable.Columns.Add("Name");
+            //userTable.Columns.Add("FacultyId");
+            //userTable.Columns.Add("CanSecure");
+            //userTable.Columns.Add("CanApprove");
+            //userTable.Columns.Add("CanAdmin");
+            //foreach (var user in usersToAdd)
+            //{
+            //    userTable.Rows.Add(
+            //        user.UserName,
+            //        user.Email,
+            //        user.Name,
+            //        user.FacultyId,
+            //        user.CanSecure,
+            //        user.CanApprove,
+            //        user.CanAdmin);
+            //}
+            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
+            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Email", "Email"));
+            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
+            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("FacultyId", "FacultyId"));
+            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Department", "Department"));
+            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanSecure", "CanSecure"));
+            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanApprove", "CanApprove"));
+            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanAdmin", "CanAdmin"));
+            //sqlBulk.DestinationTableName = "dbo.Users";
+            //sqlBulk.WriteToServer(userTable);
+
+            _context.AddRange(usersToAdd);
+            _context.SaveChanges();
 
             // Bulk insert devices
             var deviceTable = new System.Data.DataTable();
@@ -201,19 +207,21 @@ namespace DevicePortal.Controllers
             deviceTable.Columns.Add("Status", typeof(int));
             deviceTable.Columns.Add("StatusEffectiveDate");
             deviceTable.Columns.Add("Origin", typeof(int));
+            deviceTable.Columns.Add("DepartmentId", typeof(int));
             foreach (var device in devicesToAdd)
             {
                 deviceTable.Rows.Add(
-                    device.UserName, 
+                    device.UserName,
                     device.Name,
-                    device.DeviceId, 
-                    device.SerialNumber, 
-                    device.OS_Type, 
+                    device.DeviceId,
+                    device.SerialNumber,
+                    device.OS_Type,
                     device.OS_Version,
                     device.Type,
                     device.Status,
                     device.StatusEffectiveDate,
-                    device.Origin);
+                    device.Origin,
+                    device.Department.Id);
             }
 
             sqlBulk.ColumnMappings.Clear();
@@ -227,6 +235,7 @@ namespace DevicePortal.Controllers
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Status", "Status"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("StatusEffectiveDate", "StatusEffectiveDate"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Origin", "Origin"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("DepartmentId", "DepartmentId"));
             sqlBulk.DestinationTableName = "dbo.Devices";
             sqlBulk.WriteToServer(deviceTable);
             sqlBulk.Close();

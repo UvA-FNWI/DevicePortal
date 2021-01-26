@@ -1,4 +1,5 @@
 ﻿class Institute {
+    id: number;
     name: string;
     users: number;
     usersCompleted: number;
@@ -28,7 +29,7 @@ function page_faculty(parameters: string) {
             ks.column(i.toString(), '12 col-md-6 px-2', function () {
                 ks.group(inst.name, 'card mb-3', function () {
                     ks.group('body', 'card-body', function () {
-                        let url = pages[Page.Institute] + '/' + inst.name;
+                        let url = pages[Page.Institute] + '/' + inst.id;
                         ks.anchor(inst.name, url, function () {
                             ks.h5(inst.name, 'card-title');
                         });
