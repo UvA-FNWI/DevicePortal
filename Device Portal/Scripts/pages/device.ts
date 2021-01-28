@@ -25,7 +25,13 @@ osNames[OSType.iOS] = 'iOS';
 osNames[OSType.Linux] = 'Linux';
 osNames[OSType.MacOS] = 'MacOS';
 osNames[OSType.Windows] = 'Windows';
-let osTypeCount = Object.keys(osNames).length;
+
+let deviceOS = {};
+deviceOS[DeviceType.Mobile] = [OSType.Android, OSType.iOS];
+deviceOS[DeviceType.Tablet] = [OSType.Android, OSType.iOS];
+deviceOS[DeviceType.Laptop] = [OSType.Linux, OSType.MacOS, OSType.Windows];
+deviceOS[DeviceType.Desktop] = [OSType.Linux, OSType.MacOS, OSType.Windows];
+deviceOS[DeviceType.All] = [OSType.Android, OSType.iOS, OSType.Linux, OSType.MacOS, OSType.Windows];
 
 class Device {
     id: number;
@@ -120,7 +126,7 @@ function page_device(parameters: string) {
         return;
     }
 
-    header_breadcrumbs(['Add device'], ks.no_op);
+    header_breadcrumbs([state.device.id ? 'Edit device' : 'Add device'], ks.no_op);
 
     ks.row('row', function () {
         for (let i = 0; i < state.options.length; ++i) {
@@ -137,6 +143,7 @@ function page_device(parameters: string) {
                 if (!state.update) {
                     ks.is_item_clicked(function () {
                         state.selected = i;
+                        state.device.type = state.options[state.selected].type;
                         ks.refresh();
                     });
                 }
@@ -162,12 +169,14 @@ function page_device(parameters: string) {
                     ks.is_item_clicked(function () {
                         state.device.os_type = 0;
                     });
-                    for (let i = 0; i < osTypeCount; ++i) {
-                        let type: OSType = 1 << i;
-                        ks.selectable(osNames[type], state.device.os_type === type);
-                        ks.is_item_clicked(function () {
-                            state.device.os_type = type;
-                        });
+                    if (state.device.type) {
+                        for (let i = 0; i < deviceOS[state.device.type].length; ++i) {
+                            let type: OSType = deviceOS[state.device.type][i];
+                            ks.selectable(osNames[type], state.device.os_type === type);
+                            ks.is_item_clicked(function () {
+                                state.device.os_type = type;
+                            });
+                        }
                     }
                 }).disabled = state.update && !!(state.loaded_os_type & (OSType.Android | OSType.iOS));
 
@@ -184,7 +193,6 @@ function page_device(parameters: string) {
 
                 if (ks.current_form_submitted() && state.selected >= 0 && !this.getElementsByClassName('is-invalid').length) {
                     ks.cancel_current_form_submission();
-                    state.device.type = state.options[state.selected].type;
 
                     if (state.update) {
                         PUT_JSON(API.Devices(state.device.id), state.device).then(() => {

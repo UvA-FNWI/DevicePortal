@@ -120,14 +120,16 @@ function page_security_check(parameters: string) {
                         state.device.os_type = 0;
                         ks.refresh();
                     });
-                    for (let i = 0; i < osTypeCount; ++i) {
-                        let type: OSType = 1 << i;
-                        ks.selectable(osNames[type], state.device.os_type === type);
-                        ks.is_item_clicked(function () {
-                            state.device.os_type = type;
-                            state.refresh_recommendations = true;
-                            ks.refresh();
-                        });
+                    if (state.device.type) {
+                        for (let i = 0; i < deviceOS[state.device.type].length; ++i) {
+                            let type: OSType = deviceOS[state.device.type][i];
+                            ks.selectable(osNames[type], state.device.os_type === type);
+                            ks.is_item_clicked(function () {
+                                state.device.os_type = type;
+                                state.refresh_recommendations = true;
+                                ks.refresh();
+                            });
+                        }
                     }
                 }).disabled = !!(state.loaded_os_type & (OSType.Android | OSType.iOS));
             });
