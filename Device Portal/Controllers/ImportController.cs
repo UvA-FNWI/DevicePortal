@@ -66,6 +66,7 @@ namespace DevicePortal.Controllers
             Dictionary<string, Device> deviceMap = _context.Devices.ToDictionary(d => d.DeviceId);
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
+            List<Department> departmentsToAdd = new List<Department>();
             foreach (var line in deviceExport.lines)
             {
                 string departmentName = instituteDepartmentMap.TryGetValue(line[iDepartment], out departmentName) ?
@@ -74,6 +75,7 @@ namespace DevicePortal.Controllers
                 {
                     department = new Department { Name = departmentName, FacultyId = faculty.Id };
                     departmentMap.Add(departmentName, department);
+                    departmentsToAdd.Add(department);
                 }
 
                 var device = new Device
@@ -155,45 +157,65 @@ namespace DevicePortal.Controllers
                 _context.Devices.UpdateRange(devicesToUpdate);
                 _context.SaveChanges();
             }
-
+            if (departmentsToAdd.Any()) 
+            {
+                _context.AddRange(departmentsToAdd);
+                _context.SaveChanges();
+            }
+         
             // https://www.michalbialecki.com/2020/05/03/entity-framework-core-5-vs-sqlbulkcopy-2/
             var connection = _context.Database.GetDbConnection() as SqlConnection;
             connection.Open();
             using var sqlBulk = new SqlBulkCopy(_context.Database.GetDbConnection() as SqlConnection);
 
             // Bulk insert users
-            //var userTable = new System.Data.DataTable();
-            //userTable.Columns.Add("UserName");
-            //userTable.Columns.Add("Email");
-            //userTable.Columns.Add("Name");
-            //userTable.Columns.Add("FacultyId");
-            //userTable.Columns.Add("CanSecure");
-            //userTable.Columns.Add("CanApprove");
-            //userTable.Columns.Add("CanAdmin");
-            //foreach (var user in usersToAdd)
-            //{
-            //    userTable.Rows.Add(
-            //        user.UserName,
-            //        user.Email,
-            //        user.Name,
-            //        user.FacultyId,
-            //        user.CanSecure,
-            //        user.CanApprove,
-            //        user.CanAdmin);
-            //}
-            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
-            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Email", "Email"));
-            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
-            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("FacultyId", "FacultyId"));
-            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Department", "Department"));
-            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanSecure", "CanSecure"));
-            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanApprove", "CanApprove"));
-            //sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanAdmin", "CanAdmin"));
-            //sqlBulk.DestinationTableName = "dbo.Users";
-            //sqlBulk.WriteToServer(userTable);
+            var userTable = new System.Data.DataTable();
+            userTable.Columns.Add("UserName");
+            userTable.Columns.Add("Email");
+            userTable.Columns.Add("Name");
+            userTable.Columns.Add("FacultyId");
+            userTable.Columns.Add("CanSecure");
+            userTable.Columns.Add("CanApprove");
+            userTable.Columns.Add("CanAdmin");
+            foreach (var user in usersToAdd)
+            {
+                userTable.Rows.Add(
+                    user.UserName,
+                    user.Email,
+                    user.Name,
+                    user.FacultyId,
+                    user.CanSecure,
+                    user.CanApprove,
+                    user.CanAdmin);
+            }
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Email", "Email"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Name", "Name"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("FacultyId", "FacultyId"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanSecure", "CanSecure"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanApprove", "CanApprove"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanAdmin", "CanAdmin"));
+            sqlBulk.DestinationTableName = "dbo.Users";
+            sqlBulk.WriteToServer(userTable);
 
-            _context.AddRange(usersToAdd);
-            _context.SaveChanges();
+            // Bulk insert User_Department
+            var udTable = new System.Data.DataTable();
+            udTable.Columns.Add("UserName");
+            udTable.Columns.Add("DepartmentId");
+            udTable.Columns.Add("CanManage");
+            foreach (var user in usersToAdd)
+            {
+                foreach (var dep in user.Departments)
+                {
+                    udTable.Rows.Add(user.UserName, dep.Department.Id, dep.CanManage);
+                }
+            }
+            sqlBulk.ColumnMappings.Clear();
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserName", "UserName"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("DepartmentId", "DepartmentId"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanManage", "CanManage"));
+            sqlBulk.DestinationTableName = "dbo.Users_Departments";
+            sqlBulk.WriteToServer(udTable);
 
             // Bulk insert devices
             var deviceTable = new System.Data.DataTable();
