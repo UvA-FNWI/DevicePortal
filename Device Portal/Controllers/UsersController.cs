@@ -35,9 +35,9 @@ namespace DevicePortal.Controllers
             }
             else 
             {
-                var userId = User.GetUserName();
+                var userName = User.GetUserName();
                 var departmentIds = _context.Users
-                    .Where(u => u.UserName == userId)
+                    .Where(u => u.UserName == userName)
                     .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
                     .ToHashSet();
                 return await _context.Users

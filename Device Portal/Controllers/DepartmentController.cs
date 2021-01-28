@@ -32,6 +32,12 @@ namespace DevicePortal.Controllers
         [HttpGet("{id}/Devices")]
         public async Task<ActionResult> GetDevices(int id)
         {
+            var userName = User.GetUserName();
+            if (!db.Users_Departments.Any(u => u.UserName == userName && u.DepartmentId == id && u.CanManage))
+            {
+                return Forbid();
+            }
+
             var devices = await db.Devices
                 .Where(d => d.DepartmentId == id && !string.IsNullOrEmpty(d.UserName))
                 .Select(d => new 

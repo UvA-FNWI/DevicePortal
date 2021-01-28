@@ -25,8 +25,14 @@ namespace DevicePortal.Controllers
         [HttpGet]
         public async Task<ActionResult> GetOverview()
         {
+            var userName = User.GetUserName();
+            var departmentIds = await _context.Users_Departments
+                .Where(u => u.UserName == userName && u.CanManage)
+                .Select(u => u.DepartmentId)
+                .ToArrayAsync();
+
             var users = await _context.Users
-                .Where(u => u.Departments.Any())
+                .Where(u => u.Departments.Any(d => departmentIds.Contains(d.DepartmentId)))
                 .Select(u => new
                 {
                     Departments = u.Departments.Select(d => d.Department),
