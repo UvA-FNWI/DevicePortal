@@ -183,7 +183,7 @@ ks.run(function () {
                 if (user.impersonating) {
                     ks.nav_item('End impersonation', false, '');
                     ks.is_item_clicked(function () {
-                        GET(API.Identity('impersonation/end')).always(function () {
+                        GET(API.Identity('impersonate/end')).always(function () {
                             window.location.reload();
                         });
                         return false;
