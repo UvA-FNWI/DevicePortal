@@ -12,17 +12,26 @@ namespace DevicePortal.Controllers
     [ApiController, Authorize(Policy = AppPolicies.AdminOnly)]
     public class AdminController : ControllerBase
     {
-        private NotificationService _notificationService;
+        private NotificationTask _notificationTask;
+        private RightsTask _rightsTask;
 
-        public AdminController(NotificationService notificationService) 
+        public AdminController(NotificationTask notificationTask, RightsTask rightsTask) 
         {
-            _notificationService = notificationService;
+            _notificationTask = notificationTask;
+            _rightsTask = rightsTask;
         }
 
         [HttpGet("notify/approvers")]
         public ActionResult NotifyApprovers()         
         {
-            _notificationService.NotifyApprovers();
+            _notificationTask.NotifyApprovers();
+            return Ok();
+        }
+
+        [HttpGet("update/rights")]
+        public ActionResult UpdateRights()
+        {
+            _rightsTask.UpdateRights();
             return Ok();
         }
     }

@@ -34,8 +34,7 @@ namespace DevicePortal
         }
 
         public IConfiguration Configuration { get; }
-
-        // This method gets called by the runtime. Use this method to add services to the container.
+                
         public void ConfigureServices(IServiceCollection services)
         {
             JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
@@ -54,13 +53,6 @@ namespace DevicePortal
             .AddOpenIdConnect(options =>
             {
                 options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-
-                // Local
-                //options.Authority = "https://localhost:5001";
-                //options.ClientId = "device_portal";
-                //options.ClientSecret = "secret";
-
-                // Surfconext test
                 options.Prompt = "login";
                 options.Authority = Configuration["OpenID:Authority"];
                 options.ClientId = Configuration["OpenID:ClientID"];
@@ -88,7 +80,9 @@ namespace DevicePortal
                         
                         int facultyId = db.Faculties.Select(f => f.Id).First();
                         var departmentMap = db.Departments.ToDictionary(d => d.Name);
-                        var departmentRights = await departmentService.GetDepartments(userName);
+                        var rights = await departmentService.GetDepartments(userName); // contains duplicates
+                        var rightsMap = new Dictionary<string, DepartmentService.Department>();
+                        foreach (var right in rights) { rightsMap.TryAdd(right.Name, right); }
 
                         var user = await db.Users.FindAsync(userName);
                         if (user == null)
@@ -105,7 +99,7 @@ namespace DevicePortal
                                 UserName = userName,
                             };
 
-                            foreach (var right in departmentRights)
+                            foreach (var right in rightsMap.Values)
                             {
                                 var userDepartment = new User_Department()
                                 {
@@ -127,8 +121,6 @@ namespace DevicePortal
                         }
                         else 
                         {
-                            var rightsMap = departmentRights.ToDictionary(r => r.Name);
-
                             // Update or remove current department from user
                             var userDepartments = db.Users_Departments
                                 .Include(ud => ud.Department)
@@ -145,7 +137,7 @@ namespace DevicePortal
 
                             // Add new departments to user
                             var currentDepartments = userDepartments.Select(ud => ud.Department.Name).ToHashSet();
-                            foreach (var right in departmentRights) 
+                            foreach (var right in rightsMap.Values) 
                             {
                                 if (!currentDepartments.Contains(right.Name))
                                 {
@@ -211,8 +203,10 @@ namespace DevicePortal
             services.AddHttpClient();
             services.AddScoped<IntuneService>();
             services.AddScoped<DepartmentService>();
-            services.AddSingleton<NotificationService>();
-            services.AddHostedService<NotificationService>();
+            services.AddSingleton<NotificationTask>();
+            services.AddHostedService<NotificationTask>();
+            services.AddSingleton<RightsTask>();
+            services.AddHostedService<RightsTask>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -268,7 +262,8 @@ namespace DevicePortal
                         u.CanSecure,
                         u.Name,
                     })
-                    .SingleAsync();
+                    .SingleOrDefaultAsync();
+                if (user == null) { return principal; }
 
                 var identity = (ClaimsIdentity)principal.Identity;                
                 if (user.CanAdmin) 

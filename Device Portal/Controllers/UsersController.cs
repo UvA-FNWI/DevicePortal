@@ -72,7 +72,6 @@ namespace DevicePortal.Controllers
             return user;
         }
 
-
         [Authorize(Policy = AppPolicies.AdminOnly)]
         // GET: api/Users/{UserName}/Rights
         [HttpGet("{id}/Rights")]
