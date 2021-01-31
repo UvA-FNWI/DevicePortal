@@ -212,6 +212,7 @@ function page_security_check(parameters: string) {
                 $.when(xhrDevice, xhrCheck).done(function () {
                     ks.navigate_to('Home', '/');
                     state.device.status = DeviceStatus.Submitted;
+                    contextModal.showSuccess('Successfully submitted security check.');
                 }).fail(function (error) {
                     contextModal.showWarning(error.responseText);
                 });
