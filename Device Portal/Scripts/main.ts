@@ -170,7 +170,7 @@ ks.run(function () {
                 }
 
                 if (user.page_access[Page.Admin]) {
-                    ks.nav_item('Admin', iPage === Page.Users, pages[Page.Admin]);
+                    ks.nav_item('Admin', iPage === Page.Admin, pages[Page.Admin]);
                     ks.is_item_clicked(function () {
                         ks.navigate_to('Admin', pages[Page.Admin]);
                         return false;
