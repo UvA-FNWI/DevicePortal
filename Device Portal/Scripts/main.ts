@@ -406,6 +406,19 @@ function page_admin() {
             }
         });
     });
+
+    ks.h5('Tools', 'mb-2 mt-2');
+    ks.button('sync-devices', function () {
+        GET(API.Intune('managedDevices/sync')).done(function () {
+            contextModal.showSuccess('Synchronization complete.');
+        });
+    });
+    ks.set_next_item_class_name('ml-2');
+    ks.button('notify-approvers', function () {
+        GET(API.Admin('notify/approvers')).done(function () {
+            contextModal.showSuccess('Approvers notified of submitted checks.');
+        });
+    });
 }
 
 function header_breadcrumbs(items: string[], proc: (i: number) => void) {
@@ -445,7 +458,9 @@ function header_breadcrumbs(items: string[], proc: (i: number) => void) {
 
 abstract class API {
 
+    static Admin = API.getUrlFactory('/api/Admin');
     static Identity = API.getUrlFactory('/api/Identity');
+    static Intune = API.getUrlFactory('/api/Intune');
     static Import = API.getUrlFactory('/api/Import');
     static Devices = API.getUrlFactory('/api/Devices');
     static Faculties = API.getUrlFactory('/api/Faculties');
