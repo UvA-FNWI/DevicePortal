@@ -33,7 +33,8 @@ namespace DevicePortal.Controllers
         public async Task<ActionResult> GetDevices(int id)
         {
             var userName = User.GetUserName();
-            if (!db.Users_Departments.Any(u => u.UserName == userName && u.DepartmentId == id && u.CanManage))
+            bool isAdmin = User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin);
+            if (!isAdmin && !db.Users_Departments.Any(u => u.UserName == userName && u.DepartmentId == id && u.CanManage))
             {
                 return Forbid();
             }
