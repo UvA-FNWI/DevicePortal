@@ -26,10 +26,22 @@ namespace DevicePortal.Controllers
         public async Task<ActionResult> GetOverview()
         {
             var userName = User.GetUserName();
-            var departmentIds = await _context.Users_Departments
-                .Where(u => u.UserName == userName && u.CanManage)
-                .Select(u => u.DepartmentId)
-                .ToArrayAsync();
+            bool isAdmin = User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin);
+
+            int[] departmentIds;
+            if (isAdmin)
+            {
+                departmentIds = await _context.Departments
+                    .Select(d => d.Id)
+                    .ToArrayAsync();
+            }
+            else 
+            {
+                departmentIds = await _context.Users_Departments
+                    .Where(u => u.UserName == userName && u.CanManage)
+                    .Select(u => u.DepartmentId)
+                    .ToArrayAsync();
+            }
 
             var users = await _context.Users
                 .Where(u => u.Departments.Any(d => departmentIds.Contains(d.DepartmentId)))

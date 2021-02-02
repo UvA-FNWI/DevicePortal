@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace DevicePortal.Data
@@ -27,6 +28,7 @@ namespace DevicePortal.Data
         public int FacultyId { get; set; }
         public Faculty Faculty { get; set; }
 
+        [JsonIgnore]
         public HashSet<User_Department> Departments { get; set; }
         public HashSet<SecurityCheck> SecurityChecks { get; set; }
         public HashSet<Device> Devices { get; set; }
