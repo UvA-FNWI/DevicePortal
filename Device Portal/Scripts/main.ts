@@ -414,6 +414,12 @@ function page_admin() {
         });
     });
     ks.set_next_item_class_name('ml-2');
+    ks.button('sync-rights', function () {
+        GET(API.Intune('admin/update/rights')).done(function () {
+            contextModal.showSuccess('Rights synchronization with DN complete.');
+        });
+    });
+    ks.set_next_item_class_name('ml-2');
     ks.button('notify-approvers', function () {
         GET(API.Admin('notify/approvers')).done(function () {
             contextModal.showSuccess('Approvers notified of submitted checks.');

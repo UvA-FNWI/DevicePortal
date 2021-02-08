@@ -27,11 +27,22 @@ namespace DevicePortal.Controllers
 
         // GET: api/Users
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        public async Task<ActionResult> GetUsers()
         {
             if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
             {
-                return await _context.Users.ToListAsync();
+                return Ok(await _context.Users
+                    .Select(u => new 
+                    {
+                        u.CanApprove,
+                        u.CanSecure,
+                        Institute = string.Join(',', u.Departments.Select(d => d.Department.Name)),
+                        u.Email,
+                        u.FacultyId,
+                        u.Name,
+                        u.UserName,
+                    })                    
+                    .ToListAsync());
             }
             else 
             {
@@ -40,9 +51,19 @@ namespace DevicePortal.Controllers
                     .Where(u => u.UserName == userName)
                     .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
                     .ToHashSet();
-                return await _context.Users
+                return Ok(await _context.Users
                     .Where(u => u.Departments.Any(d => departmentIds.Contains(d.DepartmentId)))
-                    .ToArrayAsync();
+                    .Select(u => new
+                    {
+                        u.CanApprove,
+                        u.CanSecure,
+                        Institute = string.Join(',', u.Departments.Select(d => d.Department.Name)),
+                        u.Email,
+                        u.FacultyId,
+                        u.Name,
+                        u.UserName,
+                    })
+                    .ToArrayAsync());
                     
             }
         }

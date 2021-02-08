@@ -294,13 +294,16 @@ namespace DevicePortal
                             if (!string.IsNullOrEmpty(user.Name)) 
                             {
                                 string[] parts = user.Name.Split(' ');
+                                string firstName = parts[0];
+                                string lastName = parts.Length > 1 ? string.Join(' ', parts[1..]) : "Impersonate";
+
                                 claim = identity.Claims.FirstOrDefault(c => c.Type == "given_name");
                                 identity.RemoveClaim(claim);
                                 identity.AddClaim(new Claim(claim.Type, parts[0]));
 
                                 claim = identity.Claims.FirstOrDefault(c => c.Type == "family_name");
                                 identity.RemoveClaim(claim);
-                                identity.AddClaim(new Claim(claim.Type, parts.Length > 1 ? parts[1] : "Impersonate"));
+                                identity.AddClaim(new Claim(claim.Type, lastName));
                             }
                         }
                     }
