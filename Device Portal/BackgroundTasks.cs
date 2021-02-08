@@ -236,6 +236,7 @@ secure-science@uva.nl",
                     }
                 }
             }
+            await db.SaveChangesAsync();
         }
     }
 }
