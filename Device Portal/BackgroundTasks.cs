@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MimeKit;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -189,53 +190,88 @@ secure-science@uva.nl",
 
             int facultyId = db.Faculties.Select(f => f.Id).First();
             var departments = db.Departments.ToArray();
-            var departmentIdMap = db.Departments.ToDictionary(d => d.Id);
-            var departmentNameMap = db.Departments.ToDictionary(d => d.Name);
+            var departmentIdMap = departments.ToDictionary(d => d.Id);
+            var departmentNameMap = new ConcurrentDictionary<string, Department>(departments.ToDictionary(d => d.Name));
             var users = db.Users
                 .Include(u => u.Departments)
                 .ToArray();
+
+            int threads = 8;
+            var threadData = new List<User>[threads];
+            int i = 0;
+            for (; i < threads; ++i) { threadData[i] = new List<User>(); }
+            i = 0;
             foreach (var user in users)
             {
-                var rights = await departmentService.GetDepartments(user.UserName);
-                var rightsMap = new Dictionary<string, DepartmentService.Department>(); // contains duplicates
-                foreach (var right in rights) { rightsMap.TryAdd(right.Name, right); }
-
-                // Update or remove existings departments
-                foreach (var ud in user.Departments)
-                {
-                    if (departmentIdMap.TryGetValue(ud.DepartmentId, out var department) &&
-                        rightsMap.TryGetValue(department.Name, out var right))
-                    {
-                        ud.CanManage = right.IsManager;
-                    }
-                    else { db.Users_Departments.Remove(ud); }
-                }
-
-                // Add new departments to user
-                var currentDepartmentIds = user.Departments.Select(ud => ud.DepartmentId).ToHashSet();
-                foreach (var right in rightsMap.Values)
-                {
-                    if (!departmentNameMap.TryGetValue(right.Name, out var department) ||
-                        !currentDepartmentIds.Contains(department.Id))
-                    {
-                        var user_department = new User_Department()
-                        {
-                            UserName = user.UserName,
-                            CanManage = right.IsManager,
-                        };
-                        if (department != null)
-                        {
-                            user_department.DepartmentId = department.Id;
-                        }
-                        else
-                        {
-                            user_department.Department = new Department { Name = right.Name, FacultyId = facultyId };
-                            departmentNameMap.Add(right.Name, user_department.Department);
-                        }
-                        db.Users_Departments.Add(user_department);
-                    }
-                }
+                threadData[i++].Add(user);
+                i %= threads;
             }
+
+            i = 0;
+            var departmentsToAdd = new ConcurrentBag<Department>();
+            var userDepartsToAdd = new ConcurrentBag<User_Department>();
+            var userDepartsToRemove = new ConcurrentBag<User_Department>();
+            var tasks = new Task[threads];
+            for (; i < threads; ++i)
+            {
+                var data = threadData[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    foreach (var user in data) 
+                    {
+                        var rights = await departmentService.GetDepartments(user.UserName);
+                        var rightsMap = new Dictionary<string, DepartmentService.Department>(); // contains duplicates
+                        foreach (var right in rights) { rightsMap.TryAdd(right.Name, right); }
+
+                        // Update or remove existings departments
+                        foreach (var ud in user.Departments)
+                        {
+                            if (departmentIdMap.TryGetValue(ud.DepartmentId, out var department) &&
+                                rightsMap.TryGetValue(department.Name, out var right))
+                            {
+                                ud.CanManage = right.IsManager;
+                            }
+                            else { userDepartsToRemove.Add(ud); }
+                        }
+
+                        // Add new departments to user
+                        var currentDepartmentIds = user.Departments.Select(ud => ud.DepartmentId).ToHashSet();
+                        foreach (var right in rightsMap.Values)
+                        {
+                            if (!departmentNameMap.TryGetValue(right.Name, out var department) ||
+                                !currentDepartmentIds.Contains(department.Id))
+                            {
+                                var user_department = new User_Department()
+                                {
+                                    UserName = user.UserName,
+                                    CanManage = right.IsManager,
+                                };
+                                if (department != null)
+                                {
+                                    user_department.DepartmentId = department.Id;
+                                }
+                                else
+                                {
+                                    user_department.Department = new Department { Name = right.Name, FacultyId = facultyId };
+                                    if (departmentNameMap.TryAdd(right.Name, user_department.Department)) 
+                                    {
+                                        departmentsToAdd.Add(user_department.Department);
+                                    }
+                                }
+                                userDepartsToAdd.Add(user_department);
+                            }
+                        }
+                    }
+                });
+            }
+            Task.WhenAll(tasks).Wait();
+
+            db.Departments.AddRange(departmentsToAdd);
+            await db.SaveChangesAsync();
+
+            foreach (var ud in userDepartsToAdd) { if (ud.Department != null) { ud.DepartmentId = ud.Department.Id; } }
+            db.Users_Departments.AddRange(userDepartsToAdd);
+            db.Users_Departments.RemoveRange(userDepartsToRemove);
             await db.SaveChangesAsync();
         }
     }

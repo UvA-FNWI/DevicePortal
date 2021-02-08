@@ -230,7 +230,7 @@ namespace DevicePortal
             {
                 _context.UpdateProperties(device, d => d.Origin, d => d.Status, d => d.StatusEffectiveDate);
             }
-            _context.AddRange(devicesToAdd.ToArray());
+            _context.Devices.AddRange(devicesToAdd);
 
             await _context.SaveChangesAsync();
         }
