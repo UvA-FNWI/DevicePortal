@@ -176,7 +176,12 @@ secure-science@uva.nl",
             return Task.CompletedTask;
         }
 
-        public async void UpdateRights(object _ = null)
+        private async void UpdateRights(object _ = null)
+        {
+            await Run();
+        }
+
+        public async Task Run() 
         {
             using var scope = _scopeFactory.CreateScope();
             using var db = scope.ServiceProvider.GetRequiredService<PortalContext>();
@@ -189,7 +194,7 @@ secure-science@uva.nl",
             var users = db.Users
                 .Include(u => u.Departments)
                 .ToArray();
-            foreach (var user in users) 
+            foreach (var user in users)
             {
                 var rights = await departmentService.GetDepartments(user.UserName);
                 var rightsMap = new Dictionary<string, DepartmentService.Department>(); // contains duplicates
@@ -198,7 +203,7 @@ secure-science@uva.nl",
                 // Update or remove existings departments
                 foreach (var ud in user.Departments)
                 {
-                    if (departmentIdMap.TryGetValue(ud.DepartmentId, out var department) && 
+                    if (departmentIdMap.TryGetValue(ud.DepartmentId, out var department) &&
                         rightsMap.TryGetValue(department.Name, out var right))
                     {
                         ud.CanManage = right.IsManager;
@@ -225,7 +230,7 @@ secure-science@uva.nl",
                         else
                         {
                             user_department.Department = new Department { Name = right.Name, FacultyId = facultyId };
-                            departmentNameMap.Add(right.Name, user_department.Department);                            
+                            departmentNameMap.Add(right.Name, user_department.Department);
                         }
                         db.Users_Departments.Add(user_department);
                     }

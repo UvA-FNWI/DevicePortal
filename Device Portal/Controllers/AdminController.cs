@@ -29,9 +29,9 @@ namespace DevicePortal.Controllers
         }
 
         [HttpGet("update/rights")]
-        public ActionResult UpdateRights()
+        public async Task<ActionResult> UpdateRights()
         {
-            _rightsTask.UpdateRights();
+            await _rightsTask.Run();
             return Ok();
         }
     }
