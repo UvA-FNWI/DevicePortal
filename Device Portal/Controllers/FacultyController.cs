@@ -28,57 +28,49 @@ namespace DevicePortal.Controllers
             var userName = User.GetUserName();
             bool isAdmin = User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin);
 
-            int[] departmentIds;
+            HashSet<int> departmentIds;
             if (isAdmin)
             {
-                departmentIds = await _context.Departments
+                departmentIds = _context.Departments
                     .Select(d => d.Id)
-                    .ToArrayAsync();
+                    .ToHashSet();
             }
-            else 
+            else
             {
-                departmentIds = await _context.Users_Departments
+                departmentIds = _context.Users_Departments
                     .Where(u => u.UserName == userName && u.CanManage)
                     .Select(u => u.DepartmentId)
-                    .ToArrayAsync();
+                    .ToHashSet();
             }
 
-            var users = await _context.Users
-                .Where(u => u.Departments.Any(d => departmentIds.Contains(d.DepartmentId)))
-                .Select(u => new
+            var departments = await _context.Departments
+                .Where(d => departmentIds.Contains(d.Id))
+                .Select(d => new
                 {
-                    Departments = u.Departments.Select(d => d.Department),
-                    Completed = u.Devices.Any(d => d.Status == DeviceStatus.Approved),
-                    Devices = u.Devices.Count,
+                    d.Id,
+                    d.Name,
+                    Devices = d.Devices.Where(dev => !string.IsNullOrEmpty(dev.UserName)),
                 }).ToArrayAsync();
 
-            var result = new Dictionary<int, Department>();
-            foreach (var user in users)
+            var result = new List<Department>();
+            foreach (var department in departments)
             {
-                foreach (var department in user.Departments) 
+                var users = department.Devices.GroupBy(d => d.UserName);                
+                result.Add(new Department
                 {
-                    if (!result.TryGetValue(department.Id, out Department dep))
-                    {
-                        dep = new Department
-                        {
-                            Id = department.Id,
-                            Name = department.Name,
-                            Devices = 0,
-                            Users = 0,
-                            UsersCompleted = 0,
-                        };
-                        result.Add(dep.Id, dep);
-                    }
-                    dep.Users++;
-                    dep.Devices += user.Devices;
-                    if (user.Completed) { ++dep.UsersCompleted; }
-                }
+                    Id = department.Id,
+                    Name = department.Name,
+                    Devices = department.Devices.Count(),
+                    Users = users.Count(),
+                    UsersCompleted = users.Count(u => u.Any(dev => dev.Status == DeviceStatus.Approved)),
+                });
             }
-            return Ok(result.Values);
+
+            return Ok(result);
         }
 
-        class Department 
-        { 
+        class Department
+        {
             public int Id { get; set; }
             public string Name { get; set; }
             public int Users { get; set; }
