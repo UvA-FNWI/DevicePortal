@@ -116,7 +116,7 @@ namespace DevicePortal
                 {
                     Text = @$"Dear {approver.Name},
 
-For {string.Join(',', departmentNames)}, there are {count} devices with pending security checks. Pelase go to {portalUrl} to accept or reject the checks.
+For {string.Join(',', departmentNames)}, there are {count} devices with pending security checks. Please go to {portalUrl} to accept or reject the checks.
 
 Best regards,
 
