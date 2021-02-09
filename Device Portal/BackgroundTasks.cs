@@ -68,7 +68,7 @@ namespace DevicePortal
             string sender = Configuration["NotificationCenter:Sender"];
             string senderEmail = Configuration["NotificationCenter:SenderEmail"];
             string portalUrl = Configuration["NotificationCenter:PortalUrl"];
-            string subject = Configuration["PendingChecksSubject"];
+            string subject = Configuration["NotificationCenter:PendingChecksSubject"];
             if (string.IsNullOrEmpty(host) || !int.TryParse(port_str, out int port)) { return; }
 
             var departmentIds = db.SecurityChecks
