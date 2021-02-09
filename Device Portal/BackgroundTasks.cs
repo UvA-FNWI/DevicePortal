@@ -228,11 +228,13 @@ secure-science@uva.nl",
                         foreach (var ud in user.Departments)
                         {
                             if (departmentIdMap.TryGetValue(ud.DepartmentId, out var department) &&
-                                rightsMap.TryGetValue(department.Name, out var right) &&
-                                ud.CanManage != right.IsManager)
+                                rightsMap.TryGetValue(department.Name, out var right))
                             {
-                                ud.CanManage = right.IsManager;
-                                userDepartsToUpdate.Add(ud);
+                                if (ud.CanManage != right.IsManager) 
+                                {
+                                    ud.CanManage = right.IsManager;
+                                    userDepartsToUpdate.Add(ud);
+                                }
                             }
                             else { userDepartsToRemove.Add(ud); }
                         }
