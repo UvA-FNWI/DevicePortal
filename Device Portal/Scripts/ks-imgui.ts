@@ -863,7 +863,7 @@ namespace ks {
     export function progress_bar(id: string, label: string, val: number, max: number, bar_class_name: string): HTMLElement {
         return item_container(id, Item_Type.progress_bar, 'DIV', function () {
             let el: HTMLElement = recycle_set_current('DIV');
-            el.style.width = Math.min(Math.max(0, val), max) / max * 100 + '%';
+            el.style.width = (max === 0 ? 0 : Math.min(Math.max(0, val), max) / max * 100) + '%';
             el.setAttribute('aria-valuenow', val.toString());
             el.setAttribute('aria-valuemin', '0');
             el.setAttribute('aria-valuemax', max.toString());
