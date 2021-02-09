@@ -116,7 +116,7 @@ namespace DevicePortal
                 {
                     Text = @$"Dear {approver.Name},
 
-For {string.Join(',', departmentNames)}, there are {count} devices with pending security checks. Pelase go to {portalUrl} to accept or reject the checks.
+For {string.Join(',', departmentNames)}, there are {count} devices with pending security checks. Please go to {portalUrl} to accept or reject the checks.
 
 Best regards,
 
@@ -210,6 +210,7 @@ secure-science@uva.nl",
             i = 0;
             var departmentsToAdd = new ConcurrentBag<Department>();
             var userDepartsToAdd = new ConcurrentBag<User_Department>();
+            var userDepartsToUpdate = new ConcurrentBag<User_Department>();
             var userDepartsToRemove = new ConcurrentBag<User_Department>();
             var tasks = new Task[threads];
             for (; i < threads; ++i)
@@ -229,7 +230,11 @@ secure-science@uva.nl",
                             if (departmentIdMap.TryGetValue(ud.DepartmentId, out var department) &&
                                 rightsMap.TryGetValue(department.Name, out var right))
                             {
-                                ud.CanManage = right.IsManager;
+                                if (ud.CanManage != right.IsManager) 
+                                {
+                                    ud.CanManage = right.IsManager;
+                                    userDepartsToUpdate.Add(ud);
+                                }
                             }
                             else { userDepartsToRemove.Add(ud); }
                         }
@@ -269,6 +274,7 @@ secure-science@uva.nl",
             db.Departments.AddRange(departmentsToAdd);
             await db.SaveChangesAsync();
 
+            foreach (var ud in userDepartsToUpdate) { var entry = db.Entry(ud); entry.Property(p => p.CanManage).IsModified = true; }
             foreach (var ud in userDepartsToAdd) { if (ud.Department != null) { ud.DepartmentId = ud.Department.Id; } }
             db.Users_Departments.AddRange(userDepartsToAdd);
             db.Users_Departments.RemoveRange(userDepartsToRemove);
