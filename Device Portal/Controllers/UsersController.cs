@@ -117,7 +117,9 @@ namespace DevicePortal.Controllers
                     .Where(u => u.UserName == userId)
                     .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
                     .ToHashSet();
-                if (!user.Departments.Any(d => departmentIds.Contains(d.DepartmentId))) { return Forbid(); }
+                bool inSameDepartment = _context.Users_Departments
+                    .Any(ud => ud.UserName == user.UserName && departmentIds.Contains(ud.DepartmentId));
+                if (!inSameDepartment) { return Forbid(); }
             }
             
             var entry = _context.Entry(user);
