@@ -6,13 +6,19 @@
     <title>@ViewData["Title"] - Science Secure</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/uva.min.css" />
     <link href="~/lib/fontawesome/font-awesome.min.css" rel="stylesheet">
+
+    <environment include="Development">
+        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    </environment>
+    <environment include="Production">
+        <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" />        
+    </environment>
 </head>
 <body class="bg-light">
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
     <environment include="Development">
-        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
         <script src="~/js/ks-imgui.js" asp-append-version="true"></script>
         <script src="~/js/extensions/array.js" asp-append-version="true"></script>
         <script src="~/js/http.js" asp-append-version="true"></script>
@@ -25,8 +31,7 @@
         <script src="~/js/pages/institute.js" asp-append-version="true"></script>
         <script src="~/js/pages/requests.js" asp-append-version="true"></script>
     </environment>
-    <environment include="Production">
-        <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" />
+    <environment include="Production">        
         <script src="~/js/site.min.js" asp-append-version="true"></script>
     </environment>
 
