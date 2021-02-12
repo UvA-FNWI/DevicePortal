@@ -51,22 +51,79 @@ namespace DevicePortal.Controllers
                     d.Name,
                     Devices = d.Devices.Where(dev => dev.Category != DeviceCategory.ManagedSpecial && dev.Category != DeviceCategory.ManagedStandard && !string.IsNullOrEmpty(dev.UserName)),
                 }).ToArrayAsync();
+            var users = await _context.Users.ToArrayAsync();
+            var usersMap = users.ToDictionary(u => u.UserName);
+            var userNameSet = new HashSet<string>();
 
-            var result = new List<Department>();
+            var departmentStats = new List<Department>();
             foreach (var department in departments)
             {
-                var users = department.Devices.GroupBy(d => d.UserName);                
-                result.Add(new Department
+                int devicesIntuneCompleted = 0, devicesCheckSubmitted = 0, devicesCheckApproved = 0;
+                foreach (var d in department.Devices) 
+                {
+                    if (d.Status == DeviceStatus.Approved)
+                    {
+                        if (d.Origin == DeviceOrigin.Intune) { ++devicesIntuneCompleted; }
+                        else { ++devicesCheckApproved; }
+                    }
+                    else if (d.Origin != DeviceOrigin.Intune && d.Status == DeviceStatus.Submitted)
+                    {
+                        ++devicesCheckSubmitted;
+                    }                    
+                }
+
+                var depByUser = department.Devices.GroupBy(d => d.UserName);
+                int usersIntuneCompleted = 0, usersCheckSubmitted = 0, usersCheckApproved = 0;
+                foreach (var u in depByUser)
+                {
+                    userNameSet.Add(u.Key);
+
+                    bool submitted = false;
+                    foreach (var d in u.AsEnumerable())
+                    {
+                        if (d.Status == DeviceStatus.Approved)
+                        {
+                            if (d.Origin == DeviceOrigin.Intune) { ++usersIntuneCompleted; }
+                            else { ++usersCheckApproved; }
+                            break;
+                        }
+                        else if (d.Origin != DeviceOrigin.Intune)
+                        {
+                            submitted = submitted || d.Status == DeviceStatus.Submitted;
+                        }                        
+                    }
+                    if (submitted) { ++usersCheckSubmitted; }
+                }
+
+                departmentStats.Add(new Department
                 {
                     Id = department.Id,
                     Name = department.Name,
                     Devices = department.Devices.Count(),
-                    Users = users.Count(),
-                    UsersCompleted = users.Count(u => u.Any(dev => dev.Status == DeviceStatus.Approved)),
+                    DevicesBYOD = department.Devices.Count(d => d.Category == DeviceCategory.BYOD),
+                    DevicesManaged = department.Devices.Count(d => d.Category == DeviceCategory.ManagedStandard || d.Category == DeviceCategory.ManagedSpecial),
+                    DevicesSelfSupport = department.Devices.Count(d => d.Category == DeviceCategory.SelfSupport),
+                    DevicesCheckApproved = devicesCheckApproved,
+                    DevicesCheckSubmitted = devicesCheckSubmitted,
+                    DevicesIntuneCompleted = devicesIntuneCompleted,
+                    Users = depByUser.Count(),
+                    UsersAuthorized = depByUser.Count(u => usersMap[u.Key].CanSecure),
+                    UsersApprover = depByUser.Count(u => usersMap[u.Key].CanApprove),
+                    UsersCheckApproved = usersCheckApproved,
+                    UsersCheckSubmitted = usersCheckSubmitted,
+                    UsersIntuneCompleted = usersIntuneCompleted,
                 });
             }
 
-            return Ok(result);
+            // Filter users based on device presence in department, User_Department is incomplete
+            users = users.Where(u => userNameSet.Contains(u.UserName)).ToArray();
+            return Ok(new 
+            {
+                Departments = departmentStats,
+                Users = users.Length,
+                UsersAuthorized = users.Count(u => u.CanSecure),
+                UsersApprover = users.Count(u => u.CanApprove),
+            });
         }
 
         class Department
@@ -74,8 +131,18 @@ namespace DevicePortal.Controllers
             public int Id { get; set; }
             public string Name { get; set; }
             public int Users { get; set; }
-            public int UsersCompleted { get; set; }
+            public int UsersAuthorized { get; set; }
+            public int UsersApprover { get; set; }
+            public int UsersIntuneCompleted { get; set; }
+            public int UsersCheckSubmitted { get; set; }
+            public int UsersCheckApproved { get; set; }
             public int Devices { get; set; }
+            public int DevicesManaged { get; set; }
+            public int DevicesSelfSupport { get; set; }
+            public int DevicesBYOD { get; set; }
+            public int DevicesIntuneCompleted { get; set; }
+            public int DevicesCheckSubmitted { get; set; }
+            public int DevicesCheckApproved { get; set; }
         }
     }
 }
