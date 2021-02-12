@@ -121,8 +121,6 @@ function page_users(parameters: string) {
             ks.set_next_item_class_name('mb-3');
             ks.column('users', 12, function () {
                 let count = 0;
-                let searchName = state.search.name.toLowerCase();
-                let searchInst = state.search.institute.toLowerCase();
 
                 for (let i = 0; i < state.users.length; ++i) {
                     if (!user_search_match(state.search, state.users[i])) { continue; }
