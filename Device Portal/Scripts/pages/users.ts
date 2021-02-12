@@ -7,6 +7,10 @@
     canSecure: boolean;
     canApprove: boolean;
 }
+class UserSearchParams {
+    name = '';
+    institute = '';
+}
 
 function page_users(parameters: string) {
     let state = ks.local_persist('page_users', {
@@ -14,7 +18,7 @@ function page_users(parameters: string) {
         deviceCount: <number>null,
         users: <User[]>null,
         user: <User>null,
-        search: { name: '', institute: '' },
+        search: new UserSearchParams(),
     });
     if (isPageSwap) {
         state.user = null;
@@ -121,13 +125,7 @@ function page_users(parameters: string) {
                 let searchInst = state.search.institute.toLowerCase();
 
                 for (let i = 0; i < state.users.length; ++i) {
-                    let u = state.users[i];
-                    if (searchName) {
-                        if (u.nameLowerCase.indexOf(searchName) < 0) { continue; }
-                    }
-                    if (searchInst) {
-                        if (u.instituteLowerCase.indexOf(searchInst) < 0) { continue; }
-                    }
+                    if (!user_search_match(state.search, state.users[i])) { continue; }
                     ++count;
                 }
 
@@ -170,13 +168,7 @@ function page_users(parameters: string) {
                         let countdown = range.i_end - range.i_start;
                         for (let i = range.i_start; countdown > 0; ++i) {
                             let u = state.users[i];
-
-                            if (searchName) {
-                                if (u.nameLowerCase.indexOf(searchName) < 0) { continue; }
-                            }
-                            if (searchInst) {
-                                if (u.instituteLowerCase.indexOf(searchInst) < 0) { continue; }
-                            }
+                            if (!user_search_match(state.search, u)) { continue; }
                             --countdown;
 
                             ks.table_row(function () {
@@ -217,7 +209,7 @@ function page_users(parameters: string) {
                 });
 
                 ks.set_next_item_class_name('ml-1');
-                paginator('paginator', state.users.length, () => ks.refresh(this));
+                paginator('paginator', state.users.filter(u => user_search_match(state.search, u)).length, () => ks.refresh(this));
             });
         });
     } else {
@@ -241,6 +233,11 @@ function page_users(parameters: string) {
 }
 
 let collator = new Intl.Collator('en', { sensitivity: 'base' });
+
+function user_search_match(p: UserSearchParams, u: User) {    
+    return (!p.name || u.nameLowerCase.indexOf(p.name) >= 0) &&
+        (!p.institute || u.instituteLowerCase.indexOf(p.institute) >= 0);
+}
 
 function sort_string(a: string, b: string) {
     return collator.compare(a, b);
