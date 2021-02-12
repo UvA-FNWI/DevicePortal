@@ -49,7 +49,7 @@ namespace DevicePortal.Controllers
                 {
                     d.Id,
                     d.Name,
-                    Devices = d.Devices.Where(dev => !string.IsNullOrEmpty(dev.UserName)),
+                    Devices = d.Devices.Where(dev => dev.Category != DeviceCategory.ManagedSpecial && dev.Category != DeviceCategory.ManagedStandard && !string.IsNullOrEmpty(dev.UserName)),
                 }).ToArrayAsync();
 
             var result = new List<Department>();

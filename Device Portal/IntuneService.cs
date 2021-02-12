@@ -57,6 +57,7 @@ namespace DevicePortal
                         Name = $"{intuneDevice.Manufacturer} {intuneDevice.Model}".Trim(),
                         SerialNumber = intuneDevice.SerialNumber,
                         Origin = DeviceOrigin.Intune,
+                        Category = Data.DeviceCategory.Other,
                         OS_Type = intuneDevice.OperatingSystem switch
                         {
                             "Windows" => OS_Type.Windows,
@@ -172,6 +173,7 @@ namespace DevicePortal
                                     Name = $"{intuneDevice.Manufacturer} {intuneDevice.Model}".Trim(),
                                     SerialNumber = intuneDevice.SerialNumber,
                                     Origin = DeviceOrigin.Intune,
+                                    Category = Data.DeviceCategory.Other,
                                     OS_Type = intuneDevice.OperatingSystem switch
                                     {
                                         "Windows" => OS_Type.Windows,

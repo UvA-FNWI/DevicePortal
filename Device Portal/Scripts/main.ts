@@ -291,6 +291,7 @@ function device_table_head(can_secure: boolean, edit_device: boolean) {
             ks.table_cell('Device ID');
             ks.table_cell('Serial number');
             ks.table_cell('Type');
+            ks.table_cell('Category');
             ks.table_cell('OS');
             ks.table_cell('Status').style.width = '1%';
             if (can_secure) { ks.table_cell('').style.width = '1%'; }
@@ -331,8 +332,9 @@ function device_row(d: Device, can_secure: boolean, edit_device: boolean, user: 
             let i = ks.icon(icon);
             i.style.width = '18px';
             i.style.fontSize = iconSize;
-            ks.text(' ' + (deviceNames[d.type] || ""), 'd-inline ml-1');
+            ks.text(' ' + (deviceTypes[d.type] || ""), 'd-inline ml-1');
         });
+        ks.table_cell(deviceCategories[d.category]);
         ks.table_cell(osNames[d.os_type]);
         ks.table_cell(function () {
             ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);

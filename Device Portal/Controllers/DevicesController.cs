@@ -107,6 +107,7 @@ namespace DevicePortal.Controllers
         {
             device.Status = DeviceStatus.Unsecure;
             device.Origin = DeviceOrigin.User;
+            device.Category = DeviceCategory.BYOD;
             device.UserName = User.GetUserName();
             _context.Devices.Add(device);
             await _context.SaveChangesAsync();

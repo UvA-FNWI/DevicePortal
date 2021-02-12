@@ -22,6 +22,15 @@ namespace DevicePortal.Data
         Desktop = 1 << 3,
         All = (1 << 4) - 1,
     }
+    public enum DeviceCategory 
+    {
+        ManagedStandard = 1 << 0,
+        ManagedSpecial = 1 << 1,
+        SelfSupport = 1 << 2,
+        Other = 1 << 3,
+        BYOD = 1 << 4, // bring your own device 
+        All = (1 << 4) - 1,
+    }
 
     public enum DeviceOrigin
     { 
@@ -61,6 +70,7 @@ namespace DevicePortal.Data
         public string  OS_Version { get; set; }
 
         public DeviceType Type { get; set; }
+        public DeviceCategory Category { get; set; }
         public DeviceStatus Status { get; set; }
         public DateTime StatusEffectiveDate { get; set; }
         public DeviceOrigin Origin { get; set; }

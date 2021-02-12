@@ -4,6 +4,7 @@
     deviceId = '';
     serialNr = '';
     type = DeviceType.All;
+    category = DeviceCategory.All;
     os_type = OSType.All;
     status = <DeviceStatus>-1;
 }
@@ -61,6 +62,7 @@ function page_institute(parameters: string) {
     search.deviceId = state.search.deviceId.toLowerCase();
     search.serialNr = state.search.serialNr.toLowerCase();
     search.type = state.search.type;
+    search.category = state.search.category;
     search.os_type = state.search.os_type;
     search.status = state.search.status;
 
@@ -125,12 +127,36 @@ function page_institute(parameters: string) {
                             ks.refresh();
                         });
 
-                        let keys = Object.keys(deviceNames);
+                        let keys = Object.keys(deviceTypes);
                         for (let key of keys) {
                             let type = parseInt(key);
-                            ks.selectable(deviceNames[key], type === state.search.type);
+                            ks.selectable(deviceTypes[key], type === state.search.type);
                             ks.is_item_clicked(function () {
                                 state.search.type = type;
+                                range.reset();
+                                ks.refresh();
+                            });
+                        }
+                    });
+                    ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                }, ks.Sort_Order.none);
+
+                ks.table_cell(function () {
+                    ks.set_next_item_class_name('custom-select-sm');
+                    ks.combo('device categories', function () {
+                        ks.selectable('Category', state.search.category === DeviceCategory.All);
+                        ks.is_item_clicked(function () {
+                            state.search.category = DeviceCategory.All;
+                            range.reset();
+                            ks.refresh();
+                        });
+
+                        let keys = Object.keys(deviceCategories);
+                        for (let key of keys) {
+                            let category = parseInt(key);
+                            ks.selectable(deviceCategories[key], category === state.search.category);
+                            ks.is_item_clicked(function () {
+                                state.search.category = category;
                                 range.reset();
                                 ks.refresh();
                             });
@@ -209,7 +235,7 @@ function page_institute(parameters: string) {
     });
 
     ks.set_next_item_class_name('ml-1');
-    paginator('paginator', state.devices.length, () => ks.refresh(this));
+    paginator('paginator', state.devices.filter(d => device_search_match(search, d)).length, () => ks.refresh(this));
 }
 
 function device_search_match(p: DeviceSearchParams, d: Device) {
@@ -219,5 +245,6 @@ function device_search_match(p: DeviceSearchParams, d: Device) {
         (!p.serialNr || d.serialNumberLowerCase.indexOf(p.serialNr) >= 0) &&
         (p.type & d.type) &&
         (d.os_type === 0 || (p.os_type & d.os_type)) &&
+        (d.category === 0 || (p.category & d.category)) &&
         (p.status < 0 || p.status == d.status);
 }

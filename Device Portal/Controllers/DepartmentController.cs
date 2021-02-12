@@ -53,6 +53,7 @@ namespace DevicePortal.Controllers
                     d.Status,
                     d.StatusEffectiveDate,
                     d.Type,
+                    d.Category,
                     User = d.User.Name,
                     d.UserName                    
                 })

@@ -63,7 +63,7 @@ namespace DevicePortal.Controllers
             Dictionary<string, User> userMap = _context.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
             List<User> usersToUpdate = new List<User>();
-            Dictionary<string, Device> deviceMap = _context.Devices.ToDictionary(d => d.DeviceId);
+            Dictionary<(string username, string deviceId), Device> deviceMap = _context.Devices.ToArray().ToDictionary(d => (d.UserName, d.DeviceId));
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
             List<Department> departmentsToAdd = new List<Department>();
@@ -95,6 +95,11 @@ namespace DevicePortal.Controllers
                 else if (deviceType.StartsWith("Laptop")) { device.Type = DeviceType.Laptop; }
                 else if (deviceType.StartsWith("Tablet")) { device.Type = DeviceType.Tablet; }
                 else if (deviceType.StartsWith("Mobiel")) { device.Type = DeviceType.Mobile; }
+
+                if (deviceType.Contains("UvA Standaard SCCM")) { device.Category = DeviceCategory.ManagedStandard; }
+                else if (deviceType.Contains("UvA Spec. SCCM")) { device.Category = DeviceCategory.ManagedSpecial; }                
+                else if (deviceType.Contains("UvA Zelfsupp.")) { device.Category = DeviceCategory.SelfSupport; }
+                else { device.Category = DeviceCategory.Other; }
 
                 string deviceOs = line[iDeviceOS];
                 foreach (string prefix in osTypeMap.Keys)
@@ -133,13 +138,15 @@ namespace DevicePortal.Controllers
                         userMap.Add(user.UserName, user);
                     }
 
-                    if (deviceMap.TryGetValue(device.DeviceId, out Device existing))
+                    if (deviceMap.TryGetValue((device.UserName, device.DeviceId), out Device existing))
                     {
                         if (existing.UserName != device.UserName ||
-                            existing.SerialNumber != device.SerialNumber)
+                            existing.SerialNumber != device.SerialNumber ||
+                            existing.Category != device.Category)
                         {
                             existing.UserName = device.UserName;
                             existing.SerialNumber = device.SerialNumber;
+                            existing.Category = device.Category;
                             devicesToUpdate.Add(existing);
                         }
                     }
@@ -226,6 +233,7 @@ namespace DevicePortal.Controllers
             deviceTable.Columns.Add("OS_Type", typeof(int));
             deviceTable.Columns.Add("OS_Version");
             deviceTable.Columns.Add("Type", typeof(int));
+            deviceTable.Columns.Add("Category", typeof(int));
             deviceTable.Columns.Add("Status", typeof(int));
             deviceTable.Columns.Add("StatusEffectiveDate");
             deviceTable.Columns.Add("Origin", typeof(int));
@@ -240,6 +248,7 @@ namespace DevicePortal.Controllers
                     device.OS_Type,
                     device.OS_Version,
                     device.Type,
+                    device.Category,
                     device.Status,
                     device.StatusEffectiveDate,
                     device.Origin,
@@ -254,6 +263,7 @@ namespace DevicePortal.Controllers
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("OS_Type", "OS_Type"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("OS_Version", "OS_Version"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Type", "Type"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Category", "Category"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Status", "Status"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("StatusEffectiveDate", "StatusEffectiveDate"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Origin", "Origin"));

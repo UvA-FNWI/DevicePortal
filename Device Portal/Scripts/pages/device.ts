@@ -5,11 +5,25 @@
     Desktop = 1 << 3,
     All = (1 << 4) - 1,
 }
-let deviceNames = {};
-deviceNames[DeviceType.Mobile] = 'Mobile';
-deviceNames[DeviceType.Tablet] = 'Tablet';
-deviceNames[DeviceType.Laptop] = 'Laptop';
-deviceNames[DeviceType.Desktop] = 'Desktop';
+let deviceTypes = {};
+deviceTypes[DeviceType.Mobile] = 'Mobile';
+deviceTypes[DeviceType.Tablet] = 'Tablet';
+deviceTypes[DeviceType.Laptop] = 'Laptop';
+deviceTypes[DeviceType.Desktop] = 'Desktop';
+enum DeviceCategory {
+    ManagedStandard = 1 << 0,
+    ManagedSpecial = 1 << 1,
+    SelfSupport = 1 << 2,
+    Other = 1 << 3,
+    BYOD = 1 << 4, // bring your own device 
+    All = (1 << 4) - 1,
+}
+let deviceCategories = {};
+deviceCategories[DeviceCategory.ManagedStandard] = 'Managed standard';
+deviceCategories[DeviceCategory.ManagedSpecial] = 'Managed special';
+deviceCategories[DeviceCategory.SelfSupport] = 'Self support';
+deviceCategories[DeviceCategory.Other] = 'Other';
+deviceCategories[DeviceCategory.BYOD] = 'BYOD';
 
 enum OSType {
     Android = 1 << 0,
@@ -43,6 +57,7 @@ class Device {
     serialNumber: string;
     serialNumberLowerCase: string;   // Note: used on institue page for performance
     type: DeviceType;
+    category: DeviceCategory;
     os_type: OSType;
     os_version: string = '';
     status = DeviceStatus.Unsecure;
@@ -138,7 +153,7 @@ function page_device(parameters: string) {
                     (state.update ? '' : ' cursor-pointer'));
                 ks.card('card', function () {
                     ks.icon(o.icon).style.fontSize = '5rem';
-                    ks.text(deviceNames[o.type]);
+                    ks.text(deviceTypes[o.type]);
                 });
                 if (!state.update) {
                     ks.is_item_clicked(function () {
