@@ -337,7 +337,9 @@ function device_row(d: Device, can_secure: boolean, edit_device: boolean, user: 
         ks.table_cell(deviceCategories[d.category]);
         ks.table_cell(osNames[d.os_type]);
         ks.table_cell(function () {
-            ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
+            if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
+                ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
+            }
         });
 
         if (can_secure) {
