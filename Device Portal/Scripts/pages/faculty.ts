@@ -130,8 +130,8 @@ function page_faculty(parameters: string) {
                         ks.progress_bar('device_bar_stacked', inst.devicesCheckApproved.toString(), inst.devicesCheckApproved, inst.devices, 'bg-success opacity-40 tt');
                         ks.progress_bar('device_bar_stacked', inst.devicesIntuneCompleted.toString(), inst.devicesIntuneCompleted, inst.devices, 'bg-success tt');
                         let bars = (ks.get_current_item() as HTMLElement).children;
-                        add_tooltip(<HTMLElement>bars[0], 'Portal check submmitted');
-                        add_tooltip(<HTMLElement>bars[1], 'Portal check authorized');
+                        add_tooltip(<HTMLElement>bars[0], 'Portal check submitted');
+                        add_tooltip(<HTMLElement>bars[1], 'Portal check completed');
                         add_tooltip(<HTMLElement>bars[2], 'Intune completed');
 
                         ks.group('users', 'mb-1 mt-2 d-flex', function () {
