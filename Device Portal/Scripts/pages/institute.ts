@@ -1,4 +1,5 @@
-﻿class DeviceSearchParams {
+﻿namespace DP {
+class DeviceSearchParams {
     user = '';
     name = '';
     deviceId = '';
@@ -10,6 +11,7 @@
 }
 
 function page_institute(parameters: string) {
+export function page_institute(parameters: string) {
     let state = ks.local_persist('page_device', {
         institute: <Institute>null,
         devices: <Device[]>null,
@@ -247,4 +249,5 @@ function device_search_match(p: DeviceSearchParams, d: Device) {
         (d.os_type === 0 || (p.os_type & d.os_type)) &&
         (d.category === 0 || (p.category & d.category)) &&
         (p.status < 0 || p.status == d.status);
+}
 }
