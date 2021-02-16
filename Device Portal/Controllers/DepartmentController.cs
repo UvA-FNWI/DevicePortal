@@ -28,8 +28,8 @@ namespace DevicePortal.Controllers
             return await db.Departments.FirstAsync(d => d.Id == id);
         }
 
-        // GET: api/Department/{id}/Devices
-        [HttpGet("{id}/Devices")]
+        // GET: api/Department/{id}/Overview
+        [HttpGet("{id}/Overview")]
         public async Task<ActionResult> GetDevices(int id)
         {
             var userName = User.GetUserName();
@@ -38,6 +38,8 @@ namespace DevicePortal.Controllers
             {
                 return Forbid();
             }
+            if (!db.Departments.Any(d => d.Id == id)) { return NotFound(); }
+            var department = await db.Departments.FirstAsync(d => d.Id == id);
 
             var devices = await db.Devices
                 .Where(d => d.DepartmentId == id && !string.IsNullOrEmpty(d.UserName))
@@ -55,10 +57,30 @@ namespace DevicePortal.Controllers
                     d.Type,
                     d.Category,
                     User = d.User.Name,
-                    d.UserName                    
+                    d.UserName,
+                    d.User.Email,
                 })
                 .ToArrayAsync();
-            return Ok(devices);
+            var users = await db.Users
+               .Select(u => new
+               {
+                   u.UserName,
+                   u.CanApprove,
+                   u.CanSecure,
+                   Departments = u.Departments.Select(d => d.DepartmentId).ToHashSet(),
+               })
+               .ToArrayAsync();
+            var userNameSet = devices.Select(d => d.UserName).ToHashSet();
+
+            users = users.Where(u => u.Departments.Contains(id) || userNameSet.Contains(u.UserName)).ToArray();
+            return Ok(new 
+            {
+                Name = department.Name,
+                Devices = devices,
+                Users = users.Length,
+                UsersAuthorized = users.Count(u => u.CanSecure),
+                UsersApprover = users.Count(u => u.CanApprove),
+            });
         }
     }
 }

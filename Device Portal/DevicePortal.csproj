@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Scripts\typings\" />
     <Folder Include="wwwroot\js\" />
+    <Folder Include="wwwroot\lib\zipcelx\" />
   </ItemGroup>
 
   <ItemGroup>
