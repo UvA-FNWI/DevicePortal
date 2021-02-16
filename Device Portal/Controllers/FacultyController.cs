@@ -49,9 +49,17 @@ namespace DevicePortal.Controllers
                 {
                     d.Id,
                     d.Name,
-                    Devices = d.Devices.Where(dev => dev.Category != DeviceCategory.ManagedSpecial && dev.Category != DeviceCategory.ManagedStandard && !string.IsNullOrEmpty(dev.UserName)),
+                    Devices = d.Devices.Where(dev => !string.IsNullOrEmpty(dev.UserName)),
                 }).ToArrayAsync();
-            var users = await _context.Users.ToArrayAsync();
+            var users = await _context.Users
+                .Select(u => new
+                {
+                    u.UserName,
+                    u.CanApprove,
+                    u.CanSecure,
+                    Departments = u.Departments.Select(d => d.DepartmentId).ToHashSet(),
+                })
+                .ToArrayAsync();
             var usersMap = users.ToDictionary(u => u.UserName);
             var userNameSet = new HashSet<string>();
 
@@ -116,7 +124,7 @@ namespace DevicePortal.Controllers
             }
 
             // Filter users based on device presence in department, User_Department is incomplete
-            users = users.Where(u => userNameSet.Contains(u.UserName)).ToArray();
+            users = users.Where(u => u.Departments.Overlaps(departmentIds) || userNameSet.Contains(u.UserName)).ToArray();
             return Ok(new 
             {
                 Departments = departmentStats,

@@ -126,13 +126,15 @@ function page_faculty(parameters: string) {
                             }
                         });
                         
-                        ks.progress_bar('device_bar_stacked', inst.devicesCheckSubmitted.toString(), inst.devicesCheckSubmitted, inst.devices, 'bg-info tt');
-                        ks.progress_bar('device_bar_stacked', inst.devicesCheckApproved.toString(), inst.devicesCheckApproved, inst.devices, 'bg-success opacity-40 tt');
-                        ks.progress_bar('device_bar_stacked', inst.devicesIntuneCompleted.toString(), inst.devicesIntuneCompleted, inst.devices, 'bg-success tt');
+                        ks.progress_bar('device_bar_stacked', inst.devicesCheckSubmitted.toString(), inst.devicesCheckSubmitted, inst.devices, 'bg-info');
+                        ks.progress_bar('device_bar_stacked', inst.devicesCheckApproved.toString(), inst.devicesCheckApproved, inst.devices, 'bg-success opacity-40');
+                        ks.progress_bar('device_bar_stacked', inst.devicesIntuneCompleted.toString(), inst.devicesIntuneCompleted, inst.devices, 'bg-success');
+                        ks.progress_bar('device_bar_stacked', inst.devicesManaged.toString(), inst.devicesManaged, inst.devices, 'bg-dark');
                         let bars = (ks.get_current_item() as HTMLElement).children;
                         add_tooltip(<HTMLElement>bars[0], 'Portal check submitted');
                         add_tooltip(<HTMLElement>bars[1], 'Portal check completed');
-                        add_tooltip(<HTMLElement>bars[2], 'Intune completed');
+                        add_tooltip(<HTMLElement>bars[2], 'Intune completed');                        
+                        add_tooltip(<HTMLElement>bars[3], 'Managed');
 
                         ks.group('users', 'mb-1 mt-2 d-flex', function () {
                             ks.group('total', '', function () {
