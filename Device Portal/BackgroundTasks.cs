@@ -402,7 +402,7 @@ namespace DevicePortal
         public Task StartAsync(CancellationToken cancellationToken)
         {
             TimeSpan interval = TimeSpan.FromHours(24);
-            DateTime nextRunTime = DateTime.Today.AddDays(1);
+            DateTime nextRunTime = DateTime.Today.AddDays(1).AddHours(9);            
             var firstInterval = nextRunTime.Subtract(DateTime.Now);
 
             Task.Run(() =>
@@ -410,7 +410,7 @@ namespace DevicePortal
                 Task.Delay(firstInterval).Wait();
                 UpdateRights();
 
-                // timer repeates call to NotifyApprovers every monday at 0900.
+                // timer repeates call to UpdateRights daily at 0900
                 _timer = new Timer(
                     UpdateRights,
                     null,
