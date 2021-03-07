@@ -28,7 +28,7 @@
             institutes: <Department[]>[],
         });
 
-        header_breadcrumbs(['Faculty'], ks.no_op);
+        header_breadcrumbs(['Institutes'], ks.no_op);
 
         if (isPageSwap) {
             GET_ONCE('get_faculties', API.Faculties()).done((faculty: Faculty) => {
