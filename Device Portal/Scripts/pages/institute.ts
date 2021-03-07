@@ -118,8 +118,9 @@
                                         { value: 'DeviceId' },
                                         { value: 'SerialNumber' },
                                         { value: 'Type' },
-                                        { value: 'Categorie' },
+                                        { value: 'Category' },
                                         { value: 'OS' },
+                                        { value: 'Status' },
                                     ]]
                                 }
                             };
@@ -133,7 +134,8 @@
                                     { value: d.serialNumber, },
                                     { value: deviceTypes[d.type] },
                                     { value: deviceCategories[d.category]},
-                                    { value: osNames[d.os_type]  },
+                                    { value: osNames[d.os_type] },
+                                    { value: statusNames[d.status] },
                                 ]);
                             }
                             zipcelx(config);
