@@ -105,10 +105,11 @@ namespace DevicePortal.Controllers
         [HttpPost]
         public async Task<ActionResult<Device>> PostDevice(Device device)
         {
-            // TODO: should probably not be simply set to the first in case of multiple departments
-            string userName = User.GetUserName();
-            device.DepartmentId = _context.Users_Departments.First(ud => ud.UserName == userName).DepartmentId;
+            int[] departmentIds = Array.Empty<int>();// User.GetDepartmentIds(_context);
+            if (departmentIds.Length == 0) { return BadRequest("Failed to save device. There's no department to add device to."); }
 
+            // TODO: should probably not be simply set to the first in case of multiple departments
+            device.DepartmentId = departmentIds[0];
             device.Status = DeviceStatus.Unsecure;
             device.Origin = DeviceOrigin.User;
             device.Category = DeviceCategory.BYOD;
