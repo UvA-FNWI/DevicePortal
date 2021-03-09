@@ -84,7 +84,7 @@
                     ks.refresh();
                 } else if (window.location.href.indexOf('enter') == -1) {
                     // Trigger login screen if front-end loaded from cache
-                    window.location.href = "./api/identity/enter";
+                    window.location.href = "/api/identity/enter";
                 }
             });
         }
