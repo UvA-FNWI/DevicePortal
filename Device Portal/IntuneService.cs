@@ -17,6 +17,7 @@ namespace DevicePortal
         private readonly PortalContext _context;
 
         static SemaphoreSlim semaphoreDeviceSync = new SemaphoreSlim(1, 1);
+        static SemaphoreSlim semaphoreUserSync = new SemaphoreSlim(1, 1);
         static ConcurrentDictionary<string, SemaphoreSlim> semaphoreUserMap = new ConcurrentDictionary<string, SemaphoreSlim>();
 
         public IntuneService(PortalContext context)
@@ -268,28 +269,34 @@ namespace DevicePortal
 
         public async Task SyncUsers()
         {
-            var graphClient = GetGraphClient();
-            var users = await _context.Users.ToListAsync();
-            foreach (var user in users)
+            await semaphoreUserSync.WaitAsync();
+
+            try
             {
-                if (string.IsNullOrEmpty(user.Email)) { continue; }
-
-                var info = await graphClient.Users.Request()
-                    .Filter($"userPrincipalName eq '{user.Email}'")
-                    .Select("displayName, id")
-                    .GetAsync();
-
-                if (info.Any())
+                var graphClient = GetGraphClient();
+                var users = await _context.Users.ToListAsync();
+                foreach (var user in users)
                 {
-                    user.ObjectId = info[0].Id;
-                    user.Name = info[0].DisplayName;
+                    if (string.IsNullOrEmpty(user.Email)) { continue; }
 
-                    var entry = _context.Entry(user);
-                    entry.Property(u => u.ObjectId).IsModified = true;
-                    entry.Property(u => u.Name).IsModified = true;
+                    var info = await graphClient.Users.Request()
+                        .Filter($"userPrincipalName eq '{user.Email}'")
+                        .Select("displayName, id")
+                        .GetAsync();
+
+                    if (info.Any())
+                    {
+                        user.ObjectId = info[0].Id;
+                        user.Name = info[0].DisplayName;
+
+                        var entry = _context.Entry(user);
+                        entry.Property(u => u.ObjectId).IsModified = true;
+                        entry.Property(u => u.Name).IsModified = true;
+                    }
                 }
+                await _context.SaveChangesAsync();
             }
-            await _context.SaveChangesAsync();
+            finally { semaphoreUserSync.Release(); }
         }
 
         private static GraphServiceClient GetGraphClient()
