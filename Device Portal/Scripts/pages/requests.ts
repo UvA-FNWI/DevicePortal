@@ -10,7 +10,7 @@
         let state = ks.local_persist('page_requests', {
             device: <Device>null,
             security_check: <SecurityCheck>null,
-            checks: <SecurityCheckSubmitted[]>[],
+            checks: <SecurityCheckSubmitted[]>null,
             search: { name: '', institute: '' },
         });
         if (isPageSwap) {
@@ -26,8 +26,8 @@
                 if (fail.status === 403) { ks.navigate_to('Users', pages[Page.Home]) }
                 else { contextModal.showWarning(fail.responseText); }
             });
-            return; // wait for security checks
         }
+        if (!state.checks) { return; } // wait for security checks
 
         if (parameters) {
             let parts = parameters.split('/');

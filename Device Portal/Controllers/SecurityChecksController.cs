@@ -34,9 +34,17 @@ namespace DevicePortal.Controllers
         [HttpGet("Submitted")]
         public async Task<ActionResult> GetSecurityChecksSubmitted()
         {
-            var checks = await _context.SecurityChecks
-                .Where(c => c.Status == DeviceStatus.Submitted)
-                .Select(c => new
+            var query = _context.SecurityChecks.AsQueryable();
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            {
+                query = query.Where(c => c.Status == DeviceStatus.Submitted);
+            }
+            else
+            {
+                var departmentIds = User.GetDepartmentIds(_context);
+                query = query.Where(c => c.Status == DeviceStatus.Submitted && departmentIds.Contains(c.Device.DepartmentId));
+            }
+            var checks = await query.Select(c => new
                 {
                     c.Id,
                     c.UserName,
@@ -53,7 +61,15 @@ namespace DevicePortal.Controllers
         [Authorize(Policy = AppPolicies.ApproverOnly)]
         public async Task<ActionResult<int>> GetSecurityCheckCount()
         {
-            return await _context.SecurityChecks.CountAsync();
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            {
+                return await _context.SecurityChecks.CountAsync();
+            }
+
+            var departmentIds = User.GetDepartmentIds(_context);
+            return await _context.SecurityChecks
+                .Where(c => departmentIds.Contains(c.Device.DepartmentId))
+                .CountAsync();
         }
 
         // GET: api/SecurityChecks/Submitted/Count
@@ -61,7 +77,15 @@ namespace DevicePortal.Controllers
         [Authorize(Policy = AppPolicies.ApproverOnly)]
         public async Task<ActionResult<int>> GetSecurityCheckCountSubmitted()
         {
-            return await _context.SecurityChecks.Where(c => c.Status == DeviceStatus.Submitted).CountAsync();
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            {
+                return await _context.SecurityChecks.Where(c => c.Status == DeviceStatus.Submitted).CountAsync();
+            }
+
+            var departmentIds = User.GetDepartmentIds(_context);
+            return await _context.SecurityChecks
+                .Where(c => c.Status == DeviceStatus.Submitted && departmentIds.Contains(c.Device.DepartmentId))
+                .CountAsync();
         }
 
         [Authorize(Policy = AppPolicies.SecurityCheckAccess)]

@@ -25,7 +25,7 @@
     export function page_faculty(parameters: string) {
         let state = ks.local_persist('page_faculty', {
             faculty: <Faculty>undefined,
-            institutes: <Department[]>[],
+            institutes: <Department[]>null,
         });
 
         header_breadcrumbs(['Institutes'], ks.no_op);
@@ -36,8 +36,8 @@
                 state.institutes = faculty.departments.sort((a, b) => sort_string(a.name, b.name));
                 ks.refresh();
             });
-            return; // wait for institutes
         }
+        if (!state.institutes) { return; } // wait for institutes
 
         ks.set_next_item_class_name('mx-n2');
         ks.row('stats', function () {

@@ -31,7 +31,7 @@
 
     export function page_security_check(parameters: string) {
         let state = ks.local_persist('page_security_check', {
-            questions: <SecurityQuestion[]>[],
+            questions: <SecurityQuestion[]>null,
             security_check: <SecurityCheck>null,
             device: <Device>null,
             refresh_recommendations: true,
@@ -48,8 +48,8 @@
             });
 
             state.device = null;
-            return; // wait for get questions
         }
+        if (!state.questions) { return; } // wait for get questions
 
         if (parameters) {
             let parts = parameters.split('/');

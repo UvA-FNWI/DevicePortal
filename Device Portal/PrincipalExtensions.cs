@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DevicePortal.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -23,6 +24,12 @@ namespace DevicePortal
                 else if (claim.Type == "family_name") { familyName = claim.Value; }
             }
             return $"{givenName} {familyName}".Trim();
+        }
+
+        public static int[] GetDepartmentIds(this ClaimsPrincipal claimsPrincipal, PortalContext context)
+        {
+            string userName = claimsPrincipal.GetUserName();
+            return context.Users_Departments.Where(ud => ud.UserName == userName).Select(ud => ud.DepartmentId).ToArray();
         }
     }
 }

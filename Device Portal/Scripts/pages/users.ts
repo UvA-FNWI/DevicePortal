@@ -38,9 +38,7 @@
                 GET(API.Devices('count')).done(count => {
                     state.deviceCount = count;
                 }))
-                .always(function () { ks.refresh() })
-
-            return; // wait for users
+                .always(function () { ks.refresh(); });
         }
 
         if (parameters) {
@@ -58,13 +56,12 @@
                     }),
                     GET(API.Devices(`User/${userId}`)).done(devices => {
                         state.devices = devices;
-                    })).always(() => {
-                        ks.refresh();
-                    });
-
-                return; // wait for user
+                    })).always(function () { ks.refresh(); });
             }
+            if (!state.user) { return; } // wait for user
         } else { state.user = null; }
+
+        if (!state.users) { return; } // wait for users
 
         let breadcrumbs = ['Users'];
         if (state.user) { breadcrumbs.push(state.user.name); }

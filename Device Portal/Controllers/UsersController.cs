@@ -46,11 +46,7 @@ namespace DevicePortal.Controllers
             }
             else 
             {
-                var userName = User.GetUserName();
-                var departmentIds = _context.Users
-                    .Where(u => u.UserName == userName)
-                    .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
-                    .ToHashSet();
+                var departmentIds = User.GetDepartmentIds(_context);
                 return Ok(await _context.Users
                     .Where(u => u.Departments.Any(d => departmentIds.Contains(d.DepartmentId)))
                     .Select(u => new
@@ -82,11 +78,7 @@ namespace DevicePortal.Controllers
             }
             if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
             {
-                string userId = User.GetUserName();
-                var departmentIds = _context.Users
-                    .Where(u => u.UserName == userId)
-                    .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
-                    .ToHashSet();
+                var departmentIds = User.GetDepartmentIds(_context);
                 if (!user.Departments.Any(d => departmentIds.Contains(d.DepartmentId))) { return Forbid(); }
             }
 
@@ -112,11 +104,7 @@ namespace DevicePortal.Controllers
 
             if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
             {
-                string userId = User.GetUserName();
-                var departmentIds = _context.Users
-                    .Where(u => u.UserName == userId)
-                    .SelectMany(u => u.Departments.Select(d => d.DepartmentId))
-                    .ToHashSet();
+                var departmentIds = User.GetDepartmentIds(_context);
                 bool inSameDepartment = _context.Users_Departments
                     .Any(ud => ud.UserName == user.UserName && departmentIds.Contains(ud.DepartmentId));
                 if (!inSameDepartment) { return Forbid(); }

@@ -113,11 +113,18 @@
         let requestCount = ks.local_persist('request count', { count: 0 });
         if (user.can_approve) {
             if (isPageSwap) {
-                GET(API.SecurityCheck('Submitted/Count')).done(c => requestCount.count = c);
+                // If we swap to the Requests page we want to immediately update this number, interval might be far out
+                GET(API.SecurityCheck('Submitted/Count')).done(c => {
+                    requestCount.count = c;
+                    ks.refresh();
+                });
             }
             ks.set_interval('fetch request count', 60000, function () {
-                GET(API.SecurityCheck('Submitted/Count')).done(c => requestCount.count = c);
-            }, true);
+                GET(API.SecurityCheck('Submitted/Count')).done(c => {
+                    requestCount.count = c;
+                    ks.refresh();
+                });
+            }, !isPageSwap);
         }
 
         ks.nav_bar('top bar', 'navbar-expand navbar-light bg-white shadow-sm', function () {
@@ -244,8 +251,8 @@
                 state.devices = result;
                 ks.refresh();
             });
-            return; // wait for devices
         }
+        if (!state.devices) { return; }  // wait for devices
 
         ks.h5('My devices', 'mb-2');
         ks.row('devices', function () {

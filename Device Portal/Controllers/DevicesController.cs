@@ -105,6 +105,10 @@ namespace DevicePortal.Controllers
         [HttpPost]
         public async Task<ActionResult<Device>> PostDevice(Device device)
         {
+            // TODO: should probably not be simply set to the first in case of multiple departments
+            string userName = User.GetUserName();
+            device.DepartmentId = _context.Users_Departments.First(ud => ud.UserName == userName).DepartmentId;
+
             device.Status = DeviceStatus.Unsecure;
             device.Origin = DeviceOrigin.User;
             device.Category = DeviceCategory.BYOD;
