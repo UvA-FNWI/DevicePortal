@@ -46,7 +46,7 @@ namespace DevicePortal.Controllers
             var user = _context.Users.Find(userId);
             if (user == null) { return NotFound(); }
 
-            await _intuneService.SyncManagedDevicecUser(user.UserName, user.ObjectId);
+            await _intuneService.SyncManagedDeviceUser(user.UserName, user.ObjectId);
             return await _context.Devices.Where(d => d.UserName == userId).ToListAsync();
         }
 

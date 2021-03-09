@@ -37,7 +37,7 @@ namespace DevicePortal
             return await graphClient.Users[userId].ManagedDevices.Request().GetAsync();
         }
 
-        public async Task SyncManagedDevicecUser(string userName, string objectId)
+        public async Task SyncManagedDeviceUser(string userName, string objectId)
         {
             var semaphore = new SemaphoreSlim(1, 1);
             if (!semaphoreUserMap.TryAdd(userName, semaphore) &&
@@ -61,14 +61,24 @@ namespace DevicePortal
                 var deviceMap = _context.Devices
                     .Where(d => d.UserName == userName && !string.IsNullOrEmpty(d.SerialNumber))
                     .ToDictionary(d => d.SerialNumber);
+                var departmentIds = _context.Users_Departments
+                    .Where(ud => ud.UserName == userName)
+                    .Select(ud => ud.DepartmentId)
+                    .ToArray();
+                if (!departmentIds.Any()) { return; }
 
                 DateTime now = DateTime.Now;
-                foreach (var intuneDevice in intuneDevices)
+                HashSet<string> serialSet = new HashSet<string>();
+                foreach (var intuneDevice in intuneDevices.OrderByDescending(d => d.EnrolledDateTime))
                 {
+                    // Skip duplicates, process entry with latest enrolled dateTime
+                    if (!serialSet.Add(intuneDevice.SerialNumber)) { continue; }
+
                     if (!deviceMap.TryGetValue(intuneDevice.SerialNumber, out var device))
                     {
                         device = new Data.Device
                         {
+                            DepartmentId = departmentIds[0],
                             DeviceId = intuneDevice.DeviceName,
                             Name = $"{intuneDevice.Manufacturer} {intuneDevice.Model}".Trim(),
                             SerialNumber = intuneDevice.SerialNumber,
@@ -87,9 +97,9 @@ namespace DevicePortal
                             UserName = userName,
                             Type = intuneDevice.OperatingSystem switch
                             {
-                                //"Windows" => DeviceType.Desktop | DeviceType.Laptop,
-                                //"iOS" => DeviceType.Tablet | DeviceType.Mobile,
-                                //"Android" => DeviceType.Tablet | DeviceType.Mobile,
+                                "Windows" => DeviceType.Laptop,
+                                "iOS" => DeviceType.Mobile,
+                                "Android" => DeviceType.Mobile,
                                 "macOS" => DeviceType.Laptop,
                                 "OS X" => DeviceType.Laptop,
                                 _ => 0,
@@ -191,8 +201,12 @@ namespace DevicePortal
                             catch { continue; }
 
                             var deviceMap = user.Devices.ToDictionary(d => d.SerialNumber);
-                            foreach (var intuneDevice in intuneDevices)
+                            var serialSet = new HashSet<string>();
+                            foreach (var intuneDevice in intuneDevices.OrderByDescending(d => d.EnrolledDateTime))
                             {
+                                // Skip duplicates, process entry with latest enrolled dateTime
+                                if (!serialSet.Add(intuneDevice.SerialNumber)) { continue; }
+
                                 if (!deviceMap.TryGetValue(intuneDevice.SerialNumber, out var device))
                                 {
                                     device = new Data.Device
@@ -215,9 +229,9 @@ namespace DevicePortal
                                         UserName = user.UserName,
                                         Type = intuneDevice.OperatingSystem switch
                                         {
-                                            //"Windows" => DeviceType.Desktop | DeviceType.Laptop,
-                                            //"iOS" => DeviceType.Tablet | DeviceType.Mobile,
-                                            //"Android" => DeviceType.Tablet | DeviceType.Mobile,
+                                            "Windows" => DeviceType.Laptop,
+                                            "iOS" => DeviceType.Mobile,
+                                            "Android" => DeviceType.Mobile,
                                             "macOS" => DeviceType.Laptop,
                                             "OS X" => DeviceType.Laptop,
                                             _ => 0,
