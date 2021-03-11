@@ -63,6 +63,20 @@ namespace DevicePortal.Controllers
             var usersMap = users.ToDictionary(u => u.UserName);
             var userNameSet = new HashSet<string>();
 
+            var departmentUsers = new Dictionary<int, HashSet<string>>();
+            foreach (var user in users)
+            {
+                foreach (int departmentId in user.Departments) 
+                {
+                    if (!departmentUsers.TryGetValue(departmentId, out var userIds))
+                    {
+                        userIds = new HashSet<string>();
+                        departmentUsers.Add(departmentId, userIds);
+                    }
+                    userIds.Add(user.UserName);
+                }
+            }
+
             var departmentStats = new List<Department>();
             foreach (var department in departments)
             {
@@ -80,14 +94,14 @@ namespace DevicePortal.Controllers
                     }                    
                 }
 
-                var depByUser = department.Devices.GroupBy(d => d.UserName);
+                var deviceGroups = department.Devices.GroupBy(d => d.UserName);
                 int usersIntuneCompleted = 0, usersCheckSubmitted = 0, usersCheckApproved = 0;
-                foreach (var u in depByUser)
+                foreach (var group in deviceGroups)
                 {
-                    userNameSet.Add(u.Key);
+                    userNameSet.Add(group.Key);
 
                     bool submitted = false;
-                    foreach (var d in u.AsEnumerable())
+                    foreach (var d in group.AsEnumerable())
                     {
                         if (d.Status == DeviceStatus.Approved)
                         {
@@ -114,9 +128,9 @@ namespace DevicePortal.Controllers
                     DevicesCheckApproved = devicesCheckApproved,
                     DevicesCheckSubmitted = devicesCheckSubmitted,
                     DevicesIntuneCompleted = devicesIntuneCompleted,
-                    Users = depByUser.Count(),
-                    UsersAuthorized = depByUser.Count(u => usersMap[u.Key].CanSecure),
-                    UsersApprover = depByUser.Count(u => usersMap[u.Key].CanApprove),
+                    Users = departmentUsers[department.Id].Count,
+                    UsersAuthorized = departmentUsers[department.Id].Count(u => usersMap[u].CanSecure),
+                    UsersApprover = departmentUsers[department.Id].Count(u => usersMap[u].CanApprove),
                     UsersCheckApproved = usersCheckApproved,
                     UsersCheckSubmitted = usersCheckSubmitted,
                     UsersIntuneCompleted = usersIntuneCompleted,
