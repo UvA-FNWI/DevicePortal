@@ -66,7 +66,7 @@ namespace DevicePortal.Controllers
             var departmentUsers = new Dictionary<int, HashSet<string>>();
             foreach (var user in users)
             {
-                foreach (int departmentId in user.Departments) 
+                foreach (int departmentId in user.Departments)
                 {
                     if (!departmentUsers.TryGetValue(departmentId, out var userIds))
                     {
@@ -81,7 +81,7 @@ namespace DevicePortal.Controllers
             foreach (var department in departments)
             {
                 int devicesIntuneCompleted = 0, devicesCheckSubmitted = 0, devicesCheckApproved = 0;
-                foreach (var d in department.Devices) 
+                foreach (var d in department.Devices)
                 {
                     if (d.Status == DeviceStatus.Approved)
                     {
@@ -91,34 +91,31 @@ namespace DevicePortal.Controllers
                     else if (d.Origin != DeviceOrigin.Intune && d.Status == DeviceStatus.Submitted)
                     {
                         ++devicesCheckSubmitted;
-                    }                    
+                    }
                 }
 
-                // TODO: Users with mixed devices will count double
                 var deviceGroups = department.Devices.GroupBy(d => d.UserName);
                 int usersIntuneCompleted = 0, usersCheckSubmitted = 0, usersCheckApproved = 0, usersManagedDevices = 0;
                 foreach (var group in deviceGroups)
                 {
                     userNameSet.Add(group.Key);
 
-                    bool submitted = false;
-                    foreach (var d in group.AsEnumerable())
+                    if (group.All(d => d.Category == DeviceCategory.ManagedSpecial || d.Category == DeviceCategory.ManagedStandard))
                     {
-                        // Intune
-                        if (d.Origin == DeviceOrigin.Intune)
+                        ++usersManagedDevices;
+                    }
+                    else
+                    {
+                        bool submitted = false;
+                        foreach (var d in group.AsEnumerable())
                         {
-                            if (d.Status == DeviceStatus.Approved) { ++usersIntuneCompleted; }
-                        }
-                        // User or from export
-                        else 
-                        {
-                            // Managed devices
-                            if (d.Category == DeviceCategory.ManagedSpecial || d.Category == DeviceCategory.ManagedStandard)
+                            // Intune
+                            if (d.Origin == DeviceOrigin.Intune)
                             {
-                                ++usersManagedDevices;
+                                if (d.Status == DeviceStatus.Approved) { ++usersIntuneCompleted; }
                             }
                             // Device portal checks
-                            else 
+                            else
                             {
                                 if (d.Status == DeviceStatus.Approved) { ++usersCheckApproved; }
                                 else
@@ -127,8 +124,8 @@ namespace DevicePortal.Controllers
                                 }
                             }
                         }
+                        if (submitted) { ++usersCheckSubmitted; }
                     }
-                    if (submitted) { ++usersCheckSubmitted; }
                 }
 
                 departmentStats.Add(new Department
@@ -154,7 +151,7 @@ namespace DevicePortal.Controllers
 
             // Filter users based on device presence in department, User_Department is incomplete
             users = users.Where(u => u.Departments.Overlaps(departmentIds) || userNameSet.Contains(u.UserName)).ToArray();
-            return Ok(new 
+            return Ok(new
             {
                 Departments = departmentStats,
                 Users = users.Length,

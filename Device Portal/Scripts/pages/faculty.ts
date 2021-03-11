@@ -88,6 +88,7 @@
         ks.row('faculties', function () {
             for (let i = 0; i < state.institutes.length; ++i) {
                 let inst = state.institutes[i];
+                if (inst.devices === 0) { continue; }
 
                 ks.column(i.toString(), '12 col-md-6 px-2', function () {
                     ks.group(inst.name, 'card mb-3', function () {
