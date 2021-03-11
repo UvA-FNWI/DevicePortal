@@ -60,7 +60,7 @@ namespace DevicePortal
 
                 var deviceMap = _context.Devices
                     .Where(d => d.UserName == userName && !string.IsNullOrEmpty(d.SerialNumber))
-                    .ToDictionary(d => d.SerialNumber);
+                    .ToDictionary(d => d.SerialNumber.ToLower());
                 var departmentIds = _context.Users_Departments
                     .Where(ud => ud.UserName == userName)
                     .Select(ud => ud.DepartmentId)
@@ -71,10 +71,11 @@ namespace DevicePortal
                 HashSet<string> serialSet = new HashSet<string>();
                 foreach (var intuneDevice in intuneDevices.OrderByDescending(d => d.EnrolledDateTime))
                 {
+                    string serial_lower = intuneDevice.SerialNumber.ToLower();
                     // Skip duplicates, process entry with latest enrolled dateTime
-                    if (!serialSet.Add(intuneDevice.SerialNumber)) { continue; }
+                    if (!serialSet.Add(serial_lower)) { continue; }
 
-                    if (!deviceMap.TryGetValue(intuneDevice.SerialNumber, out var device))
+                    if (!deviceMap.TryGetValue(serial_lower, out var device))
                     {
                         device = new Data.Device
                         {
@@ -200,14 +201,16 @@ namespace DevicePortal
                             }
                             catch { continue; }
 
-                            var deviceMap = user.Devices.ToDictionary(d => d.SerialNumber);
+                            var deviceMap = user.Devices.ToDictionary(d => d.SerialNumber.ToLower());
                             var serialSet = new HashSet<string>();
                             foreach (var intuneDevice in intuneDevices.OrderByDescending(d => d.EnrolledDateTime))
                             {
-                                // Skip duplicates, process entry with latest enrolled dateTime
-                                if (!serialSet.Add(intuneDevice.SerialNumber)) { continue; }
+                                string serial_lower = intuneDevice.SerialNumber.ToLower();
 
-                                if (!deviceMap.TryGetValue(intuneDevice.SerialNumber, out var device))
+                                // Skip duplicates, process entry with latest enrolled dateTime
+                                if (!serialSet.Add(serial_lower)) { continue; }
+
+                                if (!deviceMap.TryGetValue(serial_lower, out var device))
                                 {
                                     device = new Data.Device
                                     {
