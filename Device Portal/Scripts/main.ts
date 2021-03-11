@@ -129,7 +129,7 @@
 
         ks.nav_bar('top bar', 'navbar-expand navbar-light bg-white shadow-sm', function () {
             ks.set_next_item_class_name('navbar-nav');
-            ks.group('container', 'container px-3 d-flex justify-content-between', function () {
+            ks.group('container', 'container-fluid px-lg-4 d-flex justify-content-between', function () {
                 ks.set_next_item_class_name('navbar-nav');
                 ks.unordered_list('left', '', function () {
                     ks.set_next_item_class_name('navbar-brand d-flex');
@@ -210,7 +210,7 @@
             });
         });
 
-        ks.group(pages[iPage], 'container my-3', function () {
+        ks.group(pages[iPage], 'container-fluid px-lg-5 my-3', function () {
             switch (iPage) {
                 case Page.Device:
                     page_device.call(this, parameters);
