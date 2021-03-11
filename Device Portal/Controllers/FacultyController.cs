@@ -94,8 +94,9 @@ namespace DevicePortal.Controllers
                     }                    
                 }
 
+                // TODO: Users with mixed devices will count double
                 var deviceGroups = department.Devices.GroupBy(d => d.UserName);
-                int usersIntuneCompleted = 0, usersCheckSubmitted = 0, usersCheckApproved = 0;
+                int usersIntuneCompleted = 0, usersCheckSubmitted = 0, usersCheckApproved = 0, usersManagedDevices = 0;
                 foreach (var group in deviceGroups)
                 {
                     userNameSet.Add(group.Key);
@@ -103,16 +104,29 @@ namespace DevicePortal.Controllers
                     bool submitted = false;
                     foreach (var d in group.AsEnumerable())
                     {
-                        if (d.Status == DeviceStatus.Approved)
+                        // Intune
+                        if (d.Origin == DeviceOrigin.Intune)
                         {
-                            if (d.Origin == DeviceOrigin.Intune) { ++usersIntuneCompleted; }
-                            else { ++usersCheckApproved; }
-                            break;
+                            if (d.Status == DeviceStatus.Approved) { ++usersIntuneCompleted; }
                         }
-                        else if (d.Origin != DeviceOrigin.Intune)
+                        // User or from export
+                        else 
                         {
-                            submitted = submitted || d.Status == DeviceStatus.Submitted;
-                        }                        
+                            // Managed devices
+                            if (d.Category == DeviceCategory.ManagedSpecial || d.Category == DeviceCategory.ManagedStandard)
+                            {
+                                ++usersManagedDevices;
+                            }
+                            // Device portal checks
+                            else 
+                            {
+                                if (d.Status == DeviceStatus.Approved) { ++usersCheckApproved; }
+                                else
+                                {
+                                    submitted = submitted || d.Status == DeviceStatus.Submitted;
+                                }
+                            }
+                        }
                     }
                     if (submitted) { ++usersCheckSubmitted; }
                 }
@@ -134,6 +148,7 @@ namespace DevicePortal.Controllers
                     UsersCheckApproved = usersCheckApproved,
                     UsersCheckSubmitted = usersCheckSubmitted,
                     UsersIntuneCompleted = usersIntuneCompleted,
+                    UsersManagedDevices = usersManagedDevices,
                 });
             }
 
@@ -156,6 +171,7 @@ namespace DevicePortal.Controllers
             public int UsersAuthorized { get; set; }
             public int UsersApprover { get; set; }
             public int UsersIntuneCompleted { get; set; }
+            public int UsersManagedDevices { get; set; }
             public int UsersCheckSubmitted { get; set; }
             public int UsersCheckApproved { get; set; }
             public int Devices { get; set; }

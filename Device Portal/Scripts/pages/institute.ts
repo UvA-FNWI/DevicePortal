@@ -328,14 +328,14 @@
         paginator('paginator', state.devices.filter(d => device_search_match(search, d)).length, () => ks.refresh(this));
     }
 
-    function device_search_match(p: DeviceSearchParams, d: DeviceUser) {
+    function device_search_match(p: DeviceSearchParams, d: DeviceUser): boolean {
         return (!p.user || d.userLowerCase.indexOf(p.user) >= 0) &&
             (!p.name || d.nameLowerCase.indexOf(p.name) >= 0) &&
             (!p.deviceId || d.deviceIdLowerCase.indexOf(p.deviceId) >= 0) &&
             (!p.serialNr || d.serialNumberLowerCase.indexOf(p.serialNr) >= 0) &&
             (p.type & d.type) &&
-            (d.os_type === 0 || (p.os_type & d.os_type)) &&
-            (d.category === 0 || (p.category & d.category)) &&
+            ((p.os_type === OSType.All && d.os_type === 0) || (p.os_type & d.os_type)) &&
+            ((p.category === DeviceCategory.All && d.category === 0) || (p.category & d.category)) &&
             (p.status < 0 || p.status == d.status);
     }
 }
