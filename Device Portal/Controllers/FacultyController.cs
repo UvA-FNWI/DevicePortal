@@ -49,7 +49,7 @@ namespace DevicePortal.Controllers
                 {
                     d.Id,
                     d.Name,
-                    Devices = d.Devices.Where(dev => !string.IsNullOrEmpty(dev.UserName)),
+                    Devices = d.Devices,
                 }).ToArrayAsync();
             var users = await _context.Users
                 .Select(u => new
@@ -94,7 +94,9 @@ namespace DevicePortal.Controllers
                     }
                 }
 
-                var deviceGroups = department.Devices.GroupBy(d => d.UserName);
+                var deviceGroups = department.Devices
+                    .Where(d => ! string.IsNullOrEmpty(d.UserName))
+                    .GroupBy(d => d.UserName);
                 int usersIntuneCompleted = 0, usersCheckSubmitted = 0, usersCheckApproved = 0, usersManagedDevices = 0;
                 foreach (var group in deviceGroups)
                 {

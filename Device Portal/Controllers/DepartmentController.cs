@@ -42,7 +42,7 @@ namespace DevicePortal.Controllers
             var department = await db.Departments.FirstAsync(d => d.Id == id);
 
             var devices = await db.Devices
-                .Where(d => d.DepartmentId == id && !string.IsNullOrEmpty(d.UserName))
+                .Where(d => d.DepartmentId == id)
                 .Select(d => new 
                 {
                     d.DeviceId,
@@ -70,7 +70,7 @@ namespace DevicePortal.Controllers
                    Departments = u.Departments.Select(d => d.DepartmentId).ToHashSet(),
                })
                .ToArrayAsync();
-            var userNameSet = devices.Select(d => d.UserName).ToHashSet();
+            var userNameSet = devices.Where(d => !string.IsNullOrEmpty(d.UserName)).Select(d => d.UserName).ToHashSet();
 
             users = users.Where(u => u.Departments.Contains(id) || userNameSet.Contains(u.UserName)).ToArray();
             return Ok(new 
