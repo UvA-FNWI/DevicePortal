@@ -105,7 +105,7 @@ namespace DevicePortal.Controllers
         [HttpPost]
         public async Task<ActionResult<Device>> PostDevice(Device device)
         {
-            int[] departmentIds = Array.Empty<int>();// User.GetDepartmentIds(_context);
+            int[] departmentIds = User.GetDepartmentIds(_context);
             if (departmentIds.Length == 0) { return BadRequest("Failed to save device. There's no department to add device to."); }
 
             // TODO: should probably not be simply set to the first in case of multiple departments
