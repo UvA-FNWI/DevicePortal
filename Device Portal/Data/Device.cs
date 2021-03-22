@@ -68,7 +68,15 @@ namespace DevicePortal.Data
         public OS_Type OS_Type { get; set; }
         [JsonPropertyName("os_version")]
         public string  OS_Version { get; set; }
-
+        public DateTime? PurchaseDate { get; set; }
+        public string CostCentre { get; set; }
+        public DateTime? LastSeenDate { get; set; }
+        public string ItracsBuilding { get; set; }
+        public string ItracsRoom { get; set; }
+        public string ItracsOutlet { get; set; }
+        public string Macadres { get; set; }
+        public string Notes { get; set; }
+        
         public DeviceType Type { get; set; }
         public DeviceCategory Category { get; set; }
         public DeviceStatus Status { get; set; }

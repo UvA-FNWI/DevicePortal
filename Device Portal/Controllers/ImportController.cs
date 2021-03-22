@@ -35,7 +35,9 @@ namespace DevicePortal.Controllers
             var deviceExportFile = Request.Form.Files[0];
             var deviceExport = CsvParser.Parse(deviceExportFile);
 
-            int iDepartment = -1, iUserName = -1, iUserEmail = -1, iBrand = -1, iBrandType = -1, iDeviceId = -1, iDeviceType = -1, iDeviceOS = -1, iSerial = -1;
+            int iDepartment = -1, iUserName = -1, iUserEmail = -1, iBrand = -1, iBrandType = -1, iDeviceId = -1, iDeviceType = -1, 
+                iDeviceOS = -1, iSerial = -1, iCostCentre = -1, iTracsBuilding = -1, iTracsRoom = -1, iTracsOutlet = -1,
+                iMacadres = -1, iNotes = -1, iPurchasedDate = -1, iLastSeenDate = -1;
             for (int i = 0; i < deviceExport.header.Count; ++i)
             {
                 switch (deviceExport.header[i])
@@ -49,6 +51,14 @@ namespace DevicePortal.Controllers
                     case "besturingssysteem": iDeviceOS = i; break;
                     case "merk": iBrand = i; break;
                     case "type": iBrandType = i; break;
+                    case "kostenplaats": iCostCentre = i; break;
+                    case "itracs_gebouw": iTracsBuilding = i; break;
+                    case "itracs_ruimte": iTracsRoom = i;  break;
+                    case "itracs_outlet": iTracsOutlet = i; break;
+                    case "macadres": iMacadres = i; break;
+                    case "notities_klant": iNotes = i; break;
+                    case "datum_laatst_gezien": iLastSeenDate = i; break;
+                    case "aanschafdatum": iPurchasedDate = i; break;
                 }
             }
             if (iDepartment == -1 || iUserName == -1 || iDeviceId == -1 || iDeviceType == -1)
@@ -63,7 +73,8 @@ namespace DevicePortal.Controllers
             Dictionary<string, User> userMap = _context.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
             List<User> usersToUpdate = new List<User>();
-            Dictionary<(string username, string deviceId), Device> deviceMap = _context.Devices.ToArray().ToDictionary(d => (d.UserName, d.DeviceId));
+            Dictionary<(string username, string deviceId), Device> deviceMap = _context.Devices                
+                .ToArray().ToDictionary(d => (d.UserName, d.DeviceId));
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
             List<Department> departmentsToAdd = new List<Department>();
@@ -88,6 +99,14 @@ namespace DevicePortal.Controllers
                     Status = DeviceStatus.Unsecure,
                     StatusEffectiveDate = now,
                     Department = department,
+                    CostCentre = line[iCostCentre],
+                    ItracsBuilding = line[iTracsBuilding],
+                    ItracsOutlet = line[iTracsOutlet],
+                    ItracsRoom = line[iTracsRoom],
+                    LastSeenDate = !string.IsNullOrEmpty(line[iLastSeenDate]) ? DateTime.Parse(line[iLastSeenDate]) : default,
+                    Macadres = line[iMacadres],
+                    Notes = line[iNotes],
+                    PurchaseDate = !string.IsNullOrEmpty(line[iPurchasedDate]) ? DateTime.Parse(line[iPurchasedDate]) : default,
                 };
 
                 string deviceType = line[iDeviceType];
@@ -142,11 +161,34 @@ namespace DevicePortal.Controllers
                     {
                         if (existing.UserName != device.UserName ||
                             existing.SerialNumber != device.SerialNumber ||
-                            existing.Category != device.Category)
+                            existing.Category != device.Category ||
+                            existing.CostCentre != device.CostCentre ||
+                            existing.DepartmentId != device.Department.Id ||
+                            existing.ItracsBuilding != device.ItracsBuilding ||
+                            existing.ItracsOutlet != device.ItracsOutlet ||
+                            existing.ItracsRoom != device.ItracsRoom ||
+                            existing.LastSeenDate != device.LastSeenDate ||
+                            existing.Macadres != device.Macadres ||
+                            existing.Name != device.Name ||
+                            existing.PurchaseDate != device.PurchaseDate ||
+                            existing.Notes != device.Notes)
                         {
                             existing.UserName = device.UserName;
                             existing.SerialNumber = device.SerialNumber;
                             existing.Category = device.Category;
+                            existing.CostCentre = device.CostCentre;
+                            existing.ItracsBuilding = device.ItracsBuilding;
+                            existing.ItracsOutlet = device.ItracsOutlet;
+                            existing.ItracsRoom = device.ItracsRoom;
+                            existing.LastSeenDate = device.LastSeenDate;
+                            existing.Macadres = device.Macadres;
+                            existing.Name = device.Name;
+                            existing.PurchaseDate = device.PurchaseDate;
+                            existing.Notes = device.Notes;
+                            if (device.Department != null)
+                            {
+                                existing.DepartmentId = device.DepartmentId;
+                            }
                             devicesToUpdate.Add(existing);
                         }
                     }
@@ -238,6 +280,15 @@ namespace DevicePortal.Controllers
             deviceTable.Columns.Add("StatusEffectiveDate");
             deviceTable.Columns.Add("Origin", typeof(int));
             deviceTable.Columns.Add("DepartmentId", typeof(int));
+            deviceTable.Columns.Add("PurchaseDate");
+            deviceTable.Columns.Add("CostCentre");
+            deviceTable.Columns.Add("LastSeenDate");
+            deviceTable.Columns.Add("ItracsBuilding");
+            deviceTable.Columns.Add("ItracsRoom");
+            deviceTable.Columns.Add("ItracsOutlet");
+            deviceTable.Columns.Add("Macadres");
+            deviceTable.Columns.Add("Notes");
+
             foreach (var device in devicesToAdd)
             {
                 deviceTable.Rows.Add(
@@ -252,7 +303,15 @@ namespace DevicePortal.Controllers
                     device.Status,
                     device.StatusEffectiveDate,
                     device.Origin,
-                    device.Department.Id);
+                    device.Department.Id,
+                    device.PurchaseDate,
+                    device.CostCentre,
+                    device.LastSeenDate,
+                    device.ItracsBuilding,
+                    device.ItracsRoom,
+                    device.ItracsOutlet,
+                    device.Macadres,
+                    device.Notes);
             }
 
             sqlBulk.ColumnMappings.Clear();
@@ -268,6 +327,14 @@ namespace DevicePortal.Controllers
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("StatusEffectiveDate", "StatusEffectiveDate"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Origin", "Origin"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("DepartmentId", "DepartmentId"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("PurchaseDate", "PurchaseDate"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CostCentre", "CostCentre"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("LastSeenDate", "LastSeenDate"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("ItracsBuilding", "ItracsBuilding"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("ItracsRoom", "ItracsRoom"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("ItracsOutlet", "ItracsOutlet"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Macadres", "Macadres"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Notes", "Notes"));
             sqlBulk.DestinationTableName = "dbo.Devices";
             sqlBulk.WriteToServer(deviceTable);
             sqlBulk.Close();
