@@ -301,6 +301,10 @@
                 ks.table_cell('Type');
                 ks.table_cell('Category');
                 ks.table_cell('OS');
+                ks.table_cell('Cost centre');
+                ks.table_cell('Building');
+                ks.table_cell('Room');
+                ks.table_cell('Outlet');
                 ks.table_cell('Status').style.width = '1%';
                 if (can_secure) { ks.table_cell('').style.width = '1%'; }
                 if (edit_device) { ks.table_cell('').style.width = '1%'; }
@@ -344,6 +348,10 @@
             });
             ks.table_cell(deviceCategories[d.category]);
             ks.table_cell(osNames[d.os_type]);
+            ks.table_cell(d.costCentre);
+            ks.table_cell(d.itracsBuilding);
+            ks.table_cell(d.itracsRoom);
+            ks.table_cell(d.itracsOutlet);
             ks.table_cell(function () {
                 if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
                     ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);

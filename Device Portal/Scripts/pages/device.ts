@@ -62,10 +62,14 @@
         os_type: OSType;
         os_version: string = '';
         status = DeviceStatus.Unsecure;
-
-        //user: string; // Note(Joshua): only available in institute/devices
-        //userLowerCase: string; // Note: used on institue page for performance
-        //userName: string;
+        costCentre: string;
+        itracsBuilding: string;
+        itracsRoom: string;
+        itracsOutlet: string;
+        purchaseDate: string;
+        lastSeenDate: string;
+        macadres: string;
+        notes: string;
     }
     export enum DeviceOrigin {
         DataExport,
