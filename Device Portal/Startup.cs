@@ -260,6 +260,7 @@ namespace DevicePortal
                         u.CanApprove,
                         CanManage = u.Departments.Any(d => d.CanManage),
                         u.CanSecure,
+                        CanManageFaculty = u.Departments.Any(d => d.CanManage && d.Department.Name == "FNWI"),
                         u.Name,
                     })
                     .SingleOrDefaultAsync();
@@ -279,6 +280,7 @@ namespace DevicePortal
                                 u.CanApprove,
                                 CanManage = u.Departments.Any(d => d.CanManage),
                                 u.CanSecure,
+                                CanManageFaculty = u.Departments.Any(d => d.CanManage && d.Department.Name == "FNWI"),
                                 u.Name,
                             })
                             .FirstOrDefaultAsync();
@@ -312,6 +314,7 @@ namespace DevicePortal
                 if (user.CanSecure || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanSecure)); }
                 if (user.CanApprove || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanApprove)); }
                 if (user.CanManage || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanManage)); }
+                if (user.CanManageFaculty || user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanManageFaculty)); }
                 if (user.CanAdmin) { identity.AddClaim(new Claim(AppClaimTypes.Permission, AppClaims.CanAdmin)); }
                 return principal;
             }
@@ -332,6 +335,7 @@ namespace DevicePortal
         public const string CanSecure = "CanSecure";
         public const string CanApprove = "CanApprove";
         public const string CanManage = "CanManage";
+        public const string CanManageFaculty = "CanManage";
         public const string CanAdmin = "CanAdmin";
     }
     public static class AppClaimTypes

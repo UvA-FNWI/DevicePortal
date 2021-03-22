@@ -26,10 +26,10 @@ namespace DevicePortal.Controllers
         public async Task<ActionResult> GetOverview()
         {
             var userName = User.GetUserName();
-            bool isAdmin = User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin);
 
             HashSet<int> departmentIds;
-            if (isAdmin)
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) ||
+                User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
                 departmentIds = _context.Departments
                     .Select(d => d.Id)

@@ -32,9 +32,10 @@ namespace DevicePortal.Controllers
         [HttpGet("{id}/Overview")]
         public async Task<ActionResult> GetDevices(int id)
         {
-            var userName = User.GetUserName();
-            bool isAdmin = User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin);
-            if (!isAdmin && !db.Users_Departments.Any(u => u.UserName == userName && u.DepartmentId == id && u.CanManage))
+            var userName = User.GetUserName();            
+            if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) &&
+                !User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty) &&
+                !db.Users_Departments.Any(u => u.UserName == userName && u.DepartmentId == id && u.CanManage))
             {
                 return Forbid();
             }

@@ -35,7 +35,8 @@ namespace DevicePortal.Controllers
         public async Task<ActionResult> GetSecurityChecksSubmitted()
         {
             var query = _context.SecurityChecks.AsQueryable();
-            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) ||
+                User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
                 query = query.Where(c => c.Status == DeviceStatus.Submitted);
             }
@@ -61,7 +62,8 @@ namespace DevicePortal.Controllers
         [Authorize(Policy = AppPolicies.ApproverOnly)]
         public async Task<ActionResult<int>> GetSecurityCheckCount()
         {
-            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) ||
+                User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
                 return await _context.SecurityChecks.CountAsync();
             }
@@ -77,7 +79,8 @@ namespace DevicePortal.Controllers
         [Authorize(Policy = AppPolicies.ApproverOnly)]
         public async Task<ActionResult<int>> GetSecurityCheckCountSubmitted()
         {
-            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) ||
+                User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
                 return await _context.SecurityChecks.Where(c => c.Status == DeviceStatus.Submitted).CountAsync();
             }

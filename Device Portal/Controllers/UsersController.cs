@@ -29,7 +29,8 @@ namespace DevicePortal.Controllers
         [HttpGet]
         public async Task<ActionResult> GetUsers()
         {
-            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) ||
+                User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
                 return Ok(await _context.Users
                     .Select(u => new 
@@ -76,7 +77,8 @@ namespace DevicePortal.Controllers
             {
                 return NotFound();
             }
-            if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) &&
+                !User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
                 var departmentIds = User.GetDepartmentIds(_context);
                 if (!user.Departments.Any(d => departmentIds.Contains(d.DepartmentId))) { return Forbid(); }
@@ -102,12 +104,17 @@ namespace DevicePortal.Controllers
                 return BadRequest();
             }
 
-            if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin))
+            if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) &&
+                !User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
-                var departmentIds = User.GetDepartmentIds(_context);
-                bool inSameDepartment = _context.Users_Departments
+                string userName = User.GetUserName();
+                var departmentIds = _context.Users_Departments
+                    .Where(u => u.UserName == userName && u.CanManage)
+                    .Select(u => u.DepartmentId)
+                    .ToHashSet();
+                bool canManageDepartment = _context.Users_Departments
                     .Any(ud => ud.UserName == user.UserName && departmentIds.Contains(ud.DepartmentId));
-                if (!inSameDepartment) { return Forbid(); }
+                if (!canManageDepartment) { return Forbid(); }
             }
             
             var entry = _context.Entry(user);
