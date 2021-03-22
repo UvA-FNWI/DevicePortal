@@ -333,9 +333,9 @@
             (!p.name || d.nameLowerCase.indexOf(p.name) >= 0) &&
             (!p.deviceId || d.deviceIdLowerCase.indexOf(p.deviceId) >= 0) &&
             (!p.serialNr || d.serialNumberLowerCase.indexOf(p.serialNr) >= 0) &&
-            ((p.type === DeviceType.All && d.type === 0) || p.type & d.type) &&
-            ((p.os_type === OSType.All && d.os_type === 0) || (p.os_type & d.os_type)) &&
-            ((p.category === DeviceCategory.All && d.category === 0) || (p.category & d.category)) &&
+            ((p.type === DeviceType.All && d.type === 0) || (p.type & d.type) > 0) &&
+            ((p.os_type === OSType.All && d.os_type === 0) || (p.os_type & d.os_type) > 0) &&
+            ((p.category === DeviceCategory.All && d.category === 0) || (p.category & d.category) > 0) &&
             (p.status < 0 || p.status == d.status);
     }
 }

@@ -29,7 +29,7 @@ namespace DevicePortal.Data
         SelfSupport = 1 << 2,
         Other = 1 << 3,
         BYOD = 1 << 4, // bring your own device 
-        All = (1 << 4) - 1,
+        All = (1 << 5) - 1,
     }
 
     public enum DeviceOrigin
