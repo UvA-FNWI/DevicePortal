@@ -4,6 +4,7 @@
         userName: string;
         userFullName: string;
         deviceName: string;
+        departmentName: string;
     }
 
     export function page_requests(parameters: string) {
@@ -64,6 +65,7 @@
                         let c = state.checks[i];
 
                         ks.table_row(function () {
+                            ks.table_cell(c.departmentName);
                             ks.table_cell(c.userFullName);
                             ks.table_cell(c.deviceName);
                             ks.table_cell(function () {
