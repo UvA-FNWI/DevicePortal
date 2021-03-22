@@ -25,10 +25,13 @@
     export function page_institute(parameters: string) {
         let state = ks.local_persist('page_device', {
             institute: <Institute>null,
-            devices: <DeviceUser[]>null,
+            devices: <DeviceUser[]>[],
             search: new DeviceSearchParams(),
         });
-
+        if (isPageSwap) {
+            state.institute = undefined;
+            if (state.devices) { state.devices.length = 0; }
+        }
         let instituteId: number;
         if (parameters) {
             let parts = parameters.split('/');
@@ -48,7 +51,6 @@
                     institute.devices.sort((a, b) => sort_string(a.name, b.name));
                     ks.refresh();
                 });
-                return; // wait for devices
             }
         } else {
             ks.navigate_to('Home', '/');
@@ -59,7 +61,7 @@
             header_breadcrumbs(['Faculty', state.institute.name], function () {
                 ks.navigate_to('Faculty', pages[Page.Faculty]);
             });
-        }
+        } else { ks.h5("Loading"); }
 
         ks.set_next_item_class_name('mx-n2');
         ks.row('stats', function () {
@@ -67,7 +69,9 @@
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {
                         ks.icon('fa fa-users').style.fontSize = '1.5rem';
-                        ks.h4(state.institute.users.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
+                        if (state.institute) {
+                            ks.h4(state.institute.users.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
+                        }
                         ks.text('Users', 'text-muted');
                     });
                 });
@@ -77,7 +81,9 @@
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {
                         ks.icon('fa fa-list-ol').style.fontSize = '1.5rem';
-                        ks.h4(state.institute.usersAuthorized.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
+                        if (state.institute) {
+                            ks.h4(state.institute.usersAuthorized.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
+                        }
                         ks.text('Authorized', 'text-muted');
                     });
                 });
@@ -87,7 +93,9 @@
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {
                         ks.icon('fa fa-gavel').style.fontSize = '1.5rem';
-                        ks.h4(state.institute.usersApprover.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
+                        if (state.institute) {
+                            ks.h4(state.institute.usersApprover.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
+                        }
                         ks.text('Approvers', 'text-muted');
                     });
                 });
