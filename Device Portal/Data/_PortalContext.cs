@@ -26,6 +26,7 @@ namespace DevicePortal.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Device> Devices { get; set; }
+        public DbSet<DeviceHistory> DeviceHistories { get; set; }
         public DbSet<SecurityCheck> SecurityChecks { get; set; }
         public DbSet<SecurityCheckQuestions> SecurityCheckAnswers { get; set; }
         public DbSet<SecurityQuestions> SecurityQuestions { get; set; }
@@ -34,6 +35,12 @@ namespace DevicePortal.Data
         {
             var device = modelBuilder.Entity<Device>();
             device.HasIndex(d => d.UserName);
+
+            modelBuilder.Entity<DeviceHistory>()
+                .HasOne(d => d.OriginalDevice)
+                .WithMany(d => d.History)
+                .HasForeignKey(d => d.OriginalDeviceId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             var securityCheck = modelBuilder.Entity<SecurityCheck>();
             securityCheck.HasIndex(c => c.UserName);

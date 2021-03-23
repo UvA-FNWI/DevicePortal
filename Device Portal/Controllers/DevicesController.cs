@@ -80,6 +80,10 @@ namespace DevicePortal.Controllers
                 return BadRequest();
             }
 
+            var original = await _context.Devices.FindAsync(id);
+            var history = new DeviceHistory(original);
+            _context.DeviceHistories.Add(history);
+
             _context.UpdateProperties(device, d => d.Name, d=> d.OS_Type, d => d.OS_Version);
             
             try

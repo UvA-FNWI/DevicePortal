@@ -210,6 +210,7 @@ namespace DevicePortal.Controllers
                 return NotFound();
             }
 
+            _context.DeviceHistories.Add(new DeviceHistory(device));
             device.Status = securityCheck.Status;
             device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = DateTime.Now;
 

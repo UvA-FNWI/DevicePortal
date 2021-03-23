@@ -183,6 +183,7 @@ namespace DevicePortal
                 i = 0;
                 var devicesToAdd = new ConcurrentBag<Data.Device>();
                 var devicesToUpdate = new ConcurrentBag<Data.Device>();
+                var deviceHistoriesToAdd = new ConcurrentBag<DeviceHistory>();
                 var tasks = new Task[threads];
                 for (; i < threads; ++i)
                 {
@@ -250,6 +251,8 @@ namespace DevicePortal
                                     intuneDevice.DeviceRegistrationState == DeviceRegistrationState.ApprovalPending ||
                                     intuneDevice.DeviceRegistrationState == DeviceRegistrationState.NotRegisteredPendingEnrollment)
                                 {
+                                    if (device.Id > 0) { deviceHistoriesToAdd.Add(new DeviceHistory(device)); }
+
                                     device.Origin = DeviceOrigin.Intune;
                                     device.Status = intuneDevice.ComplianceState switch
                                     {
@@ -273,6 +276,7 @@ namespace DevicePortal
                 }
                 Task.WhenAll(tasks).Wait();
 
+                if (deviceHistoriesToAdd.Any()) { _context.DeviceHistories.AddRange(deviceHistoriesToAdd); }
                 foreach (var device in devicesToUpdate)
                 {
                     _context.UpdateProperties(device, d => d.Origin, d => d.Status, d => d.StatusEffectiveDate);

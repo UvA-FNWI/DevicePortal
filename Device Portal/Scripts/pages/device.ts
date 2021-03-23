@@ -85,17 +85,20 @@
         Rejected,
         Submitted,
         Unsecure,
+        Lost,
     }
     export let statusNames = {};
     statusNames[DeviceStatus.Approved] = 'Approved';
     statusNames[DeviceStatus.Rejected] = 'Rejected';
     statusNames[DeviceStatus.Submitted] = 'Pending';
     statusNames[DeviceStatus.Unsecure] = 'Unsecure';
+    statusNames[DeviceStatus.Lost] = 'Lost';
     export let statusColors = {};
     statusColors[DeviceStatus.Approved] = 'success';
     statusColors[DeviceStatus.Rejected] = 'danger';
     statusColors[DeviceStatus.Submitted] = 'info';
     statusColors[DeviceStatus.Unsecure] = 'warning';
+    statusColors[DeviceStatus.Lost] = 'danger';
 
     export function page_device(parameters: string) {
         let state = ks.local_persist('page_device', {

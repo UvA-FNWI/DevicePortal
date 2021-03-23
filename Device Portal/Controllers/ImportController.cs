@@ -77,6 +77,7 @@ namespace DevicePortal.Controllers
                 .ToArray().ToDictionary(d => (d.UserName, d.DeviceId));
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
+            var deviceHistoriesToAdd = new List<DeviceHistory>();
             List<Department> departmentsToAdd = new List<Department>();
             foreach (var line in deviceExport.lines)
             {
@@ -173,6 +174,8 @@ namespace DevicePortal.Controllers
                             existing.PurchaseDate != device.PurchaseDate ||
                             existing.Notes != device.Notes)
                         {
+                            deviceHistoriesToAdd.Add(new DeviceHistory(existing));
+
                             existing.UserName = device.UserName;
                             existing.SerialNumber = device.SerialNumber;
                             existing.Category = device.Category;
@@ -203,6 +206,7 @@ namespace DevicePortal.Controllers
             }
             if (devicesToUpdate.Any())
             {
+                _context.DeviceHistories.AddRange(deviceHistoriesToAdd);
                 _context.Devices.UpdateRange(devicesToUpdate);
                 _context.SaveChanges();
             }

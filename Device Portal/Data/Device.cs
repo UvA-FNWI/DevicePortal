@@ -45,6 +45,7 @@ namespace DevicePortal.Data
         Denied,
         Submitted,
         Unsecure,
+        Lost,
     }
 
     public enum OS_Type 
@@ -55,9 +56,9 @@ namespace DevicePortal.Data
         MacOS = 1 << 3,
         Windows = 1 << 4,
         All = (1 << 5) - 1,
-    }   
+    }
 
-    public class Device : IEntity
+    public class DeviceBase : IEntity
     {
         public int Id { get; set; }
 
@@ -90,7 +91,38 @@ namespace DevicePortal.Data
         public int DepartmentId { get; set; }
         public Department Department { get; set; }
 
+        public bool Disowned { get; set; }
+    }
+
+    public class Device : DeviceBase
+    {
         [JsonIgnore]
         public HashSet<SecurityCheck> SecurityChecks { get; set; }
+        [JsonIgnore]
+        public HashSet<DeviceHistory> History { get; set; }
+    }
+
+    public class DeviceHistory : DeviceBase
+    {
+        public int OriginalDeviceId { get; set; }
+        public Device OriginalDevice { get; set; }
+
+        public DateTime DateHistory { get; set; }
+
+        public DeviceHistory() { }
+
+        public DeviceHistory(DeviceBase d)
+        {
+            OriginalDeviceId = d.Id;
+            DateHistory = DateTime.Now;
+
+            var type = typeof(DeviceBase);
+            var properties = type.GetProperties();
+            foreach (var p in properties)
+            {
+                p.SetValue(this, p.GetValue(d));
+            }
+            Id = 0;
+        }
     }
 }

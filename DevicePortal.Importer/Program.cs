@@ -35,6 +35,7 @@ namespace DevicePortal.Importer
             Dictionary<(string username, string deviceId), Device> deviceMap = portalContext.Devices.ToArray().ToDictionary(d => (d.UserName, d.DeviceId));
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
+            var deviceHistoriesToAdd = new List<DeviceHistory>();
             List<Department> departmentsToAdd = new List<Department>();
 
             var devices = dwhContext.FnwiPortals.ToArray();
@@ -133,6 +134,8 @@ namespace DevicePortal.Importer
                             existing.PurchaseDate != device.PurchaseDate ||
                             existing.Notes != device.Notes)
                         {
+                            deviceHistoriesToAdd.Add(new DeviceHistory(existing));
+
                             existing.UserName = device.UserName;
                             existing.SerialNumber = device.SerialNumber;
                             existing.Category = device.Category;
@@ -163,6 +166,7 @@ namespace DevicePortal.Importer
             }
             if (devicesToUpdate.Any())
             {
+                portalContext.DeviceHistories.AddRange(deviceHistoriesToAdd);
                 portalContext.Devices.UpdateRange(devicesToUpdate);
                 portalContext.SaveChanges();
             }
