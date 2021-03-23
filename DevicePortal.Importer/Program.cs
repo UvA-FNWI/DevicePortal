@@ -117,45 +117,44 @@ namespace DevicePortal.Importer
                         usersToAdd.Add(user);
                         userMap.Add(user.UserName, user);
                     }
+                }
 
-                    if (deviceMap.TryGetValue((device.UserName, device.DeviceId), out Device existing))
+                if (deviceMap.TryGetValue((device.UserName, device.DeviceId), out Device existing))
+                {
+                    if (existing.UserName != device.UserName ||
+                        existing.SerialNumber != device.SerialNumber ||
+                        existing.Category != device.Category ||
+                        existing.CostCentre != device.CostCentre ||
+                        existing.DepartmentId != device.Department.Id || 
+                        existing.ItracsBuilding != device.ItracsBuilding ||
+                        existing.ItracsOutlet != device.ItracsOutlet ||
+                        existing.ItracsRoom != device.ItracsRoom ||
+                        existing.LastSeenDate != device.LastSeenDate ||
+                        existing.Macadres != device.Macadres ||
+                        existing.Name !=  device.Name ||
+                        existing.PurchaseDate != device.PurchaseDate ||
+                        existing.Notes != device.Notes)
                     {
-                        if (existing.UserName != device.UserName ||
-                            existing.SerialNumber != device.SerialNumber ||
-                            existing.Category != device.Category ||
-                            existing.CostCentre != device.CostCentre ||
-                            existing.DepartmentId != device.Department.Id || 
-                            existing.ItracsBuilding != device.ItracsBuilding ||
-                            existing.ItracsOutlet != device.ItracsOutlet ||
-                            existing.ItracsRoom != device.ItracsRoom ||
-                            existing.LastSeenDate != device.LastSeenDate ||
-                            existing.Macadres != device.Macadres ||
-                            existing.Name !=  device.Name ||
-                            existing.PurchaseDate != device.PurchaseDate ||
-                            existing.Notes != device.Notes)
-                        {
-                            deviceHistoriesToAdd.Add(new DeviceHistory(existing));
+                        deviceHistoriesToAdd.Add(new DeviceHistory(existing));
 
-                            existing.UserName = device.UserName;
-                            existing.SerialNumber = device.SerialNumber;
-                            existing.Category = device.Category;
-                            existing.CostCentre = device.CostCentre;
-                            existing.ItracsBuilding = device.ItracsBuilding;
-                            existing.ItracsOutlet = device.ItracsOutlet;
-                            existing.ItracsRoom = device.ItracsRoom;
-                            existing.LastSeenDate = device.LastSeenDate;
-                            existing.Macadres = device.Macadres;
-                            existing.Name = device.Name;
-                            existing.PurchaseDate = device.PurchaseDate;
-                            existing.Notes = device.Notes;
-                            if (device.Department != null) 
-                            {
-                                existing.DepartmentId = device.DepartmentId;
-                            }
-                            devicesToUpdate.Add(existing);
+                        existing.UserName = device.UserName;
+                        existing.SerialNumber = device.SerialNumber;
+                        existing.Category = device.Category;
+                        existing.CostCentre = device.CostCentre;
+                        existing.ItracsBuilding = device.ItracsBuilding;
+                        existing.ItracsOutlet = device.ItracsOutlet;
+                        existing.ItracsRoom = device.ItracsRoom;
+                        existing.LastSeenDate = device.LastSeenDate;
+                        existing.Macadres = device.Macadres;
+                        existing.Name = device.Name;
+                        existing.PurchaseDate = device.PurchaseDate;
+                        existing.Notes = device.Notes;
+                        if (device.Department != null) 
+                        {
+                            existing.DepartmentId = device.DepartmentId;
                         }
+                        devicesToUpdate.Add(existing);
                     }
-                    else { devicesToAdd.Add(device); }
                 }
                 else { devicesToAdd.Add(device); }
             }
