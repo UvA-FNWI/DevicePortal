@@ -335,6 +335,8 @@
                 break;
         }
 
+        // Note: adding/removing cells here requires the same change in table headers wherever this method is called
+        // Usually this is covered by the device_table_head(), but e.g. the institute page has custom headers.
         ks.table_row(function () {                
             if (user) { ks.table_cell(user); }
             ks.table_cell(d.name);

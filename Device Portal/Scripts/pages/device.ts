@@ -63,9 +63,13 @@
         os_version: string = '';
         status = DeviceStatus.Unsecure;
         costCentre: string;
+        costCentreLowerCase: string;   // Note: used on institue page for performance
         itracsBuilding: string;
+        itracsBuildingLowerCase: string;   // Note: used on institue page for performance
         itracsRoom: string;
+        itracsRoomLowerCase: string;   // Note: used on institue page for performance
         itracsOutlet: string;
+        itracsOutletLowerCase: string;   // Note: used on institue page for performance
         purchaseDate: string;
         lastSeenDate: string;
         macadres: string;

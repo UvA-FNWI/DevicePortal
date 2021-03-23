@@ -7,6 +7,10 @@
         type = DeviceType.All;
         category = DeviceCategory.All;
         os_type = OSType.All;
+        costCentre = '';
+        itracsBuilding = '';
+        itracsRoom = '';
+        itracsOutlet = '';
         status = <DeviceStatus>-1;
     }
     class Institute {
@@ -47,6 +51,10 @@
                         d.deviceIdLowerCase = d.deviceId ? d.deviceId.toLowerCase() : '';
                         d.serialNumberLowerCase = d.serialNumber ? d.serialNumber.toLowerCase() : '';
                         d.userLowerCase = d.user ? d.user.toLowerCase() : '';
+                        d.costCentreLowerCase = d.costCentre ? d.costCentre.toLowerCase() : '';
+                        d.itracsBuildingLowerCase = d.itracsBuilding ? d.itracsBuilding.toLowerCase() : '';
+                        d.itracsRoomLowerCase = d.itracsRoom ? d.itracsRoom.toLowerCase() : '';
+                        d.itracsOutletLowerCase = d.itracsOutlet ? d.itracsOutlet.toLowerCase() : '';
                     }
                     institute.devices.sort((a, b) => sort_string(a.name, b.name));
                     ks.refresh();
@@ -162,6 +170,10 @@
         search.type = state.search.type;
         search.category = state.search.category;
         search.os_type = state.search.os_type;
+        search.costCentre = state.search.costCentre.toLowerCase();
+        search.itracsBuilding = state.search.itracsBuilding.toLowerCase();
+        search.itracsRoom = state.search.itracsRoom.toLowerCase();
+        search.itracsOutlet = state.search.itracsOutlet.toLowerCase();
         search.status = state.search.status;
 
         for (let i = 0; i < state.devices.length; ++i) {
@@ -183,7 +195,7 @@
                             ks.refresh();
                         });
                         ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.asc);
+                    }, ks.Sort_Order.none);
 
                     ks.table_cell(function () {
                         ks.set_next_item_class_name('form-control-sm');
@@ -288,6 +300,46 @@
                     }, ks.Sort_Order.none);
 
                     ks.table_cell(function () {
+                        ks.set_next_item_class_name('form-control-sm');
+                        ks.input_text('cost centre', state.search.costCentre, 'Cost centre', function (str) {
+                            state.search.costCentre = str;
+                            range.reset();
+                            ks.refresh();
+                        });
+                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                    }, ks.Sort_Order.none);
+
+                    ks.table_cell(function () {
+                        ks.set_next_item_class_name('form-control-sm');
+                        ks.input_text('building', state.search.itracsBuilding, 'Building', function (str) {
+                            state.search.itracsBuilding = str;
+                            range.reset();
+                            ks.refresh();
+                        });
+                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                    }, ks.Sort_Order.none);
+
+                    ks.table_cell(function () {
+                        ks.set_next_item_class_name('form-control-sm');
+                        ks.input_text('room', state.search.itracsRoom, 'Room', function (str) {
+                            state.search.itracsRoom = str;
+                            range.reset();
+                            ks.refresh();
+                        });
+                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                    }, ks.Sort_Order.none);
+
+                    ks.table_cell(function () {
+                        ks.set_next_item_class_name('form-control-sm');
+                        ks.input_text('outlet', state.search.itracsOutlet, 'Outlet', function (str) {
+                            state.search.itracsOutlet = str;
+                            range.reset();
+                            ks.refresh();
+                        });
+                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                    }, ks.Sort_Order.none);
+
+                    ks.table_cell(function () {
                         ks.set_next_item_class_name('custom-select-sm');
                         ks.combo('status', function () {
                             ks.selectable('Status', state.search.status < 0);
@@ -329,7 +381,11 @@
             if (i_head === 3) { state.devices.sort((a, b) => order * sort_string(a.serialNumber, b.serialNumber)); }
             if (i_head === 4) { state.devices.sort((a, b) => order * (a.type - b.type)); }
             if (i_head === 5) { state.devices.sort((a, b) => order * (a.os_type - b.os_type)); }
-            if (i_head === 6) { state.devices.sort((a, b) => order * (a.status - b.status)); }
+            if (i_head === 6) { state.devices.sort((a, b) => order * sort_string(a.costCentre, b.costCentre)); }
+            if (i_head === 7) { state.devices.sort((a, b) => order * sort_string(a.itracsBuilding, b.itracsBuilding)); }
+            if (i_head === 8) { state.devices.sort((a, b) => order * sort_string(a.itracsRoom, b.itracsRoom)); }
+            if (i_head === 9) { state.devices.sort((a, b) => order * sort_string(a.itracsOutlet, b.itracsOutlet)); }
+            if (i_head === 10) { state.devices.sort((a, b) => order * (a.status - b.status)); }
         });
 
         ks.set_next_item_class_name('ml-1');
@@ -344,6 +400,10 @@
             ((p.type === DeviceType.All && d.type === 0) || (p.type & d.type) > 0) &&
             ((p.os_type === OSType.All && d.os_type === 0) || (p.os_type & d.os_type) > 0) &&
             ((p.category === DeviceCategory.All && d.category === 0) || (p.category & d.category) > 0) &&
+            (!p.costCentre || d.costCentreLowerCase.indexOf(p.costCentre) >= 0) &&
+            (!p.itracsBuilding || d.itracsBuildingLowerCase.indexOf(p.itracsBuilding) >= 0) &&
+            (!p.itracsRoom || d.itracsRoomLowerCase.indexOf(p.itracsRoom) >= 0) &&
+            (!p.itracsOutlet || d.itracsOutletLowerCase.indexOf(p.itracsOutlet) >= 0) &&
             (p.status < 0 || p.status == d.status);
     }
 }
