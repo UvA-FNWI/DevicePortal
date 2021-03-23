@@ -32,7 +32,7 @@ namespace DevicePortal.Importer
             Dictionary<string, User> userMap = portalContext.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
             List<User> usersToUpdate = new List<User>();
-            Dictionary<(string username, string deviceId), Device> deviceMap = portalContext.Devices.ToArray().ToDictionary(d => (d.UserName, d.DeviceId));
+            Dictionary<string, Device> deviceMap = portalContext.Devices.ToArray().ToDictionary(d => d.DeviceId.ToLower());
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
             var deviceHistoriesToAdd = new List<DeviceHistory>();
@@ -119,7 +119,7 @@ namespace DevicePortal.Importer
                     }
                 }
 
-                if (deviceMap.TryGetValue((device.UserName, device.DeviceId), out Device existing))
+                if (deviceMap.TryGetValue(device.DeviceId.ToLower(), out Device existing))
                 {
                     if (existing.UserName != device.UserName ||
                         existing.SerialNumber != device.SerialNumber ||
