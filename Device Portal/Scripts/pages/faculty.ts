@@ -165,7 +165,7 @@
                             ks.progress_bar('bar_stacked', inst.usersIntuneCompleted.toString(), inst.usersIntuneCompleted, inst.users, 'bg-success');
                             ks.progress_bar('bar_stacked', inst.usersManagedDevices.toString(), inst.usersManagedDevices, inst.users, 'bg-dark');
                             bars = (ks.get_current_item() as HTMLElement).children;
-                            add_tooltip(<HTMLElement>bars[0], 'Portal check submmitted');
+                            add_tooltip(<HTMLElement>bars[0], 'Portal check submitted');
                             add_tooltip(<HTMLElement>bars[1], 'Portal check authorized');
                             add_tooltip(<HTMLElement>bars[2], 'Intune completed');
                             add_tooltip(<HTMLElement>bars[3], 'Managed');
