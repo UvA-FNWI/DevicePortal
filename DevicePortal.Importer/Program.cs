@@ -60,6 +60,7 @@ namespace DevicePortal.Importer
                     Status = DeviceStatus.Unsecure,
                     StatusEffectiveDate = now,
                     Department = department,
+                    DepartmentId = department.Id,
                     CostCentre = d.Kostenplaats,
                     ItracsBuilding = d.ItracsGebouw,
                     ItracsOutlet = d.ItracsOutlet,
