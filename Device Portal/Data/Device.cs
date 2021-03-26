@@ -123,6 +123,8 @@ namespace DevicePortal.Data
                 p.SetValue(this, p.GetValue(d));
             }
             Id = 0;
+
+            if (string.IsNullOrEmpty(UserName)) { UserName = null; }
         }
     }
 }
