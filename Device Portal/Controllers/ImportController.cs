@@ -71,6 +71,7 @@ namespace DevicePortal.Controllers
 
             DateTime now = DateTime.Now;            
             Dictionary<string, User> userMap = _context.Users.ToDictionary(u => u.UserName);
+            HashSet<string> activeDeviceSet = new HashSet<string>();
             List<User> usersToAdd = new List<User>();
             List<User> usersToUpdate = new List<User>();
             Dictionary<string, Device> deviceMap = _context.Devices.ToArray().ToDictionary(d => d.DeviceId.ToLower());
@@ -79,7 +80,7 @@ namespace DevicePortal.Controllers
             var deviceHistoriesToAdd = new List<DeviceHistory>();
             List<Department> departmentsToAdd = new List<Department>();
             foreach (var line in deviceExport.lines)
-            {
+            {                
                 string departmentName = instituteDepartmentMap.TryGetValue(line[iDepartment], out departmentName) ?
                            departmentName : line[iDepartment];
                 if (!departmentMap.TryGetValue(departmentName, out Department department))
@@ -93,7 +94,7 @@ namespace DevicePortal.Controllers
                 {
                     Name = $"{line[iBrand]} {line[iBrandType]}".Trim(),
                     DeviceId = line[iDeviceId],
-                    UserName = line[iUserName],
+                    UserName = string.IsNullOrEmpty(line[iUserName]) ? null : line[iUserName],
                     SerialNumber = line[iSerial],
                     Origin = DeviceOrigin.DataExport,
                     Status = DeviceStatus.Unsecure,
@@ -108,6 +109,7 @@ namespace DevicePortal.Controllers
                     Notes = line[iNotes],
                     PurchaseDate = !string.IsNullOrEmpty(line[iPurchasedDate]) ? DateTime.Parse(line[iPurchasedDate]) : default,
                 };
+                activeDeviceSet.Add(device.DeviceId.ToLower());
 
                 string deviceType = line[iDeviceType];
                 if (deviceType.StartsWith("Desktop")) { device.Type = DeviceType.Desktop; }
@@ -172,7 +174,8 @@ namespace DevicePortal.Controllers
                         existing.Macadres != device.Macadres ||
                         existing.Name != device.Name ||
                         existing.PurchaseDate != device.PurchaseDate ||
-                        existing.Notes != device.Notes)
+                        existing.Notes != device.Notes ||
+                        existing.Status == DeviceStatus.Disposed)
                     {
                         deviceHistoriesToAdd.Add(new DeviceHistory(existing));
 
@@ -188,13 +191,18 @@ namespace DevicePortal.Controllers
                         existing.Name = device.Name;
                         existing.PurchaseDate = device.PurchaseDate;
                         existing.Notes = device.Notes;
+                        if (existing.Status == DeviceStatus.Disposed) 
+                        {
+                            existing.Status = device.Status;
+                            existing.StatusEffectiveDate = now;
+                        }
                         if (device.Department != null)
                         {
-                            existing.DepartmentId = device.DepartmentId;
+                            existing.Department = device.Department;
+                            existing.DepartmentId = device.Department.Id;
                         }
                         devicesToUpdate.Add(existing);
-                    }
-                    else { devicesToAdd.Add(device); }
+                    }                    
                 }
                 else { devicesToAdd.Add(device); }
             }
@@ -203,18 +211,32 @@ namespace DevicePortal.Controllers
                 _context.Users.UpdateRange(usersToUpdate);
                 _context.SaveChanges();
             }
+            if (departmentsToAdd.Any()) 
+            {
+                _context.AddRange(departmentsToAdd);
+                _context.SaveChanges();
+            }
             if (devicesToUpdate.Any())
             {
                 _context.DeviceHistories.AddRange(deviceHistoriesToAdd);
                 _context.Devices.UpdateRange(devicesToUpdate);
                 _context.SaveChanges();
             }
-            if (departmentsToAdd.Any()) 
+            if (activeDeviceSet.Count < deviceMap.Count)
             {
-                _context.AddRange(departmentsToAdd);
+                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
+                foreach (var d in disposed)
+                {
+                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
+                    _context.DeviceHistories.Add(new DeviceHistory(d));
+
+                    d.Status = DeviceStatus.Disposed;
+                    d.StatusEffectiveDate = now;
+                    _context.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
+                }
                 _context.SaveChanges();
             }
-         
+
             // https://www.michalbialecki.com/2020/05/03/entity-framework-core-5-vs-sqlbulkcopy-2/
             var connection = _context.Database.GetDbConnection() as SqlConnection;
             connection.Open();

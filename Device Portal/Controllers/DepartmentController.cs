@@ -43,7 +43,7 @@ namespace DevicePortal.Controllers
             var department = await db.Departments.FirstAsync(d => d.Id == id);
 
             var devices = await db.Devices
-                .Where(d => d.DepartmentId == id)
+                .Where(d => d.DepartmentId == id).Active()
                 .Select(d => new 
                 {
                     d.DeviceId,

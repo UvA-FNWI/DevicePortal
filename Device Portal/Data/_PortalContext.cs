@@ -118,4 +118,16 @@ namespace DevicePortal.Data
             else { Set<T>().Add(entity); }
         }
     }
+
+    public static class DbSetExtensions
+    {
+        public static IQueryable<Device> Active(this DbSet<Device> set) 
+        {
+            return set.Where(d => d.Status != DeviceStatus.Disposed);
+        }
+        public static IQueryable<Device> Active(this IQueryable<Device> set)
+        {
+            return set.Where(d => d.Status != DeviceStatus.Disposed);
+        }
+    }
 }
