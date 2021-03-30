@@ -46,6 +46,7 @@ namespace DevicePortal.Data
         Submitted,
         Unsecure,
         Lost,
+        Disposed,
     }
 
     public enum OS_Type 

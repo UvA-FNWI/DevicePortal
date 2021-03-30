@@ -28,6 +28,7 @@ namespace DevicePortal.Importer
 
             DateTime now = DateTime.Now;
             Faculty faculty = portalContext.Faculties.FirstOrDefault();
+            HashSet<string> activeDeviceSet = new HashSet<string>();
             Dictionary<string, Department> departmentMap = portalContext.Departments.ToDictionary(d => d.Name);
             Dictionary<string, User> userMap = portalContext.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
@@ -54,7 +55,7 @@ namespace DevicePortal.Importer
                 {
                     Name = $"{d.Merk} {d.Type}".Trim(),
                     DeviceId = d.Naam,
-                    UserName = d.LoginGebruiker,
+                    UserName = string.IsNullOrEmpty(d.LoginGebruiker) ? null : d.LoginGebruiker,
                     SerialNumber = d.Serienummer,
                     Origin = DeviceOrigin.DataExport,
                     Status = DeviceStatus.Unsecure,
@@ -70,6 +71,7 @@ namespace DevicePortal.Importer
                     Notes = d.NotitiesKlant,
                     PurchaseDate = d.Aanschafdatum,
                 };
+                activeDeviceSet.Add(device.DeviceId.ToLower());
 
                 string deviceType = d.Soort;
                 if (deviceType.StartsWith("Desktop")) { device.Type = DeviceType.Desktop; }
@@ -134,7 +136,8 @@ namespace DevicePortal.Importer
                         existing.Macadres != device.Macadres ||
                         existing.Name !=  device.Name ||
                         existing.PurchaseDate != device.PurchaseDate ||
-                        existing.Notes != device.Notes)
+                        existing.Notes != device.Notes ||
+                        existing.Status == DeviceStatus.Disposed)
                     {
                         deviceHistoriesToAdd.Add(new DeviceHistory(existing));
 
@@ -150,8 +153,14 @@ namespace DevicePortal.Importer
                         existing.Name = device.Name;
                         existing.PurchaseDate = device.PurchaseDate;
                         existing.Notes = device.Notes;
+                        if (existing.Status == DeviceStatus.Disposed)
+                        {
+                            existing.Status = device.Status;
+                            existing.StatusEffectiveDate = now;
+                        }
                         if (device.Department != null) 
                         {
+                            existing.Department = device.Department;
                             existing.DepartmentId = device.DepartmentId;
                         }
                         devicesToUpdate.Add(existing);
@@ -164,15 +173,30 @@ namespace DevicePortal.Importer
                 portalContext.Users.UpdateRange(usersToUpdate);
                 portalContext.SaveChanges();
             }
+            if (departmentsToAdd.Any())
+            {
+                portalContext.AddRange(departmentsToAdd);
+                portalContext.SaveChanges();
+            }
             if (devicesToUpdate.Any())
             {
                 portalContext.DeviceHistories.AddRange(deviceHistoriesToAdd);
                 portalContext.Devices.UpdateRange(devicesToUpdate);
                 portalContext.SaveChanges();
             }
-            if (departmentsToAdd.Any())
+            if (activeDeviceSet.Count < deviceMap.Count) 
             {
-                portalContext.AddRange(departmentsToAdd);
+                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
+                foreach (var d in disposed) 
+                {
+                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
+
+                    portalContext.DeviceHistories.Add(new DeviceHistory(d));
+
+                    d.Status = DeviceStatus.Disposed;
+                    d.StatusEffectiveDate = now;
+                    portalContext.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
+                }
                 portalContext.SaveChanges();
             }
 

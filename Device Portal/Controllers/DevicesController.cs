@@ -26,14 +26,14 @@ namespace DevicePortal.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Device>>> GetDevices()
         {
-            return await _context.Devices.ToListAsync();
+            return await _context.Devices.Active().ToListAsync();
         }
 
         // GET: api/Devices/Count
         [HttpGet("count")]
         public async Task<ActionResult<int>> GetDeviceCount()
         {
-            return await _context.Devices.CountAsync();
+            return await _context.Devices.Active().CountAsync();
         }
 
         // GET: api/Devices/Me
@@ -47,14 +47,14 @@ namespace DevicePortal.Controllers
             if (user == null) { return NotFound(); }
 
             await _intuneService.SyncManagedDeviceUser(user.UserName, user.ObjectId);
-            return await _context.Devices.Where(d => d.UserName == userId).ToListAsync();
+            return await _context.Devices.Where(d => d.UserName == userId).Active().ToListAsync();
         }
 
         // GET: api/Devices/User{userName}
         [HttpGet("User/{userName}")]
         public async Task<ActionResult<IEnumerable<Device>>> GetDevices(string userName)
         {
-            return await _context.Devices.Where(d => d.UserName == userName).ToListAsync();
+            return await _context.Devices.Where(d => d.UserName == userName).Active().ToListAsync();
         }
 
         // GET: api/Devices/5
@@ -63,7 +63,7 @@ namespace DevicePortal.Controllers
         {
             var device = await _context.Devices.FindAsync(id);
 
-            if (device == null)
+            if (device == null || device.Status == DeviceStatus.Disposed)
             {
                 return NotFound();
             }
