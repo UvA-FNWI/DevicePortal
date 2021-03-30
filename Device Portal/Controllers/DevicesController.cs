@@ -84,7 +84,12 @@ namespace DevicePortal.Controllers
             var history = new DeviceHistory(original);
             _context.DeviceHistories.Add(history);
 
-            _context.UpdateProperties(device, d => d.Name, d=> d.OS_Type, d => d.OS_Version);
+            // Only allow status update changes if device is lost
+            if (device.Status == DeviceStatus.Lost) { device.StatusEffectiveDate = DateTime.Now; }
+            else { device.Status = original.Status; }
+
+            _context.UpdateProperties(device, d => d.Name, d=> d.OS_Type, d => d.OS_Version, d => d.Status, d => d.Disowned,
+                                              d => d.StatusEffectiveDate);
             
             try
             {

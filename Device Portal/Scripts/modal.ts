@@ -1,10 +1,12 @@
 ﻿class ConfirmModal {
     id = '####confirm_modal';
-    message = '';
+    header: string;
+    message: string;
     el: HTMLElement;
     proc;
 
-    confirm(message: string, proc: (confirmed: boolean) => void) {
+    show(header: string, message: string, proc: (confirmed: boolean) => void) {
+        this.header = header;
         this.message = message;
         this.proc = proc;
         ks.refresh(this.el);
@@ -14,24 +16,26 @@
     run() {
         let modal = this;
         modal.el = ks.popup_modal(modal.id, function () {
-            ks.set_next_item_class_name('bg-warning');
-            ks.modal_header(function () {
-                ks.h5('Warning', 'modal-title text-light');
-            });
+            ks.set_next_item_class_name('text-center px-4 py-5');
             ks.modal_body(function () {
-                ks.text(modal.message);
-            });
-            ks.modal_footer(function () {
-                ks.button('Yes', function () {
-                    modal.proc(true);
-                    ks.close_current_popup();
+                ks.icon('fa fa-question-circle-o text-info mb-2').style.fontSize = '2.5rem';
+                if (modal.header) { ks.h5(modal.header, 'mb-3'); }
+
+                if (modal.message) { ks.text(modal.message); }
+
+                ks.set_next_item_class_name('mt-4');
+                ks.group('btns', '', function () {
+                    ks.button('Cancel', function () {
+                        modal.proc(false);
+                        ks.close_current_popup();
+                    }, 'outline-secondary mr-2');
+                    ks.button('Yes', function () {
+                        modal.proc(true);
+                        ks.close_current_popup();
+                    }, 'info');
                 });
-                ks.button('Close', function () {
-                    modal.proc(false);
-                    ks.close_current_popup();
-                });
             });
-        }, false, false, true);
+        }, true, false, true);
     }
 }
 class ContextualModal {

@@ -74,6 +74,7 @@
         lastSeenDate: string;
         macadres: string;
         notes: string;
+        disowned: boolean;
     }
     export enum DeviceOrigin {
         DataExport,
@@ -215,6 +216,7 @@
                 
                     ks.group('right', 'd-flex', function () {
                         ks.set_next_item_class_name('ml-auto');
+                        if (state.update) { report_dropdown.call(ks.get_current_parent(), state.device); }
                         ks.button(state.update ? 'Update' : 'Add', ks.no_op);
                     });
 
@@ -239,6 +241,66 @@
                     }
                 });
             });
+        });
+    }
+
+    // Note: this is a quick and dirty dropdown implementation, should be replaced once KSImGui has support for it.
+    function report_dropdown(device: Device) {
+        ks.group('report', 'dropdown', function () {
+            let dropdown = this;
+            let state = ks.local_persist('state', { show: false, init: true });
+            ks.button('Report issue', function () {
+                state.show = !state.show;
+                ks.refresh(dropdown);
+            }, 'secondary dropdown-toggle mr-2').type = 'button';
+
+            let menu = ks.group('menu', 'dropdown-menu' + (state.show ? ' show' : ''), function () {
+                if (device.status != DeviceStatus.Lost) {
+                    ks.set_next_item_class_name('dropdown-item');
+                    ks.anchor('Device no longer exists', '#');
+                    ks.is_item_clicked(function (_, ev) {
+                        ev.preventDefault();
+                        confirmModal.show('Are you sure you wish to report this device as non-existent?', '', function (confirm) {
+                            if (confirm) {
+                                device.status = DeviceStatus.Lost;
+                                PUT_JSON(API.Devices(device.id), device).then(() => {
+                                    contextModal.showSuccess('Device successfully reported as non-existent.');
+                                    ks.navigate_to('Home', '/');
+                                }, fail => {
+                                    contextModal.showWarning(fail.responseText);
+                                });
+                            }
+                        });
+                        state.show = false;
+                        ks.refresh(dropdown);
+                    });
+                }
+
+                ks.set_next_item_class_name('dropdown-item');
+                ks.anchor('Device does not belong to me', '#');
+                ks.is_item_clicked(function (_, ev) {
+                    ev.preventDefault();
+                    confirmModal.show('Are you sure you wish to report this device as no longer belonging to you?',
+                        '', function (confirm) {
+                        if (confirm) {
+                            device.disowned = true;
+                            PUT_JSON(API.Devices(device.id), device).then(() => {
+                                contextModal.showSuccess('Device successfully reported as not belonging to you.');
+                                ks.navigate_to('Home', '/');
+                            }, fail => {
+                                contextModal.showWarning(fail.responseText);
+                            }); 
+                        }
+                    });
+                    state.show = false;
+                    ks.refresh(dropdown);
+                });
+            });
+
+            let offset = device.status == DeviceStatus.Lost ? -52 : -84;
+            menu.style.top = '0px';
+            menu.style.left = '0px';
+            menu.style.transform = `translate3d(-52px, ${offset}px, 0px)`;
         });
     }
 }

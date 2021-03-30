@@ -25,6 +25,7 @@
     ];
 
     export let iPage = Page.Home;
+    export let confirmModal = new ConfirmModal();
     export let contextModal = new ContextualModal();
 
     class ActiveUser {
@@ -91,6 +92,7 @@
         if (!user) { return; }
 
         // Global modals, run before any pages
+        confirmModal.run();
         contextModal.run();
 
         let iPagePrev = iPage;
@@ -264,7 +266,9 @@
                     device_table_head(user.can_secure, edit_device);
                     ks.table_body(function () {
                         for (let i = 0; i < state.devices.length; ++i) {
-                            device_row(state.devices[i], user.can_secure, edit_device);
+                            if (!state.devices[i].disowned) {
+                                device_row(state.devices[i], user.can_secure, edit_device);
+                            }
                         }
                     });
                 });
