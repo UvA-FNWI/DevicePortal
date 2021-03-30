@@ -168,35 +168,11 @@ namespace DevicePortal.Importer
                 }
                 else { devicesToAdd.Add(device); }
             }
-            if (usersToUpdate.Any())
-            {
-                portalContext.Users.UpdateRange(usersToUpdate);
-                portalContext.SaveChanges();
-            }
+
+            // Insert departments
             if (departmentsToAdd.Any())
             {
                 portalContext.AddRange(departmentsToAdd);
-                portalContext.SaveChanges();
-            }
-            if (devicesToUpdate.Any())
-            {
-                portalContext.DeviceHistories.AddRange(deviceHistoriesToAdd);
-                portalContext.Devices.UpdateRange(devicesToUpdate);
-                portalContext.SaveChanges();
-            }
-            if (activeDeviceSet.Count < deviceMap.Count) 
-            {
-                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
-                foreach (var d in disposed) 
-                {
-                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
-
-                    portalContext.DeviceHistories.Add(new DeviceHistory(d));
-
-                    d.Status = DeviceStatus.Disposed;
-                    d.StatusEffectiveDate = now;
-                    portalContext.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
-                }
                 portalContext.SaveChanges();
             }
 
@@ -254,6 +230,37 @@ namespace DevicePortal.Importer
             sqlBulk.DestinationTableName = "dbo.Users_Departments";
             sqlBulk.WriteToServer(udTable);
 
+            // Update users
+            if (usersToUpdate.Any())
+            {
+                portalContext.Users.UpdateRange(usersToUpdate);
+                portalContext.SaveChanges();
+            }
+            
+            // Update devices
+            if (devicesToUpdate.Any())
+            {
+                portalContext.DeviceHistories.AddRange(deviceHistoriesToAdd);
+                portalContext.Devices.UpdateRange(devicesToUpdate);
+                portalContext.SaveChanges();
+            }
+            // Dispose devices
+            if (activeDeviceSet.Count < deviceMap.Count) 
+            {
+                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
+                foreach (var d in disposed) 
+                {
+                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
+
+                    portalContext.DeviceHistories.Add(new DeviceHistory(d));
+
+                    d.Status = DeviceStatus.Disposed;
+                    d.StatusEffectiveDate = now;
+                    portalContext.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
+                }
+                portalContext.SaveChanges();
+            }
+                        
             // Bulk insert devices
             var deviceTable = new System.Data.DataTable();
             deviceTable.Columns.Add("UserName");
