@@ -161,7 +161,7 @@ namespace DevicePortal.Importer
                         if (device.Department != null) 
                         {
                             existing.Department = device.Department;
-                            existing.DepartmentId = device.DepartmentId;
+                            existing.DepartmentId = device.Department.Id;
                         }
                         devicesToUpdate.Add(existing);
                     }
