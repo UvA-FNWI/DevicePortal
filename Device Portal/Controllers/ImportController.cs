@@ -385,7 +385,7 @@ namespace DevicePortal.Controllers
             { "Win 7", OS_Type.Windows },
             { "Windows", OS_Type.Windows },
         };
-        private readonly Dictionary<string, string> instituteDepartmentMap = new Dictionary<string, string>()
+        static readonly Dictionary<string, string> instituteDepartmentMap = new Dictionary<string, string>()
         {
             { "UvA/FNWI/Secretariaat FNWI", "FB" },
             { "UvA/FNWI/ICT-voorzieningen FNWI", "FB" },
@@ -395,9 +395,11 @@ namespace DevicePortal.Controllers
             { "UvA/FNWI/Personeelszaken FNWI", "FB" },
             { "UvA/FNWI/Projectmanagement FNWI", "FB" },
             { "UvA/FNWI/KDV", "KDV" },
+            { "UvA/FNWI/KdVI", "KDV" },
             { "UvA/FNWI/Staf overig FNWI", "FB" },
             { "UvA/FNWI/ILLC", "ILLC" },
             { "UvA/FNWI/IoP", "IoP" },
+            { "UvA/FNWI/IOP", "IoP" },
             { "UvA/FNWI/Education Service Centre", "ESC" },
             { "UvA/FNWI/Projectenbureau FNWI", "FB" },
             { "UvA/FNWI/WZI", "WZI" },

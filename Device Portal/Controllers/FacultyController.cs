@@ -134,7 +134,7 @@ namespace DevicePortal.Controllers
                 {
                     Id = department.Id,
                     Name = department.Name,
-                    Devices = department.Devices.Count(),
+                    Devices = department.Devices.Count,
                     DevicesBYOD = department.Devices.Count(d => d.Category == DeviceCategory.BYOD),
                     DevicesManaged = department.Devices.Count(d => d.Category == DeviceCategory.ManagedStandard || d.Category == DeviceCategory.ManagedSpecial),
                     DevicesSelfSupport = department.Devices.Count(d => d.Category == DeviceCategory.SelfSupport),
