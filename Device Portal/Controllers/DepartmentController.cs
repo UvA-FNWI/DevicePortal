@@ -60,6 +60,7 @@ namespace DevicePortal.Controllers
                     User = d.User.Name,
                     d.UserName,
                     d.User.Email,
+                    Notes = d.Notes,
                 })
                 .ToArrayAsync();
             var users = await db.Users

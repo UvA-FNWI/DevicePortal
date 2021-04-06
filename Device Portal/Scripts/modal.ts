@@ -106,3 +106,48 @@ class ContextualModal {
         (<any>this.el)._ks_info.el_dlg.className = size_class;
     }
 }
+
+class NoteModal {
+    id = '####note_modal';
+    note = '';
+    proc_save: Function;
+    el: HTMLElement;
+
+    show(note: string, proc_save?: (note: string) => void) {
+        this.note = note || '';
+        this.proc_save = proc_save;
+        ks.refresh(this.el);
+        ks.open_popup(this.id);
+    }
+
+    run() {
+        let modal = this;
+        modal.el = ks.popup_modal(modal.id, function () {
+            ks.modal_body(function () {
+                if (modal.proc_save) {
+                    ks.input_text_area('note', modal.note,
+                        'Add a note to this device. This note is visible to the device owner.', function (str) {
+                            modal.note = str;
+                        });
+
+                    ks.group('close', 'text-center mt-4', function () {
+                        ks.button('Close', function () {
+                            ks.close_current_popup();
+                        }, 'light mr-2');
+                        ks.button('Save', function () {
+                            ks.close_current_popup();
+                            modal.proc_save(modal.note);
+                        }, 'warning');
+                    });
+                } else {
+                    ks.text(modal.note);
+                }
+            });
+        }, true, true, true);
+
+        let modalContent = <HTMLElement>modal.el.firstChild.firstChild;
+        modalContent.style.color = '#856404';
+        modalContent.style.borderColor = '#ffeeba';
+        modalContent.style.backgroundColor = '#fff3cd';
+    }
+}

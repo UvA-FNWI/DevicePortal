@@ -216,10 +216,10 @@
                 ks.column('devices', 12, function () {
                     ks.set_next_item_class_name('bg-white border');
                     ks.table('devices', function () {
-                        device_table_head(false, false);
+                        device_table_head(0);
                         ks.table_body(function () {
                             for (let i = 0; i < state.devices.length; ++i) {
-                                device_row(state.devices[i], false, false);
+                                device_row(state.devices[i], DTF.EditNote, '');
                             }
                         });
                     });

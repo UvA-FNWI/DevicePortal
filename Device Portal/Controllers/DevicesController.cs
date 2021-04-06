@@ -90,6 +90,10 @@ namespace DevicePortal.Controllers
 
             _context.UpdateProperties(device, d => d.Name, d=> d.OS_Type, d => d.OS_Version, d => d.Status, d => d.Disowned,
                                               d => d.StatusEffectiveDate);
+            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManage))
+            {
+                _context.UpdateProperties(device, d => d.Notes);
+            }
             
             try
             {

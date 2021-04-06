@@ -27,6 +27,7 @@
     export let iPage = Page.Home;
     export let confirmModal = new ConfirmModal();
     export let contextModal = new ContextualModal();
+    export let noteModal = new NoteModal();
 
     class ActiveUser {
         user_name: string;
@@ -94,6 +95,7 @@
         // Global modals, run before any pages
         confirmModal.run();
         contextModal.run();
+        noteModal.run();
 
         let iPagePrev = iPage;
         let pathname = window.location.pathname.toLowerCase();
@@ -262,12 +264,16 @@
             ks.column('devices', 12, function () {
                 ks.set_next_item_class_name('bg-white border');
                 ks.table('devices', function () {
-                    const edit_device = true;
-                    device_table_head(user.can_secure, edit_device);
+                    let flags = DTF.EditDevice;
+                    if (!state.devices.some(d => d.notes)) { flags |= DTF.HideNoteColumn; }
+                    if (user.can_secure) { flags |= DTF.CanSecure; }
+
+                    device_table_head(flags);
+
                     ks.table_body(function () {
                         for (let i = 0; i < state.devices.length; ++i) {
                             if (!state.devices[i].disowned) {
-                                device_row(state.devices[i], user.can_secure, edit_device);
+                                device_row(state.devices[i], flags, '');
                             }
                         }
                     });
@@ -296,7 +302,16 @@
         }
     }
 
-    export function device_table_head(can_secure: boolean, edit_device: boolean) {
+    // Device Table Flags
+    export enum DTF {
+        CanSecure = 1 << 0,
+        EditDevice = 1 << 1,
+        EditNote = 1 << 2,
+        HideNoteColumn = 1 << 3,
+    }
+
+    // EditNote flag has no effect on headers
+    export function device_table_head(flags: DTF) {
         ks.table_head(function () {
             ks.table_row(function () {
                 ks.table_cell('Name');
@@ -310,12 +325,14 @@
                 ks.table_cell('Room');
                 ks.table_cell('Outlet');
                 ks.table_cell('Status').style.width = '1%';
-                if (can_secure) { ks.table_cell('').style.width = '1%'; }
-                if (edit_device) { ks.table_cell('').style.width = '1%'; }
+                if (flags & DTF.CanSecure) { ks.table_cell('').style.width = '1%'; }
+                if (flags & DTF.EditDevice) { ks.table_cell('').style.width = '1%'; }
+                if (!(flags & DTF.HideNoteColumn)) { ks.table_cell('').style.width = '1%'; }
             });
         });
     }
-    export function device_row(d: Device, can_secure: boolean, edit_device: boolean, user: string = undefined) {
+
+    export function device_row(d: Device, flags: DTF, user: string) {
         let icon: string;
         let iconSize = '1rem';
         switch (d.type) {
@@ -364,7 +381,7 @@
                 }
             });
 
-            if (can_secure) {
+            if (flags & DTF.CanSecure) {
                 ks.table_cell(function () {
                     if (d.status != DeviceStatus.Approved && (d.origin === DeviceOrigin.DataExport || d.origin === DeviceOrigin.User)) {
                         ks.set_next_item_class_name('text-nowrap');
@@ -376,7 +393,7 @@
                     }
                 });
             }
-            if (edit_device) {
+            if (flags & DTF.EditDevice) {
                 ks.set_next_item_class_name('cursor-pointer');
                 ks.table_cell(function () {
                     ks.icon('fa fa-pencil');
@@ -385,6 +402,45 @@
                     ks.navigate_to('Device', pages[Page.Device] + '/' + d.id);
                     return false;
                 });
+            }
+
+            if (!(flags & DTF.HideNoteColumn)) {
+                let showIcon = (flags & DTF.EditNote) || d.notes;
+
+                if (showIcon) { ks.set_next_item_class_name('cursor-pointer'); }
+                ks.table_cell(function () {
+                    if (showIcon) {
+                        ks.icon(d.notes ? 'fa fa-sticky-note text-warning' : 'fa fa-sticky-note-o text-muted');
+                    }
+                });
+                if (showIcon) {
+                    ks.is_item_clicked(function () {
+                        if (flags & DTF.EditNote) {
+                            noteModal.show(d.notes, function (note) {
+                                let noteOld = d.notes;
+                                d.notes = note;
+
+                                // Device might be the derived DeviceUser class, we don't want those properties set
+                                let entity: any = {};
+                                for (let key in d) { entity[key] = d[key]; }
+                                entity.user = null;
+                                entity.userName = null;
+                                entity.email = null;
+
+                                PUT_JSON(API.Devices(d.id), entity).then(() => {
+                                    contextModal.showSuccess('Changes successfully saved.');
+                                    ks.refresh();
+                                }, fail => {
+                                    d.notes = noteOld;
+                                    contextModal.showWarning(fail.responseText);
+                                });
+                            });
+                        } else {
+                            noteModal.show(d.notes);
+                        }
+                        return false;
+                    });
+                }
             }
         });
     }

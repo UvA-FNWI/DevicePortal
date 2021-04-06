@@ -362,6 +362,8 @@
                         });
                         ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                     }, ks.Sort_Order.none);
+
+                    ks.table_cell('');
                 });
             });
 
@@ -370,7 +372,7 @@
                 let countdown = range.i_end - range.i_start;
                 for (let i = range.i_start; countdown > 0; ++i) {
                     if (!device_search_match(search, state.devices[i])) { continue; }
-                    device_row(state.devices[i], false, false, state.devices[i].user);
+                    device_row(state.devices[i], DTF.EditNote, state.devices[i].user);
                     --countdown;
                 }
             });
