@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using DevicePortal.Data;
 using Microsoft.Data.SqlClient;
@@ -10,13 +11,32 @@ namespace DevicePortal.Importer
 {
     class Program
     {
+        static readonly StreamWriter logFile = new("log.txt", true);
+
         static void Main(string[] args)
         {
+            try 
+            {
+                Import(); 
+            }
+            catch (Exception ex) 
+            {
+                Log(ex);
+            }
+
+            Log("Done");
+
+            logFile.Flush();
+            logFile.Close();
+        }
+
+        static void Import() 
+        {
             var config = new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json")
-                .AddUserSecrets<Program>()
-                .Build();
+                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                    .AddJsonFile("appsettings.json")
+                    .AddUserSecrets<Program>()
+                    .Build();
             string connectionString = config.GetConnectionString("DefaultConnection");
             var options = new DbContextOptionsBuilder<PortalContext>()
                 .UseSqlServer(connectionString)
@@ -26,6 +46,7 @@ namespace DevicePortal.Importer
             using var portalContext = new PortalContext(options);
             using var dwhContext = new DWHPMContext();
 
+            Log("Preparing");
             DateTime now = DateTime.Now;
             Faculty faculty = portalContext.Faculties.FirstOrDefault();
             HashSet<string> activeDeviceSet = new HashSet<string>();
@@ -39,6 +60,7 @@ namespace DevicePortal.Importer
             var deviceHistoriesToAdd = new List<DeviceHistory>();
             List<Department> departmentsToAdd = new List<Department>();
 
+            Log("Getting devices from cmdb");
             var devices = dwhContext.FnwiPortals.ToArray();
             foreach (var d in devices)
             {
@@ -128,13 +150,13 @@ namespace DevicePortal.Importer
                         existing.SerialNumber != device.SerialNumber ||
                         existing.Category != device.Category ||
                         existing.CostCentre != device.CostCentre ||
-                        existing.DepartmentId != device.Department.Id || 
+                        existing.DepartmentId != device.Department.Id ||
                         existing.ItracsBuilding != device.ItracsBuilding ||
                         existing.ItracsOutlet != device.ItracsOutlet ||
                         existing.ItracsRoom != device.ItracsRoom ||
                         existing.LastSeenDate != device.LastSeenDate ||
                         existing.Macadres != device.Macadres ||
-                        existing.Name !=  device.Name ||
+                        existing.Name != device.Name ||
                         existing.PurchaseDate != device.PurchaseDate ||
                         existing.Notes != device.Notes ||
                         existing.Status == DeviceStatus.Disposed)
@@ -158,45 +180,22 @@ namespace DevicePortal.Importer
                             existing.Status = device.Status;
                             existing.StatusEffectiveDate = now;
                         }
-                        if (device.Department != null) 
+                        if (device.Department != null)
                         {
                             existing.Department = device.Department;
-                            existing.DepartmentId = device.DepartmentId;
+                            existing.DepartmentId = device.Department.Id;
                         }
                         devicesToUpdate.Add(existing);
                     }
                 }
                 else { devicesToAdd.Add(device); }
             }
-            if (usersToUpdate.Any())
-            {
-                portalContext.Users.UpdateRange(usersToUpdate);
-                portalContext.SaveChanges();
-            }
+
+            // Insert departments
             if (departmentsToAdd.Any())
             {
+                Log($"Inserting {departmentsToAdd.Count} new departments");
                 portalContext.AddRange(departmentsToAdd);
-                portalContext.SaveChanges();
-            }
-            if (devicesToUpdate.Any())
-            {
-                portalContext.DeviceHistories.AddRange(deviceHistoriesToAdd);
-                portalContext.Devices.UpdateRange(devicesToUpdate);
-                portalContext.SaveChanges();
-            }
-            if (activeDeviceSet.Count < deviceMap.Count) 
-            {
-                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
-                foreach (var d in disposed) 
-                {
-                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
-
-                    portalContext.DeviceHistories.Add(new DeviceHistory(d));
-
-                    d.Status = DeviceStatus.Disposed;
-                    d.StatusEffectiveDate = now;
-                    portalContext.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
-                }
                 portalContext.SaveChanges();
             }
 
@@ -206,6 +205,7 @@ namespace DevicePortal.Importer
             using var sqlBulk = new SqlBulkCopy(portalContext.Database.GetDbConnection() as SqlConnection);
 
             // Bulk insert users
+            Log($"Inserting {usersToAdd.Count} new users");
             var userTable = new System.Data.DataTable();
             userTable.Columns.Add("UserName");
             userTable.Columns.Add("Email");
@@ -254,7 +254,42 @@ namespace DevicePortal.Importer
             sqlBulk.DestinationTableName = "dbo.Users_Departments";
             sqlBulk.WriteToServer(udTable);
 
+            // Update users
+            if (usersToUpdate.Any())
+            {
+                Log($"Updating {usersToUpdate.Count} users");
+                portalContext.Users.UpdateRange(usersToUpdate);
+                portalContext.SaveChanges();
+            }
+
+            // Update devices
+            if (devicesToUpdate.Any())
+            {
+                Log($"Updating {devicesToUpdate.Count} devices");
+                portalContext.DeviceHistories.AddRange(deviceHistoriesToAdd);
+                portalContext.Devices.UpdateRange(devicesToUpdate);
+                portalContext.SaveChanges();
+            }
+            // Dispose devices
+            if (activeDeviceSet.Count < deviceMap.Count)
+            {
+                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
+                Log($"Disposing {disposed.Count()} devices");
+                foreach (var d in disposed)
+                {
+                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
+
+                    portalContext.DeviceHistories.Add(new DeviceHistory(d));
+
+                    d.Status = DeviceStatus.Disposed;
+                    d.StatusEffectiveDate = now;
+                    portalContext.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
+                }
+                portalContext.SaveChanges();
+            }
+
             // Bulk insert devices
+            Log($"Inserting {devicesToAdd.Count} new devices");
             var deviceTable = new System.Data.DataTable();
             deviceTable.Columns.Add("UserName");
             deviceTable.Columns.Add("Name");
@@ -329,6 +364,16 @@ namespace DevicePortal.Importer
             connection.Close();
         }
 
+        static void Log(string msg) 
+        {
+            msg = $"{DateTime.Now:yyyy-MM-dd hh:mm:ff} - {msg}";
+            logFile.WriteLine(msg);
+            Console.WriteLine(msg);
+        }
+        static void Log(Exception ex) 
+        {
+            Log($"EXCEPTION - {ex.Message} - {ex.InnerException?.Message}");
+        }
         static readonly Dictionary<string, OS_Type> osTypeMap = new Dictionary<string, OS_Type>()
         {
             { "Android", OS_Type.Android },
@@ -349,9 +394,11 @@ namespace DevicePortal.Importer
             { "UvA/FNWI/Personeelszaken FNWI", "FB" },
             { "UvA/FNWI/Projectmanagement FNWI", "FB" },
             { "UvA/FNWI/KDV", "KDV" },
+            { "UvA/FNWI/KdVI", "KDV" },
             { "UvA/FNWI/Staf overig FNWI", "FB" },
             { "UvA/FNWI/ILLC", "ILLC" },
             { "UvA/FNWI/IoP", "IoP" },
+            { "UvA/FNWI/IOP", "IoP" },
             { "UvA/FNWI/Education Service Centre", "ESC" },
             { "UvA/FNWI/Projectenbureau FNWI", "FB" },
             { "UvA/FNWI/WZI", "WZI" },

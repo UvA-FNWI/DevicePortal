@@ -206,34 +206,11 @@ namespace DevicePortal.Controllers
                 }
                 else { devicesToAdd.Add(device); }
             }
-            if (usersToUpdate.Any())
-            {
-                _context.Users.UpdateRange(usersToUpdate);
-                _context.SaveChanges();
-            }
-            if (departmentsToAdd.Any()) 
+
+            // Insert departments
+            if (departmentsToAdd.Any())
             {
                 _context.AddRange(departmentsToAdd);
-                _context.SaveChanges();
-            }
-            if (devicesToUpdate.Any())
-            {
-                _context.DeviceHistories.AddRange(deviceHistoriesToAdd);
-                _context.Devices.UpdateRange(devicesToUpdate);
-                _context.SaveChanges();
-            }
-            if (activeDeviceSet.Count < deviceMap.Count)
-            {
-                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
-                foreach (var d in disposed)
-                {
-                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
-                    _context.DeviceHistories.Add(new DeviceHistory(d));
-
-                    d.Status = DeviceStatus.Disposed;
-                    d.StatusEffectiveDate = now;
-                    _context.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
-                }
                 _context.SaveChanges();
             }
 
@@ -290,6 +267,36 @@ namespace DevicePortal.Controllers
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("CanManage", "CanManage"));
             sqlBulk.DestinationTableName = "dbo.Users_Departments";
             sqlBulk.WriteToServer(udTable);
+
+            // Update users
+            if (usersToUpdate.Any())
+            {
+                _context.Users.UpdateRange(usersToUpdate);
+                _context.SaveChanges();
+            }
+
+            // Update devices
+            if (devicesToUpdate.Any())
+            {
+                _context.DeviceHistories.AddRange(deviceHistoriesToAdd);
+                _context.Devices.UpdateRange(devicesToUpdate);
+                _context.SaveChanges();
+            }
+            // Dispose devices
+            if (activeDeviceSet.Count < deviceMap.Count)
+            {
+                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
+                foreach (var d in disposed)
+                {
+                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
+                    _context.DeviceHistories.Add(new DeviceHistory(d));
+
+                    d.Status = DeviceStatus.Disposed;
+                    d.StatusEffectiveDate = now;
+                    _context.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
+                }
+                _context.SaveChanges();
+            }
 
             // Bulk insert devices
             var deviceTable = new System.Data.DataTable();
@@ -378,7 +385,7 @@ namespace DevicePortal.Controllers
             { "Win 7", OS_Type.Windows },
             { "Windows", OS_Type.Windows },
         };
-        private readonly Dictionary<string, string> instituteDepartmentMap = new Dictionary<string, string>()
+        static readonly Dictionary<string, string> instituteDepartmentMap = new Dictionary<string, string>()
         {
             { "UvA/FNWI/Secretariaat FNWI", "FB" },
             { "UvA/FNWI/ICT-voorzieningen FNWI", "FB" },
@@ -388,9 +395,11 @@ namespace DevicePortal.Controllers
             { "UvA/FNWI/Personeelszaken FNWI", "FB" },
             { "UvA/FNWI/Projectmanagement FNWI", "FB" },
             { "UvA/FNWI/KDV", "KDV" },
+            { "UvA/FNWI/KdVI", "KDV" },
             { "UvA/FNWI/Staf overig FNWI", "FB" },
             { "UvA/FNWI/ILLC", "ILLC" },
             { "UvA/FNWI/IoP", "IoP" },
+            { "UvA/FNWI/IOP", "IoP" },
             { "UvA/FNWI/Education Service Centre", "ESC" },
             { "UvA/FNWI/Projectenbureau FNWI", "FB" },
             { "UvA/FNWI/WZI", "WZI" },
