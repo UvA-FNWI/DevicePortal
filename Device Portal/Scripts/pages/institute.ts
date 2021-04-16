@@ -374,7 +374,7 @@
                     if (!device_search_match(search, state.devices[i])) { continue; }
 
                     ks.set_next_item_class_name('cursor-pointer');
-                    device_row(state.devices[i], DTF.EditNote, state.devices[i].user);
+                    device_row(state.devices[i], DTF.EditNote, state.devices[i].user || '_');
                     ks.is_item_clicked(function () {
                         deviceModal.show(state.devices[i]);
                     });
