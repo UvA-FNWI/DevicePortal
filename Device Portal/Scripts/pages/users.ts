@@ -219,7 +219,11 @@
                         device_table_head(0);
                         ks.table_body(function () {
                             for (let i = 0; i < state.devices.length; ++i) {
+                                ks.set_next_item_class_name('cursor-pointer');
                                 device_row(state.devices[i], DTF.EditNote, '');
+                                ks.is_item_clicked(function () {
+                                    deviceModal.show(state.devices[i]);
+                                });
                             }
                         });
                     });

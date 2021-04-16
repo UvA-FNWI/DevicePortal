@@ -28,6 +28,7 @@
     export let confirmModal = new ConfirmModal();
     export let contextModal = new ContextualModal();
     export let noteModal = new NoteModal();
+    export let deviceModal = new DeviceModal();
 
     class ActiveUser {
         user_name: string;
@@ -93,9 +94,10 @@
         if (!user) { return; }
 
         // Global modals, run before any pages
+        deviceModal.run();
+        noteModal.run();
         confirmModal.run();
         contextModal.run();
-        noteModal.run();
 
         let iPagePrev = iPage;
         let pathname = window.location.pathname.toLowerCase();
@@ -413,31 +415,9 @@
                         ks.icon(d.notes ? 'fa fa-sticky-note text-warning' : 'fa fa-sticky-note-o text-muted');
                     }
                 });
-                if (showIcon) {
+                if (showIcon && !(flags & DTF.EditNote)) {
                     ks.is_item_clicked(function () {
-                        if (flags & DTF.EditNote) {
-                            noteModal.show(d.notes, function (note) {
-                                let noteOld = d.notes;
-                                d.notes = note;
-
-                                // Device might be the derived DeviceUser class, we don't want those properties set
-                                let entity: any = {};
-                                for (let key in d) { entity[key] = d[key]; }
-                                entity.user = null;
-                                entity.userName = null;
-                                entity.email = null;
-
-                                PUT_JSON(API.Devices(d.id), entity).then(() => {
-                                    contextModal.showSuccess('Changes successfully saved.');
-                                    ks.refresh();
-                                }, fail => {
-                                    d.notes = noteOld;
-                                    contextModal.showWarning(fail.responseText);
-                                });
-                            });
-                        } else {
-                            noteModal.show(d.notes);
-                        }
+                        noteModal.show(d.notes);
                         return false;
                     });
                 }

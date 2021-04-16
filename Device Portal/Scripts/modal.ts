@@ -110,12 +110,10 @@ class ContextualModal {
 class NoteModal {
     id = '####note_modal';
     note = '';
-    proc_save: Function;
     el: HTMLElement;
 
-    show(note: string, proc_save?: (note: string) => void) {
+    show(note: string) {
         this.note = note || '';
-        this.proc_save = proc_save;
         ks.refresh(this.el);
         ks.open_popup(this.id);
     }
@@ -124,24 +122,7 @@ class NoteModal {
         let modal = this;
         modal.el = ks.popup_modal(modal.id, function () {
             ks.modal_body(function () {
-                if (modal.proc_save) {
-                    ks.input_text_area('note', modal.note,
-                        'Add a note to this device. This note is visible to the device owner.', function (str) {
-                            modal.note = str;
-                        });
-
-                    ks.group('close', 'text-center mt-4', function () {
-                        ks.button('Close', function () {
-                            ks.close_current_popup();
-                        }, 'light mr-2');
-                        ks.button('Save', function () {
-                            ks.close_current_popup();
-                            modal.proc_save(modal.note);
-                        }, 'warning');
-                    });
-                } else {
-                    ks.text(modal.note);
-                }
+                ks.text(modal.note);
             });
         }, true, true, true);
 
@@ -149,5 +130,146 @@ class NoteModal {
         modalContent.style.color = '#856404';
         modalContent.style.borderColor = '#ffeeba';
         modalContent.style.backgroundColor = '#fff3cd';
+    }
+}
+
+namespace DP {
+    export class DeviceModal {
+        id = '####device_modal';
+        note = '';
+        device: Device;
+        el: HTMLElement;
+
+        show(device: Device) {
+            this.note = device.notes || '';
+            this.device = device;
+            ks.refresh(this.el);
+            ks.open_popup(this.id);
+        }
+
+        run() {
+            let modal = this;
+            if (!modal.device) { return; }
+
+            ks.set_next_modal_size(ks.Modal_Size.large);
+            modal.el = ks.popup_modal(modal.id, function () {
+                let d = <DeviceUser>modal.device;
+                let scale = iconScale(d.type);
+
+                ks.group('bg', 'position-absolute w-100 h-100 overflow-hidden', function () {
+                    let icon = ks.icon(deviceIcon(d.type) + ' position-absolute text-secondary');
+                    icon.style.fontSize = scale * 30 + 'rem';
+                    icon.style.transform = 'rotate(-15deg)';
+                    icon.style.top = iconTop(d.type);
+                    icon.style.right = '50px';
+                    icon.style.opacity = '0.03';
+                }).style.pointerEvents = 'none';
+
+                ks.set_next_item_class_name('text-center px-4 py-5');
+                ks.modal_body(function () {
+                    ks.icon(deviceIcon(d.type) + ' text-primary mb-2').style.fontSize = scale * 2 + 'rem';
+                    ks.h5(d.name, 'mb-3');
+
+                    ks.row('row', function () {
+                        ks.column('left', 6, function () {
+                            detail('Type', deviceTypes[d.type]);
+                            detail('User', d.user);
+                            if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
+                                ks.text('Status', 'font-weight-bold');
+                                ks.text(statusNames[d.status], 'mb-3 badge badge-' + statusColors[d.status]);
+                            }
+                            detail('Category', deviceCategories[d.category]);
+                            detail('Cost centre', d.costCentre);
+                            detail('Building', d.itracsBuilding);
+                            detail('Room', d.itracsRoom);
+                            detail('Outlet', d.itracsOutlet);
+                        });
+
+                        ks.column('right', 6, function () {
+                            detail('Device ID', d.deviceId);
+                            detail('Serial number', d.serialNumber);
+                            detail('MAC address', d.macadres);
+                            detail('OS', osNames[d.os_type]);
+                            detail('OS version', d.os_version);
+                            detail('Purchase date', d.purchaseDate);
+                            detail('Last seen', d.lastSeenDate);
+                        });
+                    });
+
+                    ks.group('note_btns', 'px-5', function () {
+                        ks.text('Note', 'font-weight-bold py-1');
+                        ks.input_text_area('note', modal.note,
+                            'Add a note to this device. This note is visible to the device owner.', function (str) {
+                                modal.note = str;
+                                ks.refresh(this);
+                        });
+
+                        ks.group('btns', 'mt-3', function () {
+                            ks.button('Close', function () {
+                                modal.note = null;
+                                modal.device = null;
+                                ks.close_current_popup();
+                            }, 'outline-secondary mr-2');
+
+                            let disabled = modal.note === (d.notes || '');
+                            ks.button('Save', function () {
+                                let noteOld = d.notes;
+                                d.notes = modal.note;
+
+                                // Device might be the derived DeviceUser class, we don't want those properties set
+                                let entity: any = {};
+                                for (let key in d) { entity[key] = d[key]; }
+                                entity.user = null;
+                                entity.userName = null;
+                                entity.email = null;
+
+                                ks.close_current_popup();
+
+                                PUT_JSON(API.Devices(d.id), entity).then(() => {
+                                    contextModal.showSuccess('Changes successfully saved.');
+                                    ks.refresh();
+                                }, fail => {
+                                    d.notes = noteOld;
+                                    contextModal.showWarning(fail.responseText);
+                                    ks.refresh();
+                                });
+                            }, 'primary' + (disabled ? ' disabled' : '')).disabled = disabled;
+                        });
+                    });
+                });
+            }, true, true, true);
+        }
+    }
+
+    function iconScale(type: DeviceType): number {
+        switch (type) {
+            case DeviceType.Mobile:
+                return 1.3;
+            case DeviceType.Tablet:
+                return 1.2;
+            case DeviceType.Laptop:
+                return 1.1;
+            default:
+                return 1;
+        }
+    }
+
+    function iconTop(type: DeviceType): string {
+        switch (type) {
+            case DeviceType.Mobile:
+                return '0px';
+            case DeviceType.Tablet:
+                return '65px';
+            case DeviceType.Laptop:
+                return '45px';
+            default:
+                return '130px';
+        }
+    }
+
+    function detail(title: string, text: string) {
+        if (!text) { return; }
+        ks.text(title, 'font-weight-bold');
+        ks.text(text, 'mb-3');
     }
 }

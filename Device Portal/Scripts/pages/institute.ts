@@ -20,7 +20,7 @@
         usersApprover: number;
         devices: DeviceUser[];
     }
-    class DeviceUser extends Device {
+    export class DeviceUser extends Device {
         user: string;
         userLowerCase: string;
         userName: string;
@@ -372,7 +372,13 @@
                 let countdown = range.i_end - range.i_start;
                 for (let i = range.i_start; countdown > 0; ++i) {
                     if (!device_search_match(search, state.devices[i])) { continue; }
+
+                    ks.set_next_item_class_name('cursor-pointer');
                     device_row(state.devices[i], DTF.EditNote, state.devices[i].user);
+                    ks.is_item_clicked(function () {
+                        deviceModal.show(state.devices[i]);
+                    });
+
                     --countdown;
                 }
             });
