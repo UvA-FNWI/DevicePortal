@@ -61,6 +61,14 @@ namespace DevicePortal.Controllers
                     d.UserName,
                     d.User.Email,
                     Notes = d.Notes,
+                    d.ItracsBuilding,
+                    d.ItracsRoom,
+                    d.ItracsOutlet,
+                    d.Macadres,
+                    d.CostCentre,
+                    d.LastSeenDate,
+                    d.PurchaseDate,
+                    d.Disowned,
                 })
                 .ToArrayAsync();
             var users = await db.Users
