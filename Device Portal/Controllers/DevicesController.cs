@@ -92,7 +92,7 @@ namespace DevicePortal.Controllers
                                               d => d.StatusEffectiveDate);
             if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManage))
             {
-                _context.UpdateProperties(device, d => d.Notes);
+                _context.UpdateProperties(device, d => d.Notes, d => d.Shared);
             }
             
             try

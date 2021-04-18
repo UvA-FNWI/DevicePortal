@@ -137,11 +137,13 @@ namespace DP {
     export class DeviceModal {
         id = '####device_modal';
         note = '';
+        shared = false;
         device: Device;
         el: HTMLElement;
 
         show(device: Device) {
             this.note = device.notes || '';
+            this.shared = device.shared;
             this.device = device;
             ks.refresh(this.el);
             ks.open_popup(this.id);
@@ -149,10 +151,11 @@ namespace DP {
 
         run() {
             let modal = this;
-            if (!modal.device) { return; }
 
             ks.set_next_modal_size(ks.Modal_Size.large);
             modal.el = ks.popup_modal(modal.id, function () {
+                if (!modal.device) { return; }
+
                 let d = <DeviceUser>modal.device;
                 let scale = iconScale(d.type);
 
@@ -174,10 +177,12 @@ namespace DP {
                         ks.column('left', 6, function () {
                             detail('Type', deviceTypes[d.type]);
                             detail('User', d.user);
+
                             if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
                                 ks.text('Status', 'font-weight-bold');
                                 ks.text(statusNames[d.status], 'mb-3 badge badge-' + statusColors[d.status]);
                             }
+
                             detail('Category', deviceCategories[d.category]);
                             detail('Cost centre', d.costCentre);
                             detail('Building', d.itracsBuilding);
@@ -187,6 +192,14 @@ namespace DP {
 
                         ks.column('right', 6, function () {
                             detail('Device ID', d.deviceId);
+
+                            ks.text('Shared device', 'font-weight-bold');
+                            ks.set_next_item_class_name('mb-3');
+                            ks.switch_button('Multiple users', modal.shared, function (checked) {
+                                modal.shared = checked;
+                                ks.refresh(modal.el);
+                            });
+
                             detail('Serial number', d.serialNumber);
                             detail('MAC address', d.macadres);
                             detail('OS', osNames[d.os_type]);
@@ -211,10 +224,12 @@ namespace DP {
                                 ks.close_current_popup();
                             }, 'outline-secondary mr-2');
 
-                            let disabled = modal.note === (d.notes || '');
+                            let disabled = modal.note === (d.notes || '') && modal.shared === d.shared;
                             ks.button('Save', function () {
                                 let noteOld = d.notes;
+                                let sharedOld = d.shared;
                                 d.notes = modal.note;
+                                d.shared = modal.shared;
 
                                 // Device might be the derived DeviceUser class, we don't want those properties set
                                 let entity: any = {};
@@ -230,6 +245,7 @@ namespace DP {
                                     ks.refresh();
                                 }, fail => {
                                     d.notes = noteOld;
+                                    d.shared = sharedOld;
                                     contextModal.showWarning(fail.responseText);
                                     ks.refresh();
                                 });

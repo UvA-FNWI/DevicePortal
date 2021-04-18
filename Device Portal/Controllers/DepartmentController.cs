@@ -69,6 +69,7 @@ namespace DevicePortal.Controllers
                     d.LastSeenDate,
                     d.PurchaseDate,
                     d.Disowned,
+                    d.Shared,
                 })
                 .ToArrayAsync();
             var users = await db.Users

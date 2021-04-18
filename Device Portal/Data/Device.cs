@@ -93,6 +93,7 @@ namespace DevicePortal.Data
         public Department Department { get; set; }
 
         public bool Disowned { get; set; }
+        public bool Shared { get; set; }
     }
 
     public class Device : DeviceBase

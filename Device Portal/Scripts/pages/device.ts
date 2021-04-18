@@ -75,6 +75,7 @@
         macadres: string;
         notes: string;
         disowned: boolean;
+        shared: boolean;
     }
     export enum DeviceOrigin {
         DataExport,
