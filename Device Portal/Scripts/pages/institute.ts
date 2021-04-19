@@ -202,6 +202,8 @@
         ks.table('devices', function () {
             ks.table_head(function () {
                 ks.table_row(function () {
+                    ks.table_cell('');
+
                     ks.table_cell(function () {
                         ks.set_next_item_class_name('form-control-sm');
                         ks.input_text('user', state.search.user, 'User', function (str) {
@@ -389,7 +391,7 @@
                     if (!device_search_match(search, state.devices[i])) { continue; }
 
                     ks.set_next_item_class_name('cursor-pointer');
-                    device_row(state.devices[i], DTF.EditNote, state.devices[i].user || '_');
+                    device_row(state.devices[i], DTF.EditNote | DTF.ShowSharedColumn, state.devices[i].user || '_');
                     ks.is_item_clicked(function () {
                         deviceModal.show(state.devices[i]);
                     });

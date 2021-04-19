@@ -310,6 +310,7 @@
         EditDevice = 1 << 1,
         EditNote = 1 << 2,
         HideNoteColumn = 1 << 3,
+        ShowSharedColumn = 1 << 4,
     }
 
     // EditNote flag has no effect on headers
@@ -361,6 +362,13 @@
         // Note: adding/removing cells here requires the same change in table headers wherever this method is called
         // Usually this is covered by the device_table_head(), but e.g. the institute page has custom headers.
         ks.table_row(function () {                
+            if (flags & DTF.ShowSharedColumn) {
+                if (d.shared) {
+                    ks.table_cell(function () {
+                        ks.icon('fa fa-users');
+                    }).title = 'Multiple users';
+                } else { ks.table_cell(''); }
+            }
             if (user) { ks.table_cell(user); }
             ks.table_cell(d.name);
             ks.table_cell(d.deviceId);
