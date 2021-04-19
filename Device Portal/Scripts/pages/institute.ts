@@ -55,6 +55,21 @@
                         d.itracsBuildingLowerCase = d.itracsBuilding ? d.itracsBuilding.toLowerCase() : '';
                         d.itracsRoomLowerCase = d.itracsRoom ? d.itracsRoom.toLowerCase() : '';
                         d.itracsOutletLowerCase = d.itracsOutlet ? d.itracsOutlet.toLowerCase() : '';
+
+                        if (d.purchaseDate) {
+                            let index = d.purchaseDate.indexOf('T');
+                            if (index > 0) { d.purchaseDate = d.purchaseDate.substring(0, index); }
+                        }
+
+                        if (d.lastSeenDate) {
+                            let index = d.lastSeenDate.indexOf('T');
+                            if (index > 0) {
+                                if (d.lastSeenDate.indexOf('0001-01-01') === 0) { d.lastSeenDate = ''; }
+                                else { d.lastSeenDate = d.lastSeenDate.substring(0, index); }
+                            }
+                            else { d.lastSeenDate = ''; }
+                        }
+                        if (!d.lastSeenDate) { d.lastSeenDate = 'Never'; }
                     }
                     institute.devices.sort((a, b) => sort_string(a.name, b.name));
                     ks.refresh();

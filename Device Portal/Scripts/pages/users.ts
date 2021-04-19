@@ -56,6 +56,22 @@
                     }),
                     GET(API.Devices(`User/${userId}`)).done(devices => {
                         state.devices = devices;
+                        for (let d of devices) {
+                            if (d.purchaseDate) {
+                                let index = d.purchaseDate.indexOf('T');
+                                if (index > 0) { d.purchaseDate = d.purchaseDate.substring(0, index); }
+                            }
+
+                            if (d.lastSeenDate) {
+                                let index = d.lastSeenDate.indexOf('T');
+                                if (index > 0) {
+                                    if (d.lastSeenDate.indexOf('0001-01-01') === 0) { d.lastSeenDate = ''; }
+                                    else { d.lastSeenDate = d.lastSeenDate.substring(0, index); }
+                                }
+                                else { d.lastSeenDate = ''; }
+                            }
+                            if (!d.lastSeenDate) { d.lastSeenDate = 'Never'; }
+                        }
                     })).always(function () { ks.refresh(); });
             }
             if (!state.user) { return; } // wait for user
