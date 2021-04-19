@@ -101,7 +101,9 @@ namespace DevicePortal.Controllers
                     StatusEffectiveDate = now,
                     Department = department,
                     CostCentre = line[iCostCentre],
-                    ItracsBuilding = line[iTracsBuilding],
+                    ItracsBuilding = !string.IsNullOrEmpty(line[iTracsBuilding]) && 
+                                     buildingNameMap.TryGetValue(line[iTracsBuilding], out string name) ?
+                                     name : line[iTracsBuilding],
                     ItracsOutlet = line[iTracsOutlet],
                     ItracsRoom = line[iTracsRoom],
                     LastSeenDate = !string.IsNullOrEmpty(line[iLastSeenDate]) ? DateTime.Parse(line[iLastSeenDate]) : default,
@@ -421,6 +423,28 @@ namespace DevicePortal.Controllers
             { "UvA/FNWI/IVI", "IVI" },
             { "UvA/FNWI/Directie FNWI", "FB" },
             { "UvA/FNWI/ITF", "ITFA" },
+        };
+        static readonly Dictionary<string, string> buildingNameMap = new Dictionary<string, string>()
+        {
+            { "231 Turfdraagsterpad 1-9 (BG1)", "BG1" },
+            { "355 Nieuwe Prinsengracht 130 (RE-G)", "REC-G" },
+            { "630 Science Park 508 (G, AH2)", "SP 508 (G)" },
+            { "640 Science Park 700 (E, AH1)", "SP 700 (E)" },
+            { "642 Science Park 507 (Kassen)", "SP 507 (Kassen)" },
+            { "645  Science Park 904", "SP 904" },
+            { "645 	Science Park 904", "SP 904" },
+            { "645 Science Park 904 (ABCD)", "SP 904 (ABCD)" },
+            { "645 Sciencepark 904", "SP 904" },
+            { "650 Science Park 500 (F, AH3)", "SP 500 (F)" },
+            { "661 Science Park 608 B (IvI) (Startup Village)", "SP 608B (Startup Village)" },
+            { "699 Science Park 107 (Nikhef, Gebouw F)", "NIKHEF F" },
+            { "O2 gebouw VU", "O2 VU" },
+            { "Science Park 107", "NIKHEF" },
+            { "Science Park 904", "SP 904" },
+            { "Science Park 904 (ABCD)", "SP 904 (ABCD)" },
+            { "Science Park A", "SP 904 (A)" },
+            { "SciencePark 904", "SP 904" },
+            { "SP904", "SP 904" },
         };
     }
 
