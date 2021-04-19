@@ -237,6 +237,9 @@ namespace DP {
                                 entity.user = null;
                                 entity.userName = null;
                                 entity.email = null;
+                                // These dates are modified for display purposes, but could unparsable by back-end
+                                entity.lastSeenDate = null;
+                                entity.purchaseDate = null;
 
                                 ks.close_current_popup();
 
