@@ -58,6 +58,12 @@
         }
 
         if (!state.device) {
+            if (state.checks.length === 0) {
+                ks.alert_box('no-checks', 'info', true, function () {
+                    ks.text('There are no submitted checks available at this moment.');
+                });
+            }
+
             ks.set_next_item_class_name('bg-white border');
             ks.table('devices', function () {
                 ks.table_body(function () {

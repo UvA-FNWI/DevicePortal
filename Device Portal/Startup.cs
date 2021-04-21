@@ -335,7 +335,7 @@ namespace DevicePortal
         public const string CanSecure = "CanSecure";
         public const string CanApprove = "CanApprove";
         public const string CanManage = "CanManage";
-        public const string CanManageFaculty = "CanManage";
+        public const string CanManageFaculty = "CanManageFaculty";
         public const string CanAdmin = "CanAdmin";
     }
     public static class AppClaimTypes
