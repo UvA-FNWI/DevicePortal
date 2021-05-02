@@ -253,6 +253,7 @@ namespace DevicePortal
                                 {
                                     if (device.Id > 0) { deviceHistoriesToAdd.Add(new DeviceHistory(device)); }
 
+                                    device.UserEditId = null;
                                     device.Origin = DeviceOrigin.Intune;
                                     device.Status = intuneDevice.ComplianceState switch
                                     {

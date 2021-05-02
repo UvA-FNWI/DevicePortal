@@ -182,6 +182,7 @@ namespace DevicePortal.Controllers
                         deviceHistoriesToAdd.Add(new DeviceHistory(existing));
 
                         existing.UserName = device.UserName;
+                        existing.UserEditId = null;
                         existing.SerialNumber = device.SerialNumber;
                         existing.Category = device.Category;
                         existing.CostCentre = device.CostCentre;
@@ -293,9 +294,10 @@ namespace DevicePortal.Controllers
                     if (d.Origin != DeviceOrigin.DataExport) { continue; }
                     _context.DeviceHistories.Add(new DeviceHistory(d));
 
+                    d.UserEditId = null;
                     d.Status = DeviceStatus.Disposed;
                     d.StatusEffectiveDate = now;
-                    _context.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate);
+                    _context.UpdateProperties(d, dd => dd.Status, dd => dd.StatusEffectiveDate, dd => dd.UserEditId);
                 }
                 _context.SaveChanges();
             }

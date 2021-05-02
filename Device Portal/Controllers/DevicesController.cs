@@ -88,8 +88,9 @@ namespace DevicePortal.Controllers
             if (device.Status == DeviceStatus.Lost) { device.StatusEffectiveDate = DateTime.Now; }
             else { device.Status = original.Status; }
 
+            device.UserEditId = User.GetUserName();
             _context.UpdateProperties(device, d => d.Name, d=> d.OS_Type, d => d.OS_Version, d => d.Status, d => d.Disowned,
-                                              d => d.StatusEffectiveDate);
+                                              d => d.StatusEffectiveDate, d => d.UserEditId);
             if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManage))
             {
                 _context.UpdateProperties(device, d => d.Notes, d => d.Shared);

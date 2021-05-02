@@ -211,10 +211,11 @@ namespace DevicePortal.Controllers
             }
 
             _context.DeviceHistories.Add(new DeviceHistory(device));
+            device.UserEditId = User.GetUserName();
             device.Status = securityCheck.Status;
             device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = DateTime.Now;
 
-            _context.UpdateProperties(device, d => d.Status, d => d.StatusEffectiveDate);
+            _context.UpdateProperties(device, d => d.UserEditId, d => d.Status, d => d.StatusEffectiveDate);
             _context.UpdateProperties(securityCheck, c => c.Status, c => c.StatusEffectiveDate);            
             await _context.SaveChangesAsync();
 
