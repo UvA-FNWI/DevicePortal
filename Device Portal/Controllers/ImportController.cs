@@ -74,7 +74,10 @@ namespace DevicePortal.Controllers
             HashSet<string> activeDeviceSet = new HashSet<string>();
             List<User> usersToAdd = new List<User>();
             List<User> usersToUpdate = new List<User>();
-            Dictionary<string, Device> deviceMap = _context.Devices.ToArray().ToDictionary(d => d.DeviceId.ToLower());
+            Dictionary<string, Device> deviceMap = _context.Devices
+                .Where(d => d.DeviceId != null) // Note(Joshua): DeviceId is null with Origin.User
+                .ToArray()
+                .ToDictionary(d => d.DeviceId.ToLower());
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
             var deviceHistoriesToAdd = new List<DeviceHistory>();
@@ -287,10 +290,10 @@ namespace DevicePortal.Controllers
             // Dispose devices
             if (activeDeviceSet.Count < deviceMap.Count)
             {
-                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
+                var disposed = deviceMap.Values
+                    .Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()) && d.Origin == DeviceOrigin.DataExport);
                 foreach (var d in disposed)
                 {
-                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
                     _context.DeviceHistories.Add(new DeviceHistory(d));
 
                     d.Status = DeviceStatus.Disposed;
