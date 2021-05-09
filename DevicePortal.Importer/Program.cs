@@ -54,7 +54,10 @@ namespace DevicePortal.Importer
             Dictionary<string, User> userMap = portalContext.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
             List<User> usersToUpdate = new List<User>();
-            Dictionary<string, Device> deviceMap = portalContext.Devices.ToArray().ToDictionary(d => d.DeviceId.ToLower());
+            Dictionary<string, Device> deviceMap = portalContext.Devices
+                .Where(d => d.DeviceId != null) // Note(Joshua): DeviceId is null with Origin.User
+                .ToArray()
+                .ToDictionary(d => d.DeviceId.ToLower());
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
             var deviceHistoriesToAdd = new List<DeviceHistory>();
@@ -275,12 +278,11 @@ namespace DevicePortal.Importer
             // Dispose devices
             if (activeDeviceSet.Count < deviceMap.Count)
             {
-                var disposed = deviceMap.Values.Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()));
+                var disposed = deviceMap.Values
+                    .Where(d => !activeDeviceSet.Contains(d.DeviceId.ToLower()) && d.Origin == DeviceOrigin.DataExport);
                 Log($"Disposing {disposed.Count()} devices");
                 foreach (var d in disposed)
                 {
-                    if (d.Origin != DeviceOrigin.DataExport) { continue; }
-
                     portalContext.DeviceHistories.Add(new DeviceHistory(d));
 
                     d.UserEditId = User.ImporterId;
