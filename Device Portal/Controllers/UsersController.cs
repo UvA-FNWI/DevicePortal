@@ -33,6 +33,7 @@ namespace DevicePortal.Controllers
                 User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
                 return Ok(await _context.Users
+                    .Where(u => !u.UserName.StartsWith("<"))
                     .Select(u => new 
                     {
                         u.CanApprove,
@@ -49,7 +50,7 @@ namespace DevicePortal.Controllers
             {
                 var departmentIds = User.GetDepartmentIds(_context);
                 return Ok(await _context.Users
-                    .Where(u => u.Departments.Any(d => departmentIds.Contains(d.DepartmentId)))
+                    .Where(u => !u.UserName.StartsWith("<") && u.Departments.Any(d => departmentIds.Contains(d.DepartmentId)))
                     .Select(u => new
                     {
                         u.CanApprove,

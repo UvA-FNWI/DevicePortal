@@ -90,6 +90,8 @@ namespace DevicePortal.Data
         public User User { get; set; }
 
         public string UserEditId { get; set; }
+        [NotMapped]
+        public string UserEditName { get; set; }
 
         public int DepartmentId { get; set; }
         public Department Department { get; set; }

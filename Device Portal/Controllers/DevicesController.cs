@@ -54,7 +54,17 @@ namespace DevicePortal.Controllers
         [HttpGet("User/{userName}")]
         public async Task<ActionResult<IEnumerable<Device>>> GetDevices(string userName)
         {
-            return await _context.Devices.Where(d => d.UserName == userName).Active().ToListAsync();
+            var devices = await _context.Devices.Include(d => d.User).Where(d => d.UserName == userName).Active().ToListAsync();
+            var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId).ToHashSet();
+            var editNameMap = await _context.Users
+                .Where(u => userEditIds.Contains(u.UserName))
+                .Select(u => new { u.UserName, u.Name })
+                .ToDictionaryAsync(u => u.UserName, u => u.Name);
+            foreach (var d in devices)
+            {
+                d.UserEditName = (d.UserEditId == null || !editNameMap.TryGetValue(d.UserEditId, out var name)) ? null : name;
+            }
+            return devices;
         }
 
         // GET: api/Devices/5
@@ -69,6 +79,29 @@ namespace DevicePortal.Controllers
             }
 
             return device;
+        }
+
+        // GET: api/Devices/5/History
+        [HttpGet("{id}/History")]
+        public async Task<ActionResult<DeviceHistory[]>> GetDeviceHistory(int id)
+        {
+            if (!_context.Devices.Any(d => d.Id == id && d.Status != DeviceStatus.Disposed))
+            {
+                return NotFound();
+            }
+
+            var history = await _context.DeviceHistories
+                .Include(h => h.User)
+                .Where(h => h.OriginalDeviceId == id)
+                .OrderByDescending(h => h.Id)
+                .ToArrayAsync();
+            var userIds = history.Where(h => h.UserEditId != null).Select(h => h.UserEditId).ToHashSet();
+            var nameMap = await _context.Users.Where(u => userIds.Contains(u.UserName)).Select(u => new { u.UserName, u.Name }).ToDictionaryAsync(u => u.UserName, u => u.Name);
+            foreach (var h in history)
+            {
+                h.UserEditName = (h.UserEditId == null || !nameMap.TryGetValue(h.UserEditId, out var name)) ? null : name;
+            }
+            return history;
         }
 
         // PUT: api/Devices/5        
