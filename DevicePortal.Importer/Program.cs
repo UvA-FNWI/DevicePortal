@@ -389,6 +389,52 @@ namespace DevicePortal.Importer
             var historyMap = histories.GroupBy(h => h.OriginalDeviceId).ToDictionary(g => g.Key, g => g.ToArray());
 
             {
+                var devicesToUpdate = new List<Device>();
+                var historyToUpdate = new List<DeviceHistory>();
+                foreach (var d in devices)
+                {
+                    if (!historyMap.TryGetValue(d.Id, out var history))
+                    {
+                        if (d.DateEdit == DateTime.MinValue)
+                        {
+                            d.DateEdit = d.StatusEffectiveDate;
+                            devicesToUpdate.Add(d);
+                        }
+                        continue;
+                    }
+
+                    DeviceBase c = d;
+                    for (int i = 0; i < history.Length; ++i)
+                    {
+                        var n = history[i];
+
+                        if (c.DateEdit == DateTime.MinValue)
+                        {
+                            c.DateEdit = n.DateHistory;
+                            if (c is Device) { devicesToUpdate.Add((Device)c); }
+                            else { historyToUpdate.Add((DeviceHistory)c); }
+                        }
+
+                        c = n;
+                    }
+                    
+                    if (c.DateEdit == DateTime.MinValue)
+                    {
+                        c.DateEdit = c.StatusEffectiveDate;
+                        if (c is Device) { devicesToUpdate.Add((Device)c); }
+                        else { historyToUpdate.Add((DeviceHistory)c); }
+                    }
+                }
+
+                Console.WriteLine($"Updating {devicesToUpdate.Count} devices");
+                //db.Devices.UpdateRange(devicesToUpdate);
+                //db.SaveChanges();
+                Console.WriteLine($"Updating {historyToUpdate.Count} histories");
+                //db.DeviceHistories.UpdateRange(historyToUpdate);
+                //db.SaveChanges();
+            }
+
+            {
                 int countNoHistNoEdit = 0;
                 var devicesToUpdate = new List<Device>();
                 var historyToUpdate = new List<DeviceHistory>();
