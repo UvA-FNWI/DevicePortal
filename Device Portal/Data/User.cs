@@ -10,9 +10,8 @@ namespace DevicePortal.Data
 {
     public class User
     {
-        public static readonly string ImporterId = "<importer>";
+        public static readonly string ImporterId = "<CMDB importer>";
         public static readonly string IntuneServiceId = "<intune service>";
-        public static readonly string ImportControllerId = "<import controller>";
 
         public User() 
         {
