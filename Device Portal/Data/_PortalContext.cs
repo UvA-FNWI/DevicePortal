@@ -106,6 +106,7 @@ namespace DevicePortal.Data
                 {
                     Users.Add(new User()
                     {
+                        Name = id,
                         UserName = id,
                         FacultyId = facultyId,
                         Email = "secure-science@uva.nl",
