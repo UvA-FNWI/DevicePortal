@@ -124,6 +124,7 @@ namespace DevicePortal.Controllers
             // TODO: should probably not be simply set to the first in case of multiple departments
             device.DepartmentId = departmentIds[0];
             device.Status = DeviceStatus.Unsecure;
+            device.StatusEffectiveDate = DateTime.Now;
             device.Origin = DeviceOrigin.User;
             device.Category = DeviceCategory.BYOD;
             device.UserName = User.GetUserName();
