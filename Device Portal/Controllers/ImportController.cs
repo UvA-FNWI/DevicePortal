@@ -109,12 +109,14 @@ namespace DevicePortal.Controllers
                                      name : (line[iTracsBuilding] ?? ""),
                     ItracsOutlet = line[iTracsOutlet] ?? "",
                     ItracsRoom = line[iTracsRoom] ?? "",
-                    LastSeenDate = !string.IsNullOrEmpty(line[iLastSeenDate]) ? DateTime.Parse(line[iLastSeenDate]) : default,
+                    LastSeenDate = !string.IsNullOrEmpty(line[iLastSeenDate]) ? DateTime.Parse(line[iLastSeenDate]) : null,
                     Macadres = line[iMacadres] ?? "",
                     Notes = line[iNotes] ?? "",
-                    PurchaseDate = !string.IsNullOrEmpty(line[iPurchasedDate]) ? DateTime.Parse(line[iPurchasedDate]) : default,
+                    PurchaseDate = !string.IsNullOrEmpty(line[iPurchasedDate]) ? DateTime.Parse(line[iPurchasedDate]) : null,
                     OS_Version = "",
                 };
+                if (device.LastSeenDate == DateTime.MinValue) { device.LastSeenDate = null; }
+                if (device.PurchaseDate == DateTime.MinValue) { device.PurchaseDate = null; }
                 activeDeviceSet.Add(device.DeviceId.ToLower());
 
                 string deviceType = line[iDeviceType];

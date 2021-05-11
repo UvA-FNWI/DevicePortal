@@ -92,10 +92,10 @@ namespace DevicePortal.Importer
                                      buildingNameMap.TryGetValue(d.ItracsGebouw, out string name) ? name : (d.ItracsGebouw ?? ""),
                     ItracsOutlet = d.ItracsOutlet ?? "",
                     ItracsRoom = d.ItracsRuimte ?? "",
-                    LastSeenDate = d.DatumLaatstGezien,
+                    LastSeenDate = d.DatumLaatstGezien == DateTime.MinValue ? null : d.DatumLaatstGezien,
                     Macadres = d.Macadres ?? "",
                     Notes = d.NotitiesKlant ?? "",
-                    PurchaseDate = d.Aanschafdatum,
+                    PurchaseDate = d.Aanschafdatum == DateTime.MinValue ? null : d.Aanschafdatum,
                     OS_Version = "",
                 };
                 activeDeviceSet.Add(device.DeviceId.ToLower());
@@ -369,6 +369,192 @@ namespace DevicePortal.Importer
             sqlBulk.Close();
             connection.Close();
         }
+
+        #if false
+        static void Cleanup()
+        {
+            string connectionString = "";
+            var options = new DbContextOptionsBuilder<PortalContext>()
+                .UseSqlServer(connectionString)
+                .EnableSensitiveDataLogging()
+                .Options;
+
+            using var db = new PortalContext(options);
+            var devices = db.Devices.ToArray();
+            var deviceMap = devices.ToDictionary(d => d.Id);
+            var histories = db.DeviceHistories.OrderByDescending(h => h.DateHistory).ToArray();
+            var historyMap = histories.GroupBy(h => h.OriginalDeviceId).ToDictionary(g => g.Key, g => g.ToArray());
+
+            {
+                int countNoHistNoEdit = 0;
+                var devicesToUpdate = new List<Device>();
+                var historyToUpdate = new List<DeviceHistory>();
+                foreach (var d in devices)
+                {
+                    if (!historyMap.TryGetValue(d.Id, out var history) && d.UserEditId == null)
+                    {
+                        ++countNoHistNoEdit;
+                        Console.WriteLine($"No user edit {d.Id}");
+                        devicesToUpdate.Add(d);
+                        d.UserEditId = User.ImporterId;
+                    }
+
+                    if (history != null)
+                    {
+                        var h = history.Last();
+                        if (h.UserEditId == null)
+                        {
+                            h.UserEditId = User.ImporterId;
+                            historyToUpdate.Add(h);
+                        }
+                    }
+                }
+                Console.WriteLine($"No history and no user edit count {countNoHistNoEdit}");
+                Console.WriteLine($"Updating {devicesToUpdate.Count} devices");
+                Console.WriteLine($"Updating {historyToUpdate.Count} histories");
+                //db.Devices.UpdateRange(devicesToUpdate);
+                //db.SaveChanges();
+                //db.DeviceHistories.UpdateRange(historyToUpdate);
+                //db.SaveChanges();
+            }
+
+            {
+                int countMatches = 0;
+                var devicesToUpdate = new List<Device>();
+                var historyToUpdate = new List<DeviceHistory>();
+                var importDates = new List<DateTime>()
+                {
+                    DateTime.Parse("2021-03-23 22:20:37.4772695"),
+                    DateTime.Parse("2021-03-31 11:57:45.2377984"),
+                    DateTime.Parse("2021-04-21 15:17:55.2349700"),
+                    DateTime.Parse("2021-04-29 11:25:54.8424557"),
+                    DateTime.Parse("2021-04-30 09:25:42.9900850"),
+                    DateTime.Parse("2021-05-03 20:13:59.7947545"),
+                    DateTime.Parse("2021-05-04 10:05:03.8309030"),
+                };
+
+                foreach (var d in devices)
+                {
+                    if (!historyMap.TryGetValue(d.Id, out var history))
+                    {
+                        continue;
+                    }
+
+                    if (d.UserEditId == null)
+                    {
+                        var editDate = history[0].DateHistory;
+                        foreach (var date in importDates)
+                        {
+                            double delta = (editDate - date).TotalSeconds;
+                            if (Math.Abs(delta) < 160)
+                            {
+                                ++countMatches;
+                                Console.WriteLine($"{d.Id} matches import date {editDate}, time diff {delta}");
+
+                                d.UserEditId = User.ImporterId;
+                                devicesToUpdate.Add(d);
+                            }
+                        }
+                    }
+
+                    for (int i = 0; i < history.Length; ++i)
+                    {
+                        var h = history[i];
+                        if (h.UserEditId != null) { continue; }
+
+                        var editDate = h == history.Last() ? h.StatusEffectiveDate : history[i + 1].DateHistory;
+                        foreach (var date in importDates)
+                        {
+                            double delta = (editDate - date).TotalSeconds;
+                            if (Math.Abs(delta) < 160)
+                            {
+                                ++countMatches;
+                                Console.WriteLine($"{d.Id} matches import date {editDate}, time diff {delta}");
+
+                                h.UserEditId = User.ImporterId;
+                                historyToUpdate.Add(h);
+                            }
+                        }
+                    }
+                }
+                Console.WriteLine($"Found {countMatches} matching import dates");
+                
+                Console.WriteLine($"Updating {devicesToUpdate.Count} devices");
+                //db.Devices.UpdateRange(devicesToUpdate);
+                //db.SaveChanges();
+
+                Console.WriteLine($"Updating {historyToUpdate.Count} histores");
+                //db.DeviceHistories.UpdateRange(historyToUpdate);
+                //db.SaveChanges();
+            }
+
+            int countDupes = 0;
+            var historyToRemove = new List<DeviceHistory>();
+            foreach (var d in devices)
+            {
+                if (!historyMap.TryGetValue(d.Id, out var history))
+                {
+                    continue;
+                }
+
+                DeviceBase c = d;
+                for (int i = 0; i < history.Length; ++i)
+                {
+                    var n = history[i];
+
+                    if (c.Name              == n.Name &&
+                        c.DeviceId          == n.DeviceId &&
+                        c.SerialNumber      == n.SerialNumber &&
+                        c.OS_Type           == n.OS_Type &&
+                        c.OS_Version        == n.OS_Version &&
+                        c.PurchaseDate      == n.PurchaseDate &&
+                        c.CostCentre        == n.CostCentre &&
+                        c.LastSeenDate      == n.LastSeenDate &&
+                        c.ItracsBuilding    == n.ItracsBuilding &&
+                        c.ItracsRoom        == n.ItracsRoom &&
+                        c.ItracsOutlet      == n.ItracsOutlet &&
+                        c.Macadres          == n.Macadres &&
+                        c.Notes             == n.Notes &&
+                        c.Type              == n.Type &&
+                        c.Category          == n.Category &&
+                        c.Status            == n.Status &&
+                        c.StatusEffectiveDate == n.StatusEffectiveDate &&
+                        c.Origin            == n.Origin &&
+                        c.UserName          == n.UserName &&
+                        c.DepartmentId      == n.DepartmentId &&
+                        c.Disowned          == n.Disowned &&
+                        c.Shared            == n.Shared &&
+                        c.UserEditId        == n.UserEditId)
+                    {
+                        ++countDupes;
+                        bool current = c is Device;
+                        Console.WriteLine($"Duplicate found, id={n.OriginalDeviceId}, {(current ? "current" : c.Id)} - {n.Id}");
+
+                        //if (c.PurchaseDate != n.PurchaseDate)
+                        //{ 
+                        //    Console.WriteLine($"PURCHASE DATE to {c.PurchaseDate} from {n.PurchaseDate}");
+                        //}
+
+                        if (!current)
+                        {
+                            historyToRemove.Add((DeviceHistory)c);
+                        }
+                        else
+                        {
+                            historyToRemove.Add(n);
+                        }
+                    }
+
+                    c = n;
+                }
+            }
+            Console.WriteLine($"Found {countDupes} duplicates");
+            Console.WriteLine($"Removing {historyToRemove.Count} history entries");
+
+            //db.DeviceHistories.RemoveRange(historyToRemove);
+            //db.SaveChanges();
+        }
+        #endif
 
         static void Log(string msg) 
         {
