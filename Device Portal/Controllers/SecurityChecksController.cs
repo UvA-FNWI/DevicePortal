@@ -242,7 +242,8 @@ namespace DevicePortal.Controllers
             await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () => { 
                 var trans =_context.Database.BeginTransaction();
                 device.Status = DeviceStatus.Submitted;
-                _context.UpdateProperties(device, d => d.Status);
+                device.StatusEffectiveDate = DateTime.Now;
+                _context.UpdateProperties(device, d => d.Status, d => d.StatusEffectiveDate);
 
                 DateTime now = DateTime.Now;
                 securityCheck.SubmissionDate = now;
