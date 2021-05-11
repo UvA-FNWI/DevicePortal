@@ -211,6 +211,7 @@ namespace DevicePortal.Controllers
             }
 
             _context.DeviceHistories.Add(new DeviceHistory(device));
+            device.DateEdit = DateTime.Now;
             device.UserEditId = User.GetUserName();
             device.Status = securityCheck.Status;
             device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = DateTime.Now;

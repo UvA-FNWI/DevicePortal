@@ -89,6 +89,7 @@ namespace DevicePortal.Data
         public string UserName { get; set; }
         public User User { get; set; }
 
+        public DateTime DateEdit { get; set; }
         public string UserEditId { get; set; }
         [NotMapped]
         public string UserEditName { get; set; }

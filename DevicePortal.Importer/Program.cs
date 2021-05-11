@@ -169,6 +169,7 @@ namespace DevicePortal.Importer
                         deviceHistoriesToAdd.Add(new DeviceHistory(existing));
 
                         existing.UserName = device.UserName;
+                        existing.DateEdit = now;
                         existing.UserEditId = User.ImporterId;
                         existing.SerialNumber = device.SerialNumber;
                         existing.Category = device.Category;
@@ -286,10 +287,12 @@ namespace DevicePortal.Importer
                 {
                     portalContext.DeviceHistories.Add(new DeviceHistory(d));
 
+                    d.DateEdit = now;
                     d.UserEditId = User.ImporterId;
                     d.Status = DeviceStatus.Disposed;
                     d.StatusEffectiveDate = now;
-                    portalContext.UpdateProperties(d, dd => dd.UserEditId, dd => dd.Status, dd => dd.StatusEffectiveDate);
+                    portalContext.UpdateProperties(d, dd => dd.DateEdit, dd => dd.UserEditId, 
+                        dd => dd.Status, dd => dd.StatusEffectiveDate);
                 }
                 portalContext.SaveChanges();
             }
