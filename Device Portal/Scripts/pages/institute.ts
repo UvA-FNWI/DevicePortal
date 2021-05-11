@@ -18,18 +18,12 @@
         users: number;
         usersAuthorized: number;
         usersApprover: number;
-        devices: DeviceUser[];
-    }
-    export class DeviceUser extends Device {
-        user: string;
-        userLowerCase: string;
-        userName: string;
-        email: string;
+        devices: Device[];
     }
     export function page_institute(parameters: string) {
         let state = ks.local_persist('page_device', {
             institute: <Institute>null,
-            devices: <DeviceUser[]>[],
+            devices: <Device[]>[],
             search: new DeviceSearchParams(),
         });
         if (isPageSwap) {
@@ -50,26 +44,14 @@
                         d.nameLowerCase = d.name ? d.name.toLowerCase() : '';
                         d.deviceIdLowerCase = d.deviceId ? d.deviceId.toLowerCase() : '';
                         d.serialNumberLowerCase = d.serialNumber ? d.serialNumber.toLowerCase() : '';
-                        d.userLowerCase = d.user ? d.user.toLowerCase() : '';
+                        if (d.user) { d.user.nameLowerCase = d.user.name ? d.user.name.toLowerCase() : ''; }
                         d.costCentreLowerCase = d.costCentre ? d.costCentre.toLowerCase() : '';
                         d.itracsBuildingLowerCase = d.itracsBuilding ? d.itracsBuilding.toLowerCase() : '';
                         d.itracsRoomLowerCase = d.itracsRoom ? d.itracsRoom.toLowerCase() : '';
                         d.itracsOutletLowerCase = d.itracsOutlet ? d.itracsOutlet.toLowerCase() : '';
 
-                        if (d.purchaseDate) {
-                            let index = d.purchaseDate.indexOf('T');
-                            if (index > 0) { d.purchaseDate = d.purchaseDate.substring(0, index); }
-                        }
-
-                        if (d.lastSeenDate) {
-                            let index = d.lastSeenDate.indexOf('T');
-                            if (index > 0) {
-                                if (d.lastSeenDate.indexOf('0001-01-01') === 0) { d.lastSeenDate = ''; }
-                                else { d.lastSeenDate = d.lastSeenDate.substring(0, index); }
-                            }
-                            else { d.lastSeenDate = ''; }
-                        }
-                        if (!d.lastSeenDate) { d.lastSeenDate = 'Never'; }
+                        Device.formatPurchaseDate(d);
+                        Device.formatLastSeenDate(d);
                     }
                     institute.devices.sort((a, b) => sort_string(a.name, b.name));
                     ks.refresh();
@@ -157,9 +139,9 @@
                             };
                             for (let d of state.institute.devices) {
                                 config.sheet.data.push([
-                                    { value: d.user },
-                                    { value: d.userName },
-                                    { value: d.email, },
+                                    { value: d.user?.name },
+                                    { value: d.user?.userName },
+                                    { value: d.user?.email, },
                                     { value: d.name, },
                                     { value: d.deviceId, },
                                     { value: d.serialNumber, },
@@ -391,7 +373,7 @@
                     if (!device_search_match(search, state.devices[i])) { continue; }
 
                     ks.set_next_item_class_name('cursor-pointer');
-                    device_row(state.devices[i], DTF.EditNote | DTF.ShowSharedColumn, state.devices[i].user || '_');
+                    device_row(state.devices[i], DTF.EditNote | DTF.ShowSharedColumn, state.devices[i].user?.name || '_');
                     ks.is_item_clicked(function () {
                         deviceModal.show(state.devices[i]);
                     });
@@ -400,7 +382,7 @@
                 }
             });
         }, function (i_head, order) {
-            if (i_head === 0) { state.devices.sort((a, b) => order * sort_string(a.user, b.user)); }
+            if (i_head === 0) { state.devices.sort((a, b) => order * sort_string(a.user?.name, b.user?.name)); }
             if (i_head === 1) { state.devices.sort((a, b) => order * sort_string(a.name, b.name)); }
             if (i_head === 2) { state.devices.sort((a, b) => order * sort_string(a.deviceId, b.deviceId)); }
             if (i_head === 3) { state.devices.sort((a, b) => order * sort_string(a.serialNumber, b.serialNumber)); }
@@ -417,8 +399,8 @@
         paginator('paginator', state.devices.filter(d => device_search_match(search, d)).length, () => ks.refresh(this));
     }
 
-    function device_search_match(p: DeviceSearchParams, d: DeviceUser): boolean {
-        return (!p.user || d.userLowerCase.indexOf(p.user) >= 0) &&
+    function device_search_match(p: DeviceSearchParams, d: Device): boolean {
+        return (!p.user || d.user?.nameLowerCase.indexOf(p.user) >= 0) &&
             (!p.name || d.nameLowerCase.indexOf(p.name) >= 0) &&
             (!p.deviceId || d.deviceIdLowerCase.indexOf(p.deviceId) >= 0) &&
             (!p.serialNr || d.serialNumberLowerCase.indexOf(p.serialNr) >= 0) &&

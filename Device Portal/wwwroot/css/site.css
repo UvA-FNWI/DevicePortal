@@ -22,3 +22,41 @@
 .overflow-visible {
     overflow: visible;
 }
+
+.timeline {
+    position: relative;
+}
+
+    .timeline .timeline-item {
+        position: relative;
+        padding-bottom: 1rem;
+    }
+
+        .timeline .timeline-item:before {
+            content: '';
+            top: 26px;
+            bottom: 0;
+            left: 12px;
+            width: 2px;
+            position: absolute;
+            background: #ddd;
+        }
+
+        .timeline .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline .timeline-item .timeline-item-content {
+            margin-left: 2.5rem;
+        }
+
+        .timeline .timeline-item .timeline-icon {
+            float: left;
+            width: 26px;
+            height: 26px;
+            text-align: center;
+            line-height: 26px;
+            margin-left: 1px;
+            border-radius: 13px;
+            font-size: 1.25rem;
+        }

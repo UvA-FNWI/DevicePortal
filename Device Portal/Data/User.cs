@@ -10,6 +10,10 @@ namespace DevicePortal.Data
 {
     public class User
     {
+        public static readonly string ImporterId = "<importer>";
+        public static readonly string IntuneServiceId = "<intune service>";
+        public static readonly string ImportControllerId = "<import controller>";
+
         public User() 
         {
             Departments = new HashSet<User_Department>();
@@ -31,6 +35,7 @@ namespace DevicePortal.Data
         [JsonIgnore]
         public HashSet<User_Department> Departments { get; set; }
         public HashSet<SecurityCheck> SecurityChecks { get; set; }
+        [JsonIgnore]
         public HashSet<Device> Devices { get; set; }
     }
 

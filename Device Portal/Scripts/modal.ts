@@ -138,13 +138,19 @@ namespace DP {
         id = '####device_modal';
         note = '';
         shared = false;
+        showTimeline = false;
         device: Device;
+        display: Device;
+        history: DeviceHistory[];
         el: HTMLElement;
 
         show(device: Device) {
             this.note = device.notes || '';
             this.shared = device.shared;
             this.device = device;
+            this.display = device;
+            this.history = null;
+            this.showTimeline = false;
             ks.refresh(this.el);
             ks.open_popup(this.id);
         }
@@ -154,9 +160,10 @@ namespace DP {
 
             ks.set_next_modal_size(ks.Modal_Size.large);
             modal.el = ks.popup_modal(modal.id, function () {
-                if (!modal.device) { return; }
+                if (!modal.display) { return; }
 
-                let d = <DeviceUser>modal.device;
+                let d = <Device>modal.display;
+                let is_current = modal.device === modal.display;
                 let scale = iconScale(d.type);
 
                 ks.group('bg', 'position-absolute w-100 h-100 overflow-hidden', function () {
@@ -173,10 +180,27 @@ namespace DP {
                     ks.icon(deviceIcon(d.type) + ' text-primary mb-2').style.fontSize = scale * 2 + 'rem';
                     ks.h5(d.name, 'mb-3');
 
+                    if (!is_current) {
+                        ks.set_next_item_class_name('mx-5');
+                        ks.alert_box('alert', 'warning', true, function () {
+                            ks.text('Attention', 'font-weight-bold');
+                            let date = (<DeviceHistory>modal.display).dateHistory;
+                            ks.text('You are viewing an old record edited on ' + date + ' by ' + d.userEditName + '.');
+                            ks.anchor('Return to most recent', '');
+                            ks.is_item_clicked(function (_, ev) {
+                                ev.preventDefault();
+                                modal.display = modal.device;
+                                modal.note = modal.device.notes;
+                                modal.shared = modal.device.shared;
+                                ks.refresh(modal.el);
+                            });
+                        });
+                    }
+
                     ks.row('row', function () {
                         ks.column('left', 6, function () {
                             detail('Type', deviceTypes[d.type]);
-                            detail('User', d.user);
+                            detail('User', d.user?.name);
 
                             if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
                                 ks.text('Status', 'font-weight-bold');
@@ -194,11 +218,11 @@ namespace DP {
                             detail('Device ID', d.deviceId);
 
                             ks.text('Shared device', 'font-weight-bold');
-                            ks.set_next_item_class_name('mb-3');
+                            ks.set_next_item_class_name('mb-3' + (is_current ? '' : ' disabled'));
                             ks.switch_button('Multiple users', modal.shared, function (checked) {
                                 modal.shared = checked;
                                 ks.refresh(modal.el);
-                            });
+                            }).disabled = !is_current;
 
                             detail('Serial number', d.serialNumber);
                             detail('MAC address', d.macadres);
@@ -206,57 +230,183 @@ namespace DP {
                             detail('OS version', d.os_version);
                             detail('Purchase date', d.purchaseDate);
                             detail('Last seen', d.lastSeenDate);
+                            detail('Edited by', d.userEditName);
                         });
                     });
 
-                    ks.group('note_btns', 'px-5', function () {
+
+                    ks.group('note', 'px-5', function () {
                         ks.text('Note', 'font-weight-bold py-1');
+                        if (!is_current) { ks.set_next_item_class_name('disabled'); }
                         ks.input_text_area('note', modal.note,
                             'Add a note to this device. This note is visible to the device owner.', function (str) {
                                 modal.note = str;
-                                ks.refresh(this);
-                        });
+                                ks.refresh(modal.el);
+                        }).disabled = !is_current;
+                    });
 
-                        ks.group('btns', 'mt-3', function () {
-                            ks.button('Close', function () {
-                                modal.note = null;
-                                modal.device = null;
-                                ks.close_current_popup();
-                            }, 'outline-secondary mr-2');
+                    ks.set_next_item_class_name('d-block mt-2');
+                    ks.anchor(modal.showTimeline ? 'Hide history###view_history' : 'View history###view_history', '');
+                    ks.is_item_clicked(function (_, ev) {
+                        ev.preventDefault();
 
-                            let disabled = modal.note === (d.notes || '') && modal.shared === d.shared;
-                            ks.button('Save', function () {
-                                let noteOld = d.notes;
-                                let sharedOld = d.shared;
-                                d.notes = modal.note;
-                                d.shared = modal.shared;
+                        if (modal.showTimeline) {
+                            modal.showTimeline = false;
+                            ks.refresh(modal.el);
+                        } else {
+                            GET_ONCE('history', API.Devices(modal.device.id + '/History')).done((history: DeviceHistory[]) => {
+                                for (let i = 0; i < history.length; ++i) {
+                                    let h = history[i];
+                                    let index = h.dateHistory.indexOf('T');
+                                    if (index > 0) { h.dateHistory = h.dateHistory.substring(0, index); }
 
-                                // Device might be the derived DeviceUser class, we don't want those properties set
-                                let entity: any = {};
-                                for (let key in d) { entity[key] = d[key]; }
-                                entity.user = null;
-                                entity.userName = null;
-                                entity.email = null;
-                                // These dates are modified for display purposes, but could unparsable by back-end
-                                entity.lastSeenDate = null;
-                                entity.purchaseDate = null;
+                                    Device.formatPurchaseDate(h);
+                                    Device.formatLastSeenDate(h);
+                                }
+                                modal.showTimeline = true;
+                                modal.history = history;
+                                ks.refresh();
+                            });
+                        }
+                    });
 
-                                ks.close_current_popup();
+                    if (modal.showTimeline) { modal.timeline(); }
 
-                                PUT_JSON(API.Devices(d.id), entity).then(() => {
-                                    contextModal.showSuccess('Changes successfully saved.');
-                                    ks.refresh();
-                                }, fail => {
-                                    d.notes = noteOld;
-                                    d.shared = sharedOld;
-                                    contextModal.showWarning(fail.responseText);
-                                    ks.refresh();
-                                });
-                            }, 'primary' + (disabled ? ' disabled' : '')).disabled = disabled;
-                        });
+                    ks.group('btns', 'mt-3', function () {
+                        ks.button('Close', function () {
+                            modal.showTimeline = false;
+                            modal.note = null;
+                            modal.device = null;
+                            modal.display = null;
+                            ks.close_current_popup();
+                        }, 'outline-secondary mr-2');
+
+                        let disabled = modal.device !== modal.display || modal.note === (d.notes || '') && modal.shared === d.shared;
+                        ks.button('Save', function () {
+                            let noteOld = d.notes;
+                            let sharedOld = d.shared;
+                            d.notes = modal.note;
+                            d.shared = modal.shared;
+
+                            let entity: any = {};
+                            for (let key in d) { entity[key] = d[key]; }
+                            // These dates are modified for display purposes, but could be unparsable by back-end
+                            entity.lastSeenDate = null;
+                            entity.purchaseDate = null;
+
+                            ks.close_current_popup();
+
+                            PUT_JSON(API.Devices(d.id), entity).then(() => {
+                                contextModal.showSuccess('Changes successfully saved.');
+                                ks.refresh();
+                            }, fail => {
+                                d.notes = noteOld;
+                                d.shared = sharedOld;
+                                contextModal.showWarning(fail.responseText);
+                                ks.refresh();
+                            });
+                        }, 'primary' + (disabled ? ' disabled' : '')).disabled = disabled;
                     });
                 });
             }, true, true, true);
+        }
+
+        timeline() {
+            let modal = this;
+            ks.group('timeline', 'timeline d-inline-block text-left px-5 mt-3 mb-1', function () {
+                if (!modal.history) { return; }
+
+                if (!modal.history.length) {
+                    ks.text('No further history', 'm-n3');
+                }
+
+                if (modal.history.length) {
+                    let cls = modal.display !== modal.device ? 'timeline-item cursor-pointer' : 'timeline-item';
+                    ks.group('##most recent', cls, function () {
+                        ks.icon('fa fa-clock-o timeline-icon bg-primary text-light');
+                        ks.group('content', 'timeline-item-content', function () {
+                            ks.text('Most recent', modal.device === modal.display ? 'font-weight-bold text-primary' : 'font-weight-bold');
+                            modal.timeline_diff(modal.history[0], modal.device);
+                            ks.text('Edited by ' + (modal.device.userEditName || '<unknown>'), 'text-muted').style.fontSize = '0.8rem';
+                        });
+                    });
+                    ks.is_item_clicked(function () {
+                        modal.display = modal.device;
+                        modal.note = modal.device.notes;
+                        modal.shared = modal.device.shared;
+                        ks.refresh(modal.el);
+                    });
+                }
+
+                for (let i = 0; i < modal.history.length; ++i) {
+                    let h = modal.history[i];
+                    let p = modal.history[i + 1];
+
+                    let cls = modal.display !== h ? 'timeline-item cursor-pointer' : 'timeline-item';
+                    ks.group('' + h.id, cls, function () {
+                        ks.icon('fa fa-clock-o timeline-icon bg-primary text-light');
+                        ks.group('content', 'timeline-item-content', function () {
+                            ks.text(h.dateHistory, h === modal.display ? 'font-weight-bold text-primary' : 'font-weight-bold');
+                            modal.timeline_diff(p, h);
+                            ks.text('Edited by ' + (h.userEditName || '<unknown>'), 'text-muted').style.fontSize = '0.8rem';
+                        });
+                    });
+                    ks.is_item_clicked(function () {
+                        modal.display = h;
+                        modal.note = h.notes;
+                        modal.shared = h.shared;
+                        ks.refresh(modal.el);
+                    });
+                }
+            });
+        }
+
+        timeline_diff(previous: Device, current: Device) {
+            if (!previous) { return; }
+            let p = previous;
+            let c = current;
+
+            diff('Name: ', p.name, c.name);
+            diff('Type: ', deviceTypes[p.type], deviceTypes[c.type]);
+            diff('User:', p.user?.name, c.user?.name);
+
+            if (p.status !== c.status) {
+                ks.text('Status: ', 'd-inline');
+                ks.text(statusNames[p.status], 'd-inline-block badge badge-' + statusColors[p.status]);
+                ks.text(' → ', 'd-inline');
+                ks.text(statusNames[c.status], 'badge badge-' + statusColors[c.status]);
+            }
+
+            diff('Category: ', deviceCategories[p.category], deviceCategories[c.category]);
+            diff('Cost centre: ', p.costCentre, c.costCentre);
+            diff('Building: ', p.itracsBuilding, c.itracsBuilding);
+            diff('Room: ', p.itracsRoom, c.itracsRoom);
+            diff('Outlet: ', p.itracsOutlet, c.itracsOutlet);
+            diff('Device ID: ', p.deviceId, c.deviceId);
+
+            if (p.shared !== c.shared) {
+                ks.text('Shared device: ', 'd-inline');
+                ks.set_next_item_class_name('disabled d-inline');
+                ks.switch_button('##multi users from', p.shared, ks.no_op).disabled = true;
+                ks.text('→ ', 'd-inline');
+                ks.set_next_item_class_name('disabled d-inline');
+                ks.switch_button('##multi users to', c.shared, ks.no_op).disabled = true;
+            }
+
+            diff('Serial number: ', p.serialNumber, c.serialNumber);
+            diff('MAC address: ', p.macadres, c.macadres);
+            diff('OS: ', osNames[p.os_type], osNames[c.os_type]);
+            diff('OS version: ', p.os_version, c.os_version);
+            diff('Purchase date: ', p.purchaseDate, c.purchaseDate);
+            diff('Last seen: ', p.lastSeenDate, c.lastSeenDate);
+            if (p.notes !== c.notes) {
+                if (c.notes) {
+                    ks.text('Note: ', 'd-inline');
+                    ks.text(c.notes, 'font-italic d-inline clearfix');
+                } else {
+                    ks.text('Note removed');
+                }
+            }
         }
     }
 
@@ -290,5 +440,12 @@ namespace DP {
         if (!text) { return; }
         ks.text(title, 'font-weight-bold');
         ks.text(text, 'mb-3');
+    }
+
+    function diff(label: string, from: string, to: string) {
+        if (from !== to) {
+            ks.text(label, 'd-inline');
+            ks.text(from + ' → ' + to, 'd-inline font-italic clearfix');
+        }
     }
 }

@@ -97,6 +97,22 @@ namespace DevicePortal.Data
                 SecurityQuestions.AddRange(questions);
                 SaveChanges();
             }
+
+            int facultyId = Faculties.First(f => f.Name == "FNWI").Id;
+            var userIds = new string[] { User.ImporterId, User.ImportControllerId, User.IntuneServiceId };
+            foreach (string id in userIds)
+            {
+                if (!Users.Any(u => u.UserName == id))
+                {
+                    Users.Add(new User()
+                    {
+                        UserName = id,
+                        FacultyId = facultyId,
+                        Email = "secure-science@uva.nl",
+                    });
+                    SaveChanges();
+                }
+            }
         }
 
         public void UpdateProperties<T>(T entity, params Expression<Func<T, object>>[] properties) where T : class, IEntity, new()

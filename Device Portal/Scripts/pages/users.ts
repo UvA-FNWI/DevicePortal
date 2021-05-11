@@ -1,8 +1,9 @@
 ﻿namespace DP {
-    class User {
+    export class User {
         userName: string;
         name: string;
         nameLowerCase: string;
+        email: string;
         institute: string;
         instituteLowerCase: string;
         canSecure: boolean;
@@ -49,28 +50,15 @@
                 $.when(
                     GET(API.Users(userId)).then((user) => {
                         state.user = user;
-                        ks.refresh();
                     }, (fail) => {
                         if (fail.status === 404) { contextModal.showWarning("User not found"); }
                         ks.navigate_to('Users', pages[Page.Users])
                     }),
-                    GET(API.Devices(`User/${userId}`)).done(devices => {
+                    GET(API.Devices(`User/${userId}`)).done((devices: Device[]) => {
                         state.devices = devices;
                         for (let d of devices) {
-                            if (d.purchaseDate) {
-                                let index = d.purchaseDate.indexOf('T');
-                                if (index > 0) { d.purchaseDate = d.purchaseDate.substring(0, index); }
-                            }
-
-                            if (d.lastSeenDate) {
-                                let index = d.lastSeenDate.indexOf('T');
-                                if (index > 0) {
-                                    if (d.lastSeenDate.indexOf('0001-01-01') === 0) { d.lastSeenDate = ''; }
-                                    else { d.lastSeenDate = d.lastSeenDate.substring(0, index); }
-                                }
-                                else { d.lastSeenDate = ''; }
-                            }
-                            if (!d.lastSeenDate) { d.lastSeenDate = 'Never'; }
+                            Device.formatPurchaseDate(d);
+                            Device.formatLastSeenDate(d);
                         }
                     })).always(function () { ks.refresh(); });
             }

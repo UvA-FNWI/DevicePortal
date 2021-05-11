@@ -76,6 +76,31 @@
         notes: string;
         disowned: boolean;
         shared: boolean;
+        user: User;
+        userEditId: string;
+        userEditName: string;
+
+        static formatPurchaseDate(d: Device) {
+            if (d.purchaseDate) {
+                let index = d.purchaseDate.indexOf('T');
+                if (index > 0) { d.purchaseDate = d.purchaseDate.substring(0, index); }
+            }
+        }
+
+        static formatLastSeenDate(d: Device) {
+            if (d.lastSeenDate) {
+                let index = d.lastSeenDate.indexOf('T');
+                if (index > 0) {
+                    if (d.lastSeenDate.indexOf('0001-01-01') === 0) { d.lastSeenDate = ''; }
+                    else { d.lastSeenDate = d.lastSeenDate.substring(0, index); }
+                }
+                else { d.lastSeenDate = ''; }
+            }
+            if (!d.lastSeenDate) { d.lastSeenDate = 'Never'; }
+        }
+    }
+    export class DeviceHistory extends Device {
+        dateHistory: string;
     }
     export enum DeviceOrigin {
         DataExport,

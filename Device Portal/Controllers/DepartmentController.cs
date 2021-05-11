@@ -43,35 +43,19 @@ namespace DevicePortal.Controllers
             var department = await db.Departments.FirstAsync(d => d.Id == id);
 
             var devices = await db.Devices
+                .Include(d => d.User)
                 .Where(d => d.DepartmentId == id).Active()
-                .Select(d => new 
-                {
-                    d.DeviceId,
-                    d.Id,
-                    d.Name,
-                    d.Origin,
-                    os_type = d.OS_Type,
-                    os_version = d.OS_Version,
-                    d.SerialNumber,
-                    d.Status,
-                    d.StatusEffectiveDate,
-                    d.Type,
-                    d.Category,
-                    User = d.User.Name,
-                    d.UserName,
-                    d.User.Email,
-                    Notes = d.Notes,
-                    d.ItracsBuilding,
-                    d.ItracsRoom,
-                    d.ItracsOutlet,
-                    d.Macadres,
-                    d.CostCentre,
-                    d.LastSeenDate,
-                    d.PurchaseDate,
-                    d.Disowned,
-                    d.Shared,
-                })
                 .ToArrayAsync();
+            var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId).ToHashSet();
+            var editNameMap = await db.Users
+                .Where(u => userEditIds.Contains(u.UserName))
+                .Select(u => new { u.UserName, u.Name })
+                .ToDictionaryAsync(u => u.UserName, u => u.Name);
+            foreach (var d in devices)
+            {
+                d.UserEditName = (d.UserEditId == null || !editNameMap.TryGetValue(d.UserEditId, out var name)) ? null : name;
+            }
+
             var users = await db.Users
                .Select(u => new
                {
