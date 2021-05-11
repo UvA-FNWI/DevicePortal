@@ -82,7 +82,7 @@ namespace DevicePortal
                             DepartmentId = departmentIds[0],
                             DeviceId = intuneDevice.DeviceName,
                             Name = $"{intuneDevice.Manufacturer} {intuneDevice.Model}".Trim(),
-                            SerialNumber = intuneDevice.SerialNumber,
+                            SerialNumber = intuneDevice.SerialNumber ?? "",
                             Origin = DeviceOrigin.Intune,
                             Category = Data.DeviceCategory.BYOD,
                             OS_Type = intuneDevice.OperatingSystem switch
@@ -94,7 +94,7 @@ namespace DevicePortal
                                 "OS X" => OS_Type.MacOS,
                                 _ => 0,
                             },
-                            OS_Version = intuneDevice.OsVersion,
+                            OS_Version = intuneDevice.OsVersion ?? "",
                             UserName = userName,
                             Type = intuneDevice.OperatingSystem switch
                             {
@@ -105,6 +105,12 @@ namespace DevicePortal
                                 "OS X" => DeviceType.Laptop,
                                 _ => 0,
                             },
+                            Notes = "",
+                            Macadres = "",
+                            CostCentre = "",
+                            ItracsRoom = "",
+                            ItracsOutlet = "",
+                            ItracsBuilding = "",
                         };
                         _context.Add(device);
                     }
@@ -217,7 +223,7 @@ namespace DevicePortal
                                     {
                                         DeviceId = intuneDevice.DeviceName,
                                         Name = $"{intuneDevice.Manufacturer} {intuneDevice.Model}".Trim(),
-                                        SerialNumber = intuneDevice.SerialNumber,
+                                        SerialNumber = intuneDevice.SerialNumber ?? "",
                                         Origin = DeviceOrigin.Intune,
                                         Category = Data.DeviceCategory.Other,
                                         OS_Type = intuneDevice.OperatingSystem switch
@@ -229,7 +235,7 @@ namespace DevicePortal
                                             "OS X" => OS_Type.MacOS,
                                             _ => 0,
                                         },
-                                        OS_Version = intuneDevice.OsVersion,
+                                        OS_Version = intuneDevice.OsVersion ?? "",
                                         UserName = user.UserName,
                                         Type = intuneDevice.OperatingSystem switch
                                         {
@@ -243,6 +249,12 @@ namespace DevicePortal
                                         DepartmentId = user.DepartmentId.Value,
                                         Status = DeviceStatus.Unsecure,
                                         StatusEffectiveDate = now,
+                                        Notes = "",
+                                        Macadres = "",
+                                        CostCentre = "",
+                                        ItracsRoom = "",
+                                        ItracsOutlet = "",
+                                        ItracsBuilding = "",
                                     };
                                     devicesToAdd.Add(device);
                                 }

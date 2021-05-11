@@ -98,21 +98,22 @@ namespace DevicePortal.Controllers
                     Name = $"{line[iBrand]} {line[iBrandType]}".Trim(),
                     DeviceId = line[iDeviceId],
                     UserName = string.IsNullOrEmpty(line[iUserName]) ? null : line[iUserName],
-                    SerialNumber = line[iSerial],
+                    SerialNumber = line[iSerial] ?? "",
                     Origin = DeviceOrigin.DataExport,
                     Status = DeviceStatus.Unsecure,
                     StatusEffectiveDate = now,
                     Department = department,
-                    CostCentre = line[iCostCentre],
+                    CostCentre = line[iCostCentre] ?? "",
                     ItracsBuilding = !string.IsNullOrEmpty(line[iTracsBuilding]) && 
                                      buildingNameMap.TryGetValue(line[iTracsBuilding], out string name) ?
-                                     name : line[iTracsBuilding],
-                    ItracsOutlet = line[iTracsOutlet],
-                    ItracsRoom = line[iTracsRoom],
+                                     name : (line[iTracsBuilding] ?? ""),
+                    ItracsOutlet = line[iTracsOutlet] ?? "",
+                    ItracsRoom = line[iTracsRoom] ?? "",
                     LastSeenDate = !string.IsNullOrEmpty(line[iLastSeenDate]) ? DateTime.Parse(line[iLastSeenDate]) : default,
-                    Macadres = line[iMacadres],
-                    Notes = line[iNotes],
+                    Macadres = line[iMacadres] ?? "",
+                    Notes = line[iNotes] ?? "",
                     PurchaseDate = !string.IsNullOrEmpty(line[iPurchasedDate]) ? DateTime.Parse(line[iPurchasedDate]) : default,
+                    OS_Version = "",
                 };
                 activeDeviceSet.Add(device.DeviceId.ToLower());
 
