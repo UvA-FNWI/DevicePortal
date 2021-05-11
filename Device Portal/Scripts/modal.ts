@@ -348,7 +348,8 @@ namespace DP {
                         ks.group('content', 'timeline-item-content', function () {
                             ks.text(h.dateHistory, h === modal.display ? 'font-weight-bold text-primary' : 'font-weight-bold');
                             modal.timeline_diff(p, h);
-                            ks.text('Edited by ' + (h.userEditName || '<unknown>'), 'text-muted').style.fontSize = '0.8rem';
+                            let label = (i + 1) === modal.history.length ? 'Added by ' : 'Edited by ';
+                            ks.text(label + (h.userEditName || '<unknown>'), 'text-muted').style.fontSize = '0.8rem';
                         });
                     });
                     ks.is_item_clicked(function () {
