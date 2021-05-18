@@ -257,8 +257,7 @@ namespace DP {
                             GET_ONCE('history', API.Devices(modal.device.id + '/History')).done((history: DeviceHistory[]) => {
                                 for (let i = 0; i < history.length; ++i) {
                                     let h = history[i];
-                                    let index = h.dateHistory.indexOf('T');
-                                    if (index > 0) { h.dateHistory = h.dateHistory.substring(0, index); }
+                                    h.dateHistory = truncTimeOffDate(h.dateHistory);
 
                                     Device.formatPurchaseDate(h);
                                     Device.formatLastSeenDate(h);
@@ -314,29 +313,24 @@ namespace DP {
         timeline() {
             let modal = this;
             ks.group('timeline', 'timeline d-inline-block text-left px-5 mt-3 mb-1', function () {
+                ks.group('##most recent', modal.display !== modal.device ? 'timeline-item cursor-pointer' : 'timeline-item', function () {
+                    ks.icon('fa fa-clock-o timeline-icon bg-primary text-light');
+                    ks.group('content', 'timeline-item-content', function () {
+                        let title = modal.history?.length ? 'Most recent' : truncTimeOffDate(modal.device.dateEdit);
+                        ks.text(title, modal.device === modal.display ? 'font-weight-bold text-primary' : 'font-weight-bold');
+                        modal.timeline_diff(modal.history?.length ? modal.device : modal.history[0], modal.device);
+                        let label = !modal.history?.length ? 'Added by ' : 'Edited by ';
+                        ks.text(label + (modal.device.userEditName || '<unknown>'), 'text-muted').style.fontSize = '0.8rem';
+                    });
+                });
+                ks.is_item_clicked(function () {
+                    modal.display = modal.device;
+                    modal.note = modal.device.notes;
+                    modal.shared = modal.device.shared;
+                    ks.refresh(modal.el);
+                });
+
                 if (!modal.history) { return; }
-
-                if (!modal.history.length) {
-                    ks.text('No further history', 'm-n3');
-                }
-
-                if (modal.history.length) {
-                    let cls = modal.display !== modal.device ? 'timeline-item cursor-pointer' : 'timeline-item';
-                    ks.group('##most recent', cls, function () {
-                        ks.icon('fa fa-clock-o timeline-icon bg-primary text-light');
-                        ks.group('content', 'timeline-item-content', function () {
-                            ks.text('Most recent', modal.device === modal.display ? 'font-weight-bold text-primary' : 'font-weight-bold');
-                            modal.timeline_diff(modal.history[0], modal.device);
-                            ks.text('Edited by ' + (modal.device.userEditName || '<unknown>'), 'text-muted').style.fontSize = '0.8rem';
-                        });
-                    });
-                    ks.is_item_clicked(function () {
-                        modal.display = modal.device;
-                        modal.note = modal.device.notes;
-                        modal.shared = modal.device.shared;
-                        ks.refresh(modal.el);
-                    });
-                }
 
                 for (let i = 0; i < modal.history.length; ++i) {
                     let h = modal.history[i];

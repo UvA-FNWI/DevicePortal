@@ -79,6 +79,7 @@
         user: User;
         userEditId: string;
         userEditName: string;
+        dateEdit: string;
 
         static formatPurchaseDate(d: Device) {
             if (d.purchaseDate) {
@@ -130,6 +131,14 @@
     statusColors[DeviceStatus.Submitted] = 'info';
     statusColors[DeviceStatus.Unsecure] = 'warning';
     statusColors[DeviceStatus.Lost] = 'danger';
+
+    export function truncTimeOffDate(date: string) {
+        if (date) {
+            let index = date.indexOf('T');
+            return index > 0 ? date.substring(0, index) : date;
+        }
+        return date;
+    }
 
     export function page_device(parameters: string) {
         let state = ks.local_persist('page_device', {
