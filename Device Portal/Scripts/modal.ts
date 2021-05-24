@@ -134,19 +134,57 @@ class NoteModal {
 }
 
 namespace DP {
+    class EditDevice {
+        shared = false;
+        notes = '';
+        itracsBuilding = '';
+        itracsRoom = '';
+        itracsOutlet = '';
+
+        static equal(e: EditDevice, d: Device): boolean {
+            for (let key in e) {
+                let ve = e[key];
+                let vd = d[key];
+                if (typeof (ve) === 'string') {
+                    if (ve !== (vd || '')) { return false; }
+                } else {
+                    if (ve !== vd) { return false; }
+                }
+            }
+            return true;
+        }
+    }
+
     export class DeviceModal {
         id = '####device_modal';
-        note = '';
-        shared = false;
         showTimeline = false;
+        edit = new EditDevice();
         device: Device;
         display: Device;
         history: DeviceHistory[];
         el: HTMLElement;
+        buildings = [
+            'BG1',
+            'REC-G',
+            'NIKHEF',
+            'NIKHEF F',
+            'O2 VU',
+            'SP 500 (F)',
+            'SP 507 (Kassen)',
+            'SP 508 (G)',
+            'SP 608B (Startup Village)',
+            'SP 700 (E)',
+            'SP 904',
+            'SP 904 (A)',
+            'SP 904 (ABCD)',
+        ];
+        comboId = 0;
 
         show(device: Device) {
-            this.note = device.notes || '';
-            this.shared = device.shared;
+            for (let key in this.edit) {
+                let v = device[key];
+                this.edit[key] = v != null ? v : '';
+            }
             this.device = device;
             this.display = device;
             this.history = null;
@@ -190,8 +228,10 @@ namespace DP {
                             ks.is_item_clicked(function (_, ev) {
                                 ev.preventDefault();
                                 modal.display = modal.device;
-                                modal.note = modal.device.notes;
-                                modal.shared = modal.device.shared;
+                                for (let key in modal.edit) {
+                                    let v = modal.device[key];
+                                    modal.edit[key] = v != null ? v : '';
+                                }
                                 ks.refresh(modal.el);
                             });
                         });
@@ -209,9 +249,56 @@ namespace DP {
 
                             detail('Category', deviceCategories[d.category]);
                             detail('Cost centre', d.costCentre);
-                            detail('Building', d.itracsBuilding);
-                            detail('Room', d.itracsRoom);
-                            detail('Outlet', d.itracsOutlet);
+
+                            if (is_current) {
+                                ks.text('Building', 'font-weight-bold');
+                                ks.set_next_item_class_name('custom-select-sm mb-2');
+                                // make sure we recreate combo every refresh in order to 
+                                // clear selections from previously opened modals
+                                ks.combo('' + (++modal.comboId), function () {
+                                    if (!modal.buildings.some(b => b === modal.display.itracsBuilding)) {
+                                        ks.selectable(modal.display.itracsBuilding || '##empty',
+                                            modal.edit.itracsBuilding === modal.display.itracsBuilding);
+                                        ks.is_item_clicked(function () {
+                                            modal.edit.itracsBuilding = modal.display.itracsBuilding || '';
+                                            ks.refresh(modal.el);
+                                        });
+                                    }
+
+                                    for (let i = 0; i < modal.buildings.length; ++i) {
+                                        let building = modal.buildings[i];
+                                        ks.selectable(building, building === modal.edit.itracsBuilding);
+                                        ks.is_item_clicked(function () {
+                                            modal.edit.itracsBuilding = building;
+                                            ks.refresh(modal.el);
+                                        });
+                                    }
+                                }).style.width = '200px';
+                            } else {
+                                detail('Building', d.itracsBuilding);
+                            }
+
+                            if (is_current) {
+                                ks.text('Room', 'font-weight-bold');
+                                ks.set_next_item_class_name('mb-2 text-center form-control-sm d-inline-block');
+                                ks.input_text('Room', modal.edit.itracsRoom, 'Room', function (val) {
+                                    modal.edit.itracsRoom = val;
+                                    ks.refresh(modal.el);
+                                }).style.width = '200px';
+                            } else {
+                                detail('Room', modal.display.itracsRoom);
+                            }
+
+                            if (is_current) {
+                                ks.text('Outlet', 'font-weight-bold');
+                                ks.set_next_item_class_name('mb-2 text-center form-control-sm d-inline-block');
+                                ks.input_text('Outlet', modal.edit.itracsOutlet, 'Outlet', function (val) {
+                                    modal.edit.itracsOutlet = val;
+                                    ks.refresh(modal.el);
+                                }).style.width = '200px';
+                            } else {
+                                detail('Outlet', modal.display.itracsOutlet);
+                            }
                         });
 
                         ks.column('right', 6, function () {
@@ -219,8 +306,8 @@ namespace DP {
 
                             ks.text('Shared device', 'font-weight-bold');
                             ks.set_next_item_class_name('mb-3' + (is_current ? '' : ' disabled'));
-                            ks.switch_button('Multiple users', modal.shared, function (checked) {
-                                modal.shared = checked;
+                            ks.switch_button('Multiple users', modal.edit.shared, function (checked) {
+                                modal.edit.shared = checked;
                                 ks.refresh(modal.el);
                             }).disabled = !is_current;
 
@@ -238,9 +325,9 @@ namespace DP {
                     ks.group('note', 'px-5', function () {
                         ks.text('Note', 'font-weight-bold py-1');
                         if (!is_current) { ks.set_next_item_class_name('disabled'); }
-                        ks.input_text_area('note', modal.note,
+                        ks.input_text_area('note', modal.edit.notes,
                             'Add a note to this device. This note is visible to the device owner.', function (str) {
-                                modal.note = str;
+                                modal.edit.notes = str;
                                 ks.refresh(modal.el);
                         }).disabled = !is_current;
                     });
@@ -273,19 +360,16 @@ namespace DP {
 
                     ks.group('btns', 'mt-3', function () {
                         ks.button('Close', function () {
-                            modal.showTimeline = false;
-                            modal.note = null;
-                            modal.device = null;
-                            modal.display = null;
                             ks.close_current_popup();
                         }, 'outline-secondary mr-2');
 
-                        let disabled = modal.device !== modal.display || modal.note === (d.notes || '') && modal.shared === d.shared;
+                        let disabled = modal.device !== modal.display || EditDevice.equal(modal.edit, d);
                         ks.button('Save', function () {
-                            let noteOld = d.notes;
-                            let sharedOld = d.shared;
-                            d.notes = modal.note;
-                            d.shared = modal.shared;
+                            let prev = new EditDevice();
+                            for (let key in modal.edit) {
+                                prev[key] = d[key];
+                                d[key] = modal.edit[key];
+                            }
 
                             let entity: any = {};
                             for (let key in d) { entity[key] = d[key]; }
@@ -299,8 +383,7 @@ namespace DP {
                                 contextModal.showSuccess('Changes successfully saved.');
                                 ks.refresh();
                             }, fail => {
-                                d.notes = noteOld;
-                                d.shared = sharedOld;
+                                for (let key in prev) { d[key] = prev[key]; }
                                 contextModal.showWarning(fail.responseText);
                                 ks.refresh();
                             });
@@ -316,17 +399,20 @@ namespace DP {
                 ks.group('##most recent', modal.display !== modal.device ? 'timeline-item cursor-pointer' : 'timeline-item', function () {
                     ks.icon('fa fa-clock-o timeline-icon bg-primary text-light');
                     ks.group('content', 'timeline-item-content', function () {
-                        let title = modal.history?.length ? 'Most recent' : truncTimeOffDate(modal.device.dateEdit);
+                        let date = truncTimeOffDate(modal.device.dateEdit);
+                        let title = modal.history?.length ? 'Most recent (' + date + ')': date;
                         ks.text(title, modal.device === modal.display ? 'font-weight-bold text-primary' : 'font-weight-bold');
-                        modal.timeline_diff(modal.history?.length ? modal.device : modal.history[0], modal.device);
+                        modal.timeline_diff(modal.history?.length ? modal.history[0] : modal.device, modal.device);
                         let label = !modal.history?.length ? 'Added by ' : 'Edited by ';
                         ks.text(label + (modal.device.userEditName || '<unknown>'), 'text-muted').style.fontSize = '0.8rem';
                     });
                 });
                 ks.is_item_clicked(function () {
                     modal.display = modal.device;
-                    modal.note = modal.device.notes;
-                    modal.shared = modal.device.shared;
+                    for (let key in modal.edit) {
+                        let v = modal.device[key];
+                        modal.edit[key] = v != null ? v : '';
+                    }
                     ks.refresh(modal.el);
                 });
 
@@ -348,8 +434,10 @@ namespace DP {
                     });
                     ks.is_item_clicked(function () {
                         modal.display = h;
-                        modal.note = h.notes;
-                        modal.shared = h.shared;
+                        for (let key in modal.edit) {
+                            let v = h[key];
+                            modal.edit[key] = v != null ? v : '';
+                        }
                         ks.refresh(modal.el);
                     });
                 }
@@ -438,9 +526,12 @@ namespace DP {
     }
 
     function diff(label: string, from: string, to: string) {
+        if (from === null && to === '') { return; }
+
         if (from !== to) {
             ks.text(label, 'd-inline');
-            ks.text(from + ' → ' + to, 'd-inline font-italic clearfix');
+            let text = from == null ? ' → ' + to : from + ' → ' + to;
+            ks.text(text, 'd-inline font-italic clearfix');
         }
     }
 }

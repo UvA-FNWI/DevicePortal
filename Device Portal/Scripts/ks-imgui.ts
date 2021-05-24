@@ -218,7 +218,7 @@ namespace ks {
                     for (let i = 0; i < el.children.length; ++i) {
                         let child = el.children[i];
                         if (child._ks_info && child._ks_info.option_on_click && child.value === value) {
-                            child._ks_info.option_on_click();
+                            child._ks_info.option_on_click(ev);
                             break;
                         }
                     }

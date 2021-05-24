@@ -127,7 +127,8 @@ namespace DevicePortal.Controllers
                                               d => d.StatusEffectiveDate, d => d.UserEditId, d => d.DateEdit);
             if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManage))
             {
-                _context.UpdateProperties(device, d => d.Notes, d => d.Shared);
+                _context.UpdateProperties(device, d => d.Notes, d => d.Shared, d => d.ItracsBuilding, d => d.ItracsRoom,
+                    d => d.ItracsOutlet);
             }
             
             try
