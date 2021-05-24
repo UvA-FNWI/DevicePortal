@@ -58,6 +58,15 @@ namespace DevicePortal.Importer
                 .Where(d => d.DeviceId != null) // Note(Joshua): DeviceId is null with Origin.User
                 .ToArray()
                 .ToDictionary(d => d.DeviceId.ToLower());
+            // Note: if a user has made any edit, we no longer update the device through this import 
+            HashSet<int> ignoreSet = portalContext.DeviceHistories
+                .Where(h => h.UserEditId != User.ImporterId && h.UserEditId != User.IntuneServiceId)
+                .Select(h => h.OriginalDeviceId)
+                .ToArray().ToHashSet();
+            ignoreSet.UnionWith(portalContext.Devices
+                .Where(d => d.UserEditId != User.ImporterId && d.UserEditId != User.IntuneServiceId)
+                .Select(d => d.Id)
+                .ToArray());
             List<Device> devicesToAdd = new List<Device>();
             List<Device> devicesToUpdate = new List<Device>();
             var deviceHistoriesToAdd = new List<DeviceHistory>();
@@ -151,7 +160,8 @@ namespace DevicePortal.Importer
 
                 if (deviceMap.TryGetValue(device.DeviceId.ToLower(), out Device existing))
                 {
-                    if (existing.UserName != device.UserName ||
+                    if (!ignoreSet.Contains(existing.Id) &&
+                        (existing.UserName != device.UserName ||
                         existing.SerialNumber != device.SerialNumber ||
                         existing.Category != device.Category ||
                         existing.CostCentre != device.CostCentre ||
@@ -164,7 +174,7 @@ namespace DevicePortal.Importer
                         existing.Name != device.Name ||
                         existing.PurchaseDate != device.PurchaseDate ||
                         existing.Notes != device.Notes ||
-                        existing.Status == DeviceStatus.Disposed)
+                        existing.Status == DeviceStatus.Disposed))
                     {
                         deviceHistoriesToAdd.Add(new DeviceHistory(existing));
 
