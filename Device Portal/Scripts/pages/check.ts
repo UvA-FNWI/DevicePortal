@@ -156,18 +156,13 @@
                 if (q.recommendations?.length) {
                     let g = ks.group('recommendation', 'text-muted mb-1', ks.no_op);
                     if (state.refresh_recommendations) {
-                        while (g.children.length) { g.removeChild(g.children[0]); }
-
-                        let div = document.createElement("DIV");
                         let html = '';
                         for (let k = 0; k < q.recommendations.length; ++k) {
                             if (state.device.os_type & q.recommendations[k].os_type) {
                                 html += q.recommendations[k].content;
                             }
                         }
-                        div.innerHTML = html;
-                        g.appendChild(div);
-                        ks.mark_persist(div);
+                        g.innerHTML = html;
                     }
                 }
 

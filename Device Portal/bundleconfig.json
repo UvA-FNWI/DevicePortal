@@ -7,8 +7,9 @@
   },
   {
     "outputFileName": "wwwroot/js/site.min.js",
-    "inputFiles": [      
+    "inputFiles": [
       "wwwroot/js/ks-imgui.js",
+      "wwwroot/js/autocomplete.js",
       "wwwroot/js/extensions/*.js",
       "wwwroot/js/http.js",
       "wwwroot/js/modal.js",

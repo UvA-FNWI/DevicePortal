@@ -135,6 +135,7 @@ class NoteModal {
 
 namespace DP {
     class EditDevice {
+        userName = '';
         shared = false;
         notes = '';
         itracsBuilding = '';
@@ -159,9 +160,11 @@ namespace DP {
         id = '####device_modal';
         showTimeline = false;
         edit = new EditDevice();
+        user: string;
         device: Device;
         display: Device;
         history: DeviceHistory[];
+        users: User[] = [];
         el: HTMLElement;
         buildings = [
             'BG1',
@@ -185,12 +188,21 @@ namespace DP {
                 let v = device[key];
                 this.edit[key] = v != null ? v : '';
             }
+            this.user = device.user.name;
             this.device = device;
             this.display = device;
             this.history = null;
             this.showTimeline = false;
             ks.refresh(this.el);
             ks.open_popup(this.id);
+
+            GET_ONCE('user list', API.Users()).done((users: User[]) => {
+                for (let i = 0; i < users.length; ++i) { 
+                    users[i].name = users[i].name || '';
+                }
+                this.users = users;
+                ks.refresh(this.el);
+            });
         }
 
         run() {
@@ -240,7 +252,30 @@ namespace DP {
                     ks.row('row', function () {
                         ks.column('left', 6, function () {
                             detail('Type', deviceTypes[d.type]);
-                            detail('User', d.user?.name);
+
+                            if (is_current) {
+                                ks.text('User', 'font-weight-bold');
+
+                                ks.set_next_item_class_name('mb-2 text-center form-control-sm d-inline-block');
+                                let input = ks.input_text('user', modal.user, 'User', function (val) {
+                                    modal.user = val;
+                                });
+                                input.style.width = '200px';
+
+                                $(input).autocomplete({
+                                    treshold: 1,
+                                    source: modal.users,
+                                    label: 'name',
+                                    value: 'userName',
+                                    onSelectItem: function (item) {
+                                        modal.user = item.label;
+                                        modal.edit.userName = item.value;
+                                        ks.refresh(modal.el);
+                                    }
+                                });
+                            } else {
+                                detail('User', d.user?.name);
+                            }
 
                             if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
                                 ks.text('Status', 'font-weight-bold');
@@ -409,6 +444,7 @@ namespace DP {
                 });
                 ks.is_item_clicked(function () {
                     modal.display = modal.device;
+                    modal.user = modal.device.user.name;
                     for (let key in modal.edit) {
                         let v = modal.device[key];
                         modal.edit[key] = v != null ? v : '';

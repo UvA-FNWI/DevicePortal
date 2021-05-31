@@ -76,6 +76,7 @@
         notes: string;
         disowned: boolean;
         shared: boolean;
+        userName: string; // user id
         user: User;
         userEditId: string;
         userEditName: string;
