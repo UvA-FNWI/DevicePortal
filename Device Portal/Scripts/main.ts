@@ -24,6 +24,10 @@
         '/',
     ];
 
+    export interface DeviceTableSettings {
+        columns: { label: string, active: boolean }[];
+    }
+
     export let iPage = Page.Home;
     export let confirmModal = new ConfirmModal();
     export let contextModal = new ContextualModal();
@@ -98,6 +102,25 @@
         noteModal.run();
         confirmModal.run();
         contextModal.run();
+
+        {
+            let settings = JSON.parse(window.localStorage.getItem('device_table_cols'));
+            ks.local_persist('####device_table_cols', settings || {
+                columns: [
+                    { label: 'Name', active: true },
+                    { label: 'Device ID', active: true },
+                    { label: 'Serial number', active: true },
+                    { label: 'Type', active: true },
+                    { label: 'Category', active: true },
+                    { label: 'OS', active: true },
+                    { label: 'Cost centre', active: true },
+                    { label: 'Building', active: true },
+                    { label: 'Room', active: true },
+                    { label: 'Outlet', active: true },
+                ]
+            });
+            ks.local_persist('####table_settings_workaround', { counter: 0 });
+        }
 
         let iPagePrev = iPage;
         let pathname = window.location.pathname.toLowerCase();
@@ -265,9 +288,10 @@
             ks.set_next_item_class_name('mb-3');
             ks.column('devices', 12, function () {
                 ks.set_next_item_class_name('bg-white border');
-                ks.table('devices', function () {
+                // TODO: remove on fix
+                let workaround: { counter: number } = ks.local_persist('####table_settings_workaround');
+                ks.table('devices##' + workaround.counter, function () {
                     let flags = DTF.EditDevice;
-                    if (!state.devices.some(d => d.notes)) { flags |= DTF.HideNoteColumn; }
                     if (user.can_secure) { flags |= DTF.CanSecure; }
 
                     device_table_head(flags);
@@ -309,28 +333,40 @@
         CanSecure = 1 << 0,
         EditDevice = 1 << 1,
         EditNote = 1 << 2,
-        HideNoteColumn = 1 << 3,
-        ShowSharedColumn = 1 << 4,
+        ShowSharedColumn = 1 << 3,
     }
 
     // EditNote flag has no effect on headers
     export function device_table_head(flags: DTF) {
         ks.table_head(function () {
+            let settings: DeviceTableSettings = ks.local_persist('####device_table_cols');
             ks.table_row(function () {
-                ks.table_cell('Name');
-                ks.table_cell('Device ID');
-                ks.table_cell('Serial number');
-                ks.table_cell('Type');
-                ks.table_cell('Category');
-                ks.table_cell('OS');
-                ks.table_cell('Cost centre');
-                ks.table_cell('Building');
-                ks.table_cell('Room');
-                ks.table_cell('Outlet');
+                for (let i = 0; i < settings.columns.length; ++i) {
+                    let c = settings.columns[i];
+                    if (c.active) { ks.table_cell(c.label); }
+                }
+
                 ks.table_cell('Status').style.width = '1%';
                 if (flags & DTF.CanSecure) { ks.table_cell('').style.width = '1%'; }
                 if (flags & DTF.EditDevice) { ks.table_cell('').style.width = '1%'; }
-                if (!(flags & DTF.HideNoteColumn)) { ks.table_cell('').style.width = '1%'; }
+                ks.table_cell(function () {
+                    ks.group('dropdown', 'dropdown', function () {
+                        ks.set_next_item_class_name('dropdown-toggle btn-sm');
+                        ks.button('##btn', ks.no_op, 'outline-secondary').setAttribute('data-toggle', 'dropdown');
+                        ks.group('menu', 'dropdown-menu dropdown-menu-right', function () {
+                            for (let i = 0; i < settings.columns.length; ++i) {
+                                let c = settings.columns[i];
+                                dropdown_item(c.label, c.active, function () {
+                                    c.active = !c.active;
+                                    // TODO: remove when fixed
+                                    (<any>ks.local_persist('####table_settings_workaround')).counter++;
+                                    window.localStorage.setItem('device_table_cols', JSON.stringify(settings));
+                                    ks.refresh();
+                                });
+                            }
+                        });
+                    });
+                }).style.width = '1%';
             });
         });
     }
@@ -361,7 +397,10 @@
 
         // Note: adding/removing cells here requires the same change in table headers wherever this method is called
         // Usually this is covered by the device_table_head(), but e.g. the institute page has custom headers.
-        ks.table_row(function () {                
+        ks.table_row(function () {
+            let settings: DeviceTableSettings = ks.local_persist('####device_table_cols');
+            let cols = settings.columns;
+
             if (flags & DTF.ShowSharedColumn) {
                 if (d.shared) {
                     ks.table_cell(function () {
@@ -370,21 +409,23 @@
                 } else { ks.table_cell(''); }
             }
             if (user) { ks.table_cell(user); }
-            ks.table_cell(d.name);
-            ks.table_cell(d.deviceId);
-            ks.table_cell(d.serialNumber);
-            ks.table_cell(function () {
-                let i = ks.icon(icon);
-                i.style.width = '18px';
-                i.style.fontSize = iconSize;
-                ks.text(' ' + (deviceTypes[d.type] || ""), 'd-inline ml-1');
-            });
-            ks.table_cell(deviceCategories[d.category]);
-            ks.table_cell(osNames[d.os_type]);
-            ks.table_cell(d.costCentre);
-            ks.table_cell(d.itracsBuilding);
-            ks.table_cell(d.itracsRoom);
-            ks.table_cell(d.itracsOutlet);
+            if (cols[0].active) { ks.table_cell(d.name); }
+            if (cols[1].active) { ks.table_cell(d.deviceId); }
+            if (cols[2].active) { ks.table_cell(d.serialNumber); }
+            if (cols[3].active) {
+                ks.table_cell(function () {
+                    let i = ks.icon(icon);
+                    i.style.width = '18px';
+                    i.style.fontSize = iconSize;
+                    ks.text(' ' + (deviceTypes[d.type] || ""), 'd-inline ml-1');
+                });
+            }
+            if (cols[4].active) { ks.table_cell(deviceCategories[d.category]); }
+            if (cols[5].active) { ks.table_cell(osNames[d.os_type]); }
+            if (cols[6].active) { ks.table_cell(d.costCentre); }
+            if (cols[7].active) { ks.table_cell(d.itracsBuilding); }
+            if (cols[8].active) { ks.table_cell(d.itracsRoom); }
+            if (cols[9].active) { ks.table_cell(d.itracsOutlet); }
             ks.table_cell(function () {
                 if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
                     ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);
@@ -414,21 +455,18 @@
                 });
             }
 
-            if (!(flags & DTF.HideNoteColumn)) {
-                let showIcon = (flags & DTF.EditNote) || d.notes;
-
-                if (showIcon) { ks.set_next_item_class_name('cursor-pointer'); }
-                ks.table_cell(function () {
-                    if (showIcon) {
-                        ks.icon(d.notes ? 'fa fa-sticky-note text-warning' : 'fa fa-sticky-note-o text-muted');
-                    }
-                });
-                if (showIcon && !(flags & DTF.EditNote)) {
-                    ks.is_item_clicked(function () {
-                        noteModal.show(d.notes);
-                        return false;
-                    });
+            let showIcon = (flags & DTF.EditNote) || d.notes;
+            if (showIcon) { ks.set_next_item_class_name('cursor-pointer'); }
+            ks.table_cell(function () {
+                if (showIcon) {
+                    ks.icon(d.notes ? 'fa fa-sticky-note text-warning' : 'fa fa-sticky-note-o text-muted');
                 }
+            });
+            if (showIcon && !(flags & DTF.EditNote)) {
+                ks.is_item_clicked(function () {
+                    noteModal.show(d.notes);
+                    return false;
+                });
             }
         });
     }
@@ -620,6 +658,21 @@
             });
         });
     }
+
+    export function dropdown_item(id_label, active: boolean, proc: Function) {
+        let parent = ks.get_current_parent();
+        ks.set_next_item_class_name('dropdown-item d-flex align-items-center');
+        ks.button_container(id_label, function () {
+            ks.icon(active ? 'fa fa-check mr-2' : 'mr-2').style.width = '16px';
+            ks.text(ks.label_extract(id_label));
+        });
+        ks.is_item_clicked(function (_, ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            proc.call(parent, _, ev);
+        });
+    }
+
     let collator = new Intl.Collator('en', { sensitivity: 'base' });
     export function sort_string(a: string, b: string) {
         return collator.compare(a, b);

@@ -180,9 +180,11 @@
 
         let range = paginator_range('paginator', count);
 
+        let workaround: { counter: number } = ks.local_persist('####table_settings_workaround');
         ks.set_next_item_class_name('bg-white border');
-        ks.table('devices', function () {
+        ks.table('devices##' + workaround.counter, function () {
             ks.table_head(function () {
+                let settings: DeviceTableSettings = ks.local_persist('####device_table_cols');
                 ks.table_row(function () {
                     ks.table_cell('');
 
@@ -196,147 +198,167 @@
                         ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                     }, ks.Sort_Order.none);
 
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('form-control-sm');
-                        ks.input_text('name', state.search.name, 'Name', function (str) {
-                            state.search.name = str;
-                            range.reset();
-                            ks.refresh();
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.asc);
-
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('form-control-sm');
-                        ks.input_text('device id', state.search.deviceId, 'Device ID', function (str) {
-                            state.search.deviceId = str;
-                            range.reset();
-                            ks.refresh();
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
-
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('form-control-sm');
-                        ks.input_text('serial number', state.search.serialNr, 'Serial number', function (str) {
-                            state.search.serialNr = str;
-                            range.reset();
-                            ks.refresh();
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
-
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('custom-select-sm');
-                        ks.combo('device types', function () {
-                            ks.selectable('Type', state.search.type === DeviceType.All);
-                            ks.is_item_clicked(function () {
-                                state.search.type = DeviceType.All;
+                    if (settings.columns[0].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('name', state.search.name, 'Name', function (str) {
+                                state.search.name = str;
                                 range.reset();
                                 ks.refresh();
                             });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.asc);
+                    }
 
-                            let keys = Object.keys(deviceTypes);
-                            for (let key of keys) {
-                                let type = parseInt(key);
-                                ks.selectable(deviceTypes[key], type === state.search.type);
-                                ks.is_item_clicked(function () {
-                                    state.search.type = type;
-                                    range.reset();
-                                    ks.refresh();
-                                });
-                            }
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
-
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('custom-select-sm');
-                        ks.combo('device categories', function () {
-                            ks.selectable('Category', state.search.category === DeviceCategory.All);
-                            ks.is_item_clicked(function () {
-                                state.search.category = DeviceCategory.All;
+                    if (settings.columns[1].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('device id', state.search.deviceId, 'Device ID', function (str) {
+                                state.search.deviceId = str;
                                 range.reset();
                                 ks.refresh();
                             });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
 
-                            let keys = Object.keys(deviceCategories);
-                            for (let key of keys) {
-                                let category = parseInt(key);
-                                ks.selectable(deviceCategories[key], category === state.search.category);
-                                ks.is_item_clicked(function () {
-                                    state.search.category = category;
-                                    range.reset();
-                                    ks.refresh();
-                                });
-                            }
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
-
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('custom-select-sm');
-                        ks.combo('os types', function () {
-                            ks.selectable('OS', state.search.os_type === OSType.All);
-                            ks.is_item_clicked(function () {
-                                state.search.os_type = OSType.All;
+                    if (settings.columns[2].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('serial number', state.search.serialNr, 'Serial number', function (str) {
+                                state.search.serialNr = str;
                                 range.reset();
                                 ks.refresh();
                             });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
 
-                            let keys = Object.keys(osNames);
-                            for (let key of keys) {
-                                let type = parseInt(key);
-                                ks.selectable(osNames[key], type === state.search.os_type);
+                    if (settings.columns[3].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('custom-select-sm');
+                            ks.combo('device types', function () {
+                                ks.selectable('Type', state.search.type === DeviceType.All);
                                 ks.is_item_clicked(function () {
-                                    state.search.os_type = type;
+                                    state.search.type = DeviceType.All;
                                     range.reset();
                                     ks.refresh();
                                 });
-                            }
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
 
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('form-control-sm');
-                        ks.input_text('cost centre', state.search.costCentre, 'Cost centre', function (str) {
-                            state.search.costCentre = str;
-                            range.reset();
-                            ks.refresh();
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
+                                let keys = Object.keys(deviceTypes);
+                                for (let key of keys) {
+                                    let type = parseInt(key);
+                                    ks.selectable(deviceTypes[key], type === state.search.type);
+                                    ks.is_item_clicked(function () {
+                                        state.search.type = type;
+                                        range.reset();
+                                        ks.refresh();
+                                    });
+                                }
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
 
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('form-control-sm');
-                        ks.input_text('building', state.search.itracsBuilding, 'Building', function (str) {
-                            state.search.itracsBuilding = str;
-                            range.reset();
-                            ks.refresh();
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
+                    if (settings.columns[4].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('custom-select-sm');
+                            ks.combo('device categories', function () {
+                                ks.selectable('Category', state.search.category === DeviceCategory.All);
+                                ks.is_item_clicked(function () {
+                                    state.search.category = DeviceCategory.All;
+                                    range.reset();
+                                    ks.refresh();
+                                });
 
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('form-control-sm');
-                        ks.input_text('room', state.search.itracsRoom, 'Room', function (str) {
-                            state.search.itracsRoom = str;
-                            range.reset();
-                            ks.refresh();
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
+                                let keys = Object.keys(deviceCategories);
+                                for (let key of keys) {
+                                    let category = parseInt(key);
+                                    ks.selectable(deviceCategories[key], category === state.search.category);
+                                    ks.is_item_clicked(function () {
+                                        state.search.category = category;
+                                        range.reset();
+                                        ks.refresh();
+                                    });
+                                }
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
 
-                    ks.table_cell(function () {
-                        ks.set_next_item_class_name('form-control-sm');
-                        ks.input_text('outlet', state.search.itracsOutlet, 'Outlet', function (str) {
-                            state.search.itracsOutlet = str;
-                            range.reset();
-                            ks.refresh();
-                        });
-                        ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
-                    }, ks.Sort_Order.none);
+                    if (settings.columns[5].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('custom-select-sm');
+                            ks.combo('os types', function () {
+                                ks.selectable('OS', state.search.os_type === OSType.All);
+                                ks.is_item_clicked(function () {
+                                    state.search.os_type = OSType.All;
+                                    range.reset();
+                                    ks.refresh();
+                                });
+
+                                let keys = Object.keys(osNames);
+                                for (let key of keys) {
+                                    let type = parseInt(key);
+                                    ks.selectable(osNames[key], type === state.search.os_type);
+                                    ks.is_item_clicked(function () {
+                                        state.search.os_type = type;
+                                        range.reset();
+                                        ks.refresh();
+                                    });
+                                }
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
+
+                    if (settings.columns[6].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('cost centre', state.search.costCentre, 'Cost centre', function (str) {
+                                state.search.costCentre = str;
+                                range.reset();
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
+
+                    if (settings.columns[7].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('building', state.search.itracsBuilding, 'Building', function (str) {
+                                state.search.itracsBuilding = str;
+                                range.reset();
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
+
+                    if (settings.columns[8].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('room', state.search.itracsRoom, 'Room', function (str) {
+                                state.search.itracsRoom = str;
+                                range.reset();
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
+
+                    if (settings.columns[9].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('outlet', state.search.itracsOutlet, 'Outlet', function (str) {
+                                state.search.itracsOutlet = str;
+                                range.reset();
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                    }
 
                     ks.table_cell(function () {
                         ks.set_next_item_class_name('custom-select-sm');
@@ -362,7 +384,24 @@
                         ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                     }, ks.Sort_Order.none);
 
-                    ks.table_cell('');
+                    ks.table_cell(function () {
+                        ks.group('dropdown', 'dropdown', function () {
+                            ks.set_next_item_class_name('dropdown-toggle btn-sm');
+                            ks.button('##btn', ks.no_op, 'outline-secondary').setAttribute('data-toggle', 'dropdown');
+                            ks.group('menu', 'dropdown-menu dropdown-menu-right', function () {
+                                for (let i = 0; i < settings.columns.length; ++i) {
+                                    let c = settings.columns[i];
+                                    dropdown_item(c.label, c.active, function () {
+                                        c.active = !c.active;
+                                        // TODO: remove when fixed
+                                        (<any>ks.local_persist('####table_settings_workaround')).counter++;
+                                        window.localStorage.setItem('device_table_cols', JSON.stringify(settings));
+                                        ks.refresh();
+                                    });
+                                }
+                            });
+                        });
+                    }).style.width = '1%';
                 });
             });
 
