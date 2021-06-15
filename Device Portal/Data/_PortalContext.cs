@@ -30,6 +30,7 @@ namespace DevicePortal.Data
         public DbSet<SecurityCheck> SecurityChecks { get; set; }
         public DbSet<SecurityCheckQuestions> SecurityCheckAnswers { get; set; }
         public DbSet<SecurityQuestions> SecurityQuestions { get; set; }
+        public DbSet<Labnet> Labnets { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -99,7 +100,7 @@ namespace DevicePortal.Data
             }
 
             int facultyId = Faculties.First(f => f.Name == "FNWI").Id;
-            var userIds = new string[] { User.ImporterId, User.IntuneServiceId };
+            var userIds = new string[] { User.ImporterId, User.IntuneServiceId, User.LabnetId };
             foreach (string id in userIds)
             {
                 if (!Users.Any(u => u.UserName == id))

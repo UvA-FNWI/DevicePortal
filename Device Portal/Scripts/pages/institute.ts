@@ -11,6 +11,9 @@
         itracsBuilding = '';
         itracsRoom = '';
         itracsOutlet = '';
+        labnet = '';
+        ipv4 = '';
+        ipv6 = '';
         status = <DeviceStatus>-1;
     }
     class Institute {
@@ -172,6 +175,9 @@
         search.itracsRoom = state.search.itracsRoom.toLowerCase();
         search.itracsOutlet = state.search.itracsOutlet.toLowerCase();
         search.status = state.search.status;
+        search.labnet = state.search.labnet;
+        search.ipv4 = state.search.ipv4;
+        search.ipv6 = state.search.ipv6;
 
         for (let i = 0; i < state.devices.length; ++i) {
             if (!device_search_match(search, state.devices[i])) { continue; }
@@ -180,6 +186,7 @@
 
         let range = paginator_range('paginator', count);
 
+        let sort_columns = [];
         let workaround: { counter: number } = ks.local_persist('####table_settings_workaround');
         ks.set_next_item_class_name('bg-white border');
         ks.table('devices##' + workaround.counter, function () {
@@ -187,6 +194,7 @@
                 let settings: DeviceTableSettings = ks.local_persist('####device_table_cols');
                 ks.table_row(function () {
                     ks.table_cell('');
+                    sort_columns.push(null);
 
                     ks.table_cell(function () {
                         ks.set_next_item_class_name('form-control-sm');
@@ -197,6 +205,7 @@
                         });
                         ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                     }, ks.Sort_Order.none);
+                    sort_columns.push(null);
 
                     if (settings.columns[0].active) {
                         ks.table_cell(function () {
@@ -208,6 +217,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.asc);
+                        sort_columns.push({ field: 'name', type: 'string' });
                     }
 
                     if (settings.columns[1].active) {
@@ -220,6 +230,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'deviceId', type: 'string' });
                     }
 
                     if (settings.columns[2].active) {
@@ -232,6 +243,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'serialNr', type: 'string' });
                     }
 
                     if (settings.columns[3].active) {
@@ -258,6 +270,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'type', type: 'number' });
                     }
 
                     if (settings.columns[4].active) {
@@ -284,6 +297,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'category', type: 'number' });
                     }
 
                     if (settings.columns[5].active) {
@@ -310,6 +324,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'os_type', type: 'number' });
                     }
 
                     if (settings.columns[6].active) {
@@ -322,6 +337,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'costCentre', type: 'string' });
                     }
 
                     if (settings.columns[7].active) {
@@ -334,6 +350,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'itracsBuilding', type: 'string' });
                     }
 
                     if (settings.columns[8].active) {
@@ -346,6 +363,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'itracsRoom', type: 'string' });
                     }
 
                     if (settings.columns[9].active) {
@@ -358,6 +376,46 @@
                             });
                             ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
                         }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'itracsOutlet', type: 'string' });
+                    }
+
+                    if (settings.columns[10].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('Labnet', state.search.labnet, 'Labnet', function (str) {
+                                state.search.labnet = str;
+                                range.reset();
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'labnetId', type: 'number' });
+                    }
+
+                    if (settings.columns[11].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('ipv4', state.search.ipv4, 'IPv4', function (str) {
+                                state.search.ipv4 = str;
+                                range.reset();
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'ipv4', type: 'string' });
+                    }
+
+                    if (settings.columns[12].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('ipv6', state.search.ipv6, 'IPv6', function (str) {
+                                state.search.ipv6 = str;
+                                range.reset();
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'ipv6', type: 'string' });
                     }
 
                     ks.table_cell(function () {
@@ -382,6 +440,7 @@
                             }
                         });
                         ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        sort_columns.push({ field: 'status', type: 'number' });
                     }, ks.Sort_Order.none);
 
                     ks.table_cell(function () {
@@ -403,6 +462,7 @@
                         });
                     }).style.width = '1%';
                 });
+                sort_columns.push(null);
             });
 
 
@@ -421,17 +481,15 @@
                 }
             });
         }, function (i_head, order) {
-            if (i_head === 0) { state.devices.sort((a, b) => order * sort_string(a.user?.name, b.user?.name)); }
-            if (i_head === 1) { state.devices.sort((a, b) => order * sort_string(a.name, b.name)); }
-            if (i_head === 2) { state.devices.sort((a, b) => order * sort_string(a.deviceId, b.deviceId)); }
-            if (i_head === 3) { state.devices.sort((a, b) => order * sort_string(a.serialNumber, b.serialNumber)); }
-            if (i_head === 4) { state.devices.sort((a, b) => order * (a.type - b.type)); }
-            if (i_head === 5) { state.devices.sort((a, b) => order * (a.os_type - b.os_type)); }
-            if (i_head === 6) { state.devices.sort((a, b) => order * sort_string(a.costCentre, b.costCentre)); }
-            if (i_head === 7) { state.devices.sort((a, b) => order * sort_string(a.itracsBuilding, b.itracsBuilding)); }
-            if (i_head === 8) { state.devices.sort((a, b) => order * sort_string(a.itracsRoom, b.itracsRoom)); }
-            if (i_head === 9) { state.devices.sort((a, b) => order * sort_string(a.itracsOutlet, b.itracsOutlet)); }
-            if (i_head === 10) { state.devices.sort((a, b) => order * (a.status - b.status)); }
+            let sc = sort_columns[i_head];
+            if (sc) {
+                if (sc.type === 'string') {
+                    state.devices.sort((a, b) => order * sort_string(a[sc.field], b[sc.field]));
+                } else {
+                    state.devices.sort((a, b) => order * (a[sc.field] - b[sc.field]));
+                }
+            }
+            if (i_head === 1) { state.devices.sort((a, b) => order * sort_string(a.user?.name, b.user?.name)); }
         });
 
         ks.set_next_item_class_name('ml-1');
@@ -450,6 +508,9 @@
             (!p.itracsBuilding || d.itracsBuildingLowerCase.indexOf(p.itracsBuilding) >= 0) &&
             (!p.itracsRoom || d.itracsRoomLowerCase.indexOf(p.itracsRoom) >= 0) &&
             (!p.itracsOutlet || d.itracsOutletLowerCase.indexOf(p.itracsOutlet) >= 0) &&
+            (!p.labnet || p.labnet === ('' + d.labnetId)) &&
+            (!p.ipv4 || !d.ipv4 || d.ipv4.indexOf(p.ipv4)) >= 0 &&
+            (!p.ipv6 || !d.ipv6 || d.ipv6.indexOf(p.ipv6)) >= 0 &&
             (p.status < 0 || p.status == d.status);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -37,6 +38,7 @@ namespace DevicePortal.Data
         DataExport,
         Intune,
         User,
+        Labnet,
     }
 
     public enum DeviceStatus
@@ -99,6 +101,14 @@ namespace DevicePortal.Data
 
         public bool Disowned { get; set; }
         public bool Shared { get; set; }
+
+        [MaxLength(15)]
+        public string Ipv4 { get; set; }
+        [MaxLength(45)]
+        public string Ipv6 { get; set; }
+
+        public int? LabnetId { get; set; }
+        public Labnet Labnet { get; set; }
     }
 
     public class Device : DeviceBase

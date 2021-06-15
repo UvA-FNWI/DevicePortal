@@ -104,8 +104,7 @@
         contextModal.run();
 
         {
-            let settings = JSON.parse(window.localStorage.getItem('device_table_cols'));
-            ks.local_persist('####device_table_cols', settings || {
+            let settings = {
                 columns: [
                     { label: 'Name', active: true },
                     { label: 'Device ID', active: true },
@@ -117,8 +116,21 @@
                     { label: 'Building', active: true },
                     { label: 'Room', active: true },
                     { label: 'Outlet', active: true },
+                    { label: 'Labnet', active: false },
+                    { label: 'Ipv4', active: false },
+                    { label: 'Ipv6', active: false },
                 ]
-            });
+            };
+            let stored = JSON.parse(window.localStorage.getItem('device_table_cols'));
+            if (stored) {
+                for (let i = 0; i < settings.columns.length; ++i) {
+                    let col = settings.columns[i];
+                    let colStored = stored.columns.find(c => c.label === col.label);
+                    if (colStored) { col.active = colStored.active; }
+                }
+            }
+
+            ks.local_persist('####device_table_cols', settings);
             ks.local_persist('####table_settings_workaround', { counter: 0 });
         }
 
@@ -426,6 +438,9 @@
             if (cols[7].active) { ks.table_cell(d.itracsBuilding); }
             if (cols[8].active) { ks.table_cell(d.itracsRoom); }
             if (cols[9].active) { ks.table_cell(d.itracsOutlet); }
+            if (cols[10].active) { ks.table_cell(d.labnetId ? ('Labnet-' + d.labnetId) : ''); }
+            if (cols[11].active) { ks.table_cell(d.ipv4); }
+            if (cols[12].active) { ks.table_cell(d.ipv6); }
             ks.table_cell(function () {
                 if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
                     ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);

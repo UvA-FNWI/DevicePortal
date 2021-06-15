@@ -12,6 +12,7 @@ namespace DevicePortal.Data
     {
         public static readonly string ImporterId = "<CMDB importer>";
         public static readonly string IntuneServiceId = "<intune service>";
+        public static readonly string LabnetId = "<Labnet importer>";
 
         public User() 
         {

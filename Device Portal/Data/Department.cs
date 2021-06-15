@@ -25,5 +25,7 @@ namespace DevicePortal.Data
         public HashSet<Device> Devices { get; set; }
         [JsonIgnore]
         public HashSet<User_Department> Users { get; set; }
+        [JsonIgnore]
+        public HashSet<Labnet> Labnets { get; set; }
     }
 }

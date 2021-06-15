@@ -188,7 +188,7 @@ namespace DP {
                 let v = device[key];
                 this.edit[key] = v != null ? v : '';
             }
-            this.user = device.user.name;
+            this.user = device.user?.name || '';
             this.device = device;
             this.display = device;
             this.history = null;
@@ -348,6 +348,8 @@ namespace DP {
 
                             detail('Serial number', d.serialNumber);
                             detail('MAC address', d.macadres);
+                            detail('IPv4', d.ipv4);
+                            detail('IPv6', d.ipv6);
                             detail('OS', osNames[d.os_type]);
                             detail('OS version', d.os_version);
                             detail('Purchase date', d.purchaseDate);
@@ -415,6 +417,10 @@ namespace DP {
                             ks.close_current_popup();
 
                             PUT_JSON(API.Devices(d.id), entity).then(() => {
+                                if (modal.device.userName !== prev.userName) {
+                                    let index = modal.users.findIndex(u => u.userName == modal.device.userName);
+                                    if (index >= 0) { modal.device.user = modal.users[index]; }
+                                }
                                 contextModal.showSuccess('Changes successfully saved.');
                                 ks.refresh();
                             }, fail => {
@@ -444,7 +450,7 @@ namespace DP {
                 });
                 ks.is_item_clicked(function () {
                     modal.display = modal.device;
-                    modal.user = modal.device.user.name;
+                    modal.user = modal.device.user?.name || '';
                     for (let key in modal.edit) {
                         let v = modal.device[key];
                         modal.edit[key] = v != null ? v : '';

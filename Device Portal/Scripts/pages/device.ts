@@ -81,6 +81,9 @@
         userEditId: string;
         userEditName: string;
         dateEdit: string;
+        labnetId: number;
+        ipv4: string;
+        ipv6: string;
 
         static formatPurchaseDate(d: Device) {
             if (d.purchaseDate) {

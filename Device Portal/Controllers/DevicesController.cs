@@ -128,7 +128,7 @@ namespace DevicePortal.Controllers
             if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManage))
             {
                 _context.UpdateProperties(device, d => d.Notes, d => d.Shared, d => d.ItracsBuilding, d => d.ItracsRoom,
-                    d => d.ItracsOutlet);
+                    d => d.ItracsOutlet, d => d.UserName);
             }
             
             try

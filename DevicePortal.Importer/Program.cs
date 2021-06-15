@@ -6,18 +6,83 @@ using DevicePortal.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 
 namespace DevicePortal.Importer
 {
+    public class LabnetJson
+    {
+        public LabnetDevice[] results;
+    }
+
+    public class LabnetDevice
+    {
+        public string mac;
+        public string master_mac;
+        public bool is_master_device;
+        public string hardware_type;
+        public string hardware_vendor;
+        public string os_name;
+        public string os_version;
+        public string hostname;
+        public string ipv4_address;
+        public string ipv6_address;
+        public string detected_interface;
+        public string detected_interface_fortiletelemetry;
+        public string is_detected_interface_role_wan;
+        public int last_seen;
+        public bool is_online;
+    }
+
     class Program
     {
         static readonly StreamWriter logFile = new("log.txt", true);
 
+        static readonly string HelpText = @"Usage: DevicePortal.Importer.exe [--cmdb] [--labnet <filename>]";
+
         static void Main(string[] args)
         {
+            const int ERROR_BAD_ARGUMENTS = 160;
+
+            void HelpExit()
+            {
+                Console.WriteLine(HelpText);
+                Environment.Exit(ERROR_BAD_ARGUMENTS);
+            }
+
             try 
             {
-                Import(); 
+                var cmd_params = new List<(string cmd, List<string> parameters)>();
+                foreach (string arg in args)
+                {
+                    if (arg.StartsWith("--"))
+                    {
+                        cmd_params.Add((arg, new List<string>()));
+                    }
+                    else
+                    {
+                        if (cmd_params.Count == 0) { HelpExit(); }
+                        cmd_params.Last().parameters.Add(arg);
+                    }
+                }
+
+                if (cmd_params.Count == 0) { HelpExit(); }
+
+                foreach (var cp in cmd_params)
+                {
+                    switch (cp.cmd)
+                    {
+                    case "--cmdb":
+                        ImportCmdb(); 
+                        break;
+
+                    case "--labnet":
+                        if (cp.parameters.Count != 1) { HelpExit(); }
+                        var labnetData = JsonConvert.DeserializeObject<LabnetJson>(File.ReadAllText(cp.parameters[0]));
+                        ImportLabnet(labnetData.results);
+                        break;
+                    }
+                }
             }
             catch (Exception ex) 
             {
@@ -30,7 +95,7 @@ namespace DevicePortal.Importer
             logFile.Close();
         }
 
-        static void Import() 
+        static void ImportCmdb() 
         {
             var config = new ConfigurationBuilder()
                     .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
@@ -381,6 +446,207 @@ namespace DevicePortal.Importer
             sqlBulk.WriteToServer(deviceTable);
             sqlBulk.Close();
             connection.Close();
+        }
+
+        static void ImportLabnet(LabnetDevice[] labnetDevices)
+        {
+            Log("Importing Labnet devices");
+
+            var config = new ConfigurationBuilder()
+                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                    .AddJsonFile("appsettings.json")
+                    .AddUserSecrets<Program>()
+                    .Build();
+            string connectionString = config.GetConnectionString("DefaultConnection");
+            var options = new DbContextOptionsBuilder<PortalContext>()
+                .UseSqlServer(connectionString)
+                .EnableSensitiveDataLogging()
+                .Options;
+
+            using var db = new PortalContext(options);
+
+            var portalDevices = db.Devices.Active().ToArray();
+            var mapPortalDevices = portalDevices.Where(d => !string.IsNullOrEmpty(d.Macadres)).ToDictionary(d => d.Macadres);
+            var labnets = db.Labnets.ToArray();
+            var mapLabnets = labnets.ToDictionary(l => l.Id);
+
+            // Note: if a user or intune import has made any edit, we no longer update
+            // device type, OS type and version through this import 
+            HashSet<int> ignoreSet = db.DeviceHistories
+                .Where(h => h.UserEditId != User.ImporterId)
+                .Select(h => h.OriginalDeviceId)
+                .ToArray().ToHashSet();
+            ignoreSet.UnionWith(db.Devices
+                .Where(d => d.UserEditId != User.ImporterId)
+                .Select(d => d.Id)
+                .ToArray());
+
+            var now = DateTime.Now;
+
+            var historiesToAdd = new List<DeviceHistory>();
+            var labnetsToAdd = new List<Labnet>();
+            var devicesToAdd = new List<Device>();
+            var devicesToUpdate = new List<Device>();
+            foreach (var ld in labnetDevices)
+            {
+                if (string.IsNullOrEmpty(ld.mac)) { continue; }
+                if (string.IsNullOrEmpty(ld.ipv4_address)) { continue; }
+                if (ld.ipv4_address.Count(c => c == '.') != 3)
+                {
+                    Log($"Skipping malformed ipv4 address ({ld.ipv4_address})");
+                    continue;
+                }
+
+                var parts = ld.ipv4_address.Split('.', StringSplitOptions.TrimEntries);
+                if (parts.Length != 4) { continue; }
+
+                bool ipMalformed = false;
+                foreach (var p in parts)
+                {
+                    if (!byte.TryParse(p, out byte sub))
+                    {
+                        Log($"Skipping malformed ipv4 address ({ld.ipv4_address})");
+                        ipMalformed = true;
+                        break;
+                    }
+                }
+                if (ipMalformed) { continue; }
+
+                int labnetId = byte.Parse(parts[2]);
+                int category = byte.Parse(parts[3]);
+
+                if (!mapLabnets.TryGetValue(labnetId, out var labnet))
+                {
+                    labnet = new Labnet()
+                    {
+                        Id = labnetId,
+                        Name = $"Labnet-{labnetId}",
+                    };
+                    labnetsToAdd.Add(labnet);
+                    mapLabnets.Add(labnetId, labnet);
+                }
+
+                var lastSeen = now.AddSeconds(-ld.last_seen);
+
+                DeviceType deviceType = 0;
+                {
+                    string type = ld.hardware_type ?? "";
+                    if (type.StartsWith("Computer") || type.StartsWith("Desktop")) { deviceType = DeviceType.Desktop; }
+                    else if (type.StartsWith("Laptop")) { deviceType = DeviceType.Laptop; }
+                    else if (type.StartsWith("Tablet")) { deviceType = DeviceType.Tablet; }
+                    else if (type.StartsWith("Phone")) { deviceType = DeviceType.Mobile; }
+                }
+
+                OS_Type osType = 0;
+                string osVersion = "";
+                {
+                    string name = ld.os_name ?? "";
+                    foreach (string prefix in osTypeMap.Keys)
+                    {
+                        if (name.StartsWith(prefix))
+                        {
+                            osType = osTypeMap[prefix];
+                            osVersion = name[prefix.Length..];
+                        }
+                    }
+                    if (osType == 0 && deviceType == DeviceType.Tablet)
+                    {
+                        osType = ld.hardware_vendor.Contains("Apple") ? OS_Type.iOS : OS_Type.Android;
+                    }
+                }
+
+                if (mapPortalDevices.TryGetValue(ld.mac, out var existing))
+                {
+                    bool ignore = ignoreSet.Contains(existing.Id);
+
+                    if (existing.Ipv4 != ld.ipv4_address ||
+                        existing.Ipv6 != ld.ipv6_address ||
+                        existing.LabnetId != labnetId ||
+                        !ignore && existing.Type != deviceType ||
+                        !ignore && existing.OS_Type != osType ||
+                        !ignore && existing.OS_Version != osVersion ||
+                        existing.LastSeenDate == null || 
+                        (lastSeen > existing.LastSeenDate && (lastSeen - existing.LastSeenDate) > TimeSpan.FromDays(1)))
+                    {
+                        historiesToAdd.Add(new DeviceHistory(existing));
+
+                        existing.DateEdit = now;
+                        existing.UserEditId = User.LabnetId;
+                        existing.LabnetId = labnetId;
+                        existing.Ipv4 = ld.ipv4_address;
+                        existing.Ipv6 = ld.ipv6_address;
+                        existing.LastSeenDate = lastSeen;
+
+                        if (!ignore)
+                        {
+                            existing.Type = deviceType;
+                            existing.OS_Type = osType;
+                            existing.OS_Version = osVersion;
+                        }
+
+                        devicesToUpdate.Add(existing);
+                    }
+                }
+                else
+                {
+                    if (labnet.DepartmentId != null)
+                    {
+                        devicesToAdd.Add(new Device()
+                        {
+                            Name = (!string.IsNullOrEmpty(ld.hardware_vendor) ? ld.hardware_vendor : ld.hostname) ?? "",
+                            DeviceId = ld.hostname ?? "",
+                            SerialNumber = "",
+                            Type = deviceType,
+                            Origin = DeviceOrigin.Labnet,
+                            Status = DeviceStatus.Unsecure,
+                            StatusEffectiveDate = now,
+                            DepartmentId = (int)labnet.DepartmentId,
+                            CostCentre = "",
+                            ItracsBuilding = "",
+                            ItracsOutlet = "",
+                            ItracsRoom = "",
+                            LastSeenDate = lastSeen,
+                            Macadres = ld.mac,
+                            Notes = "",
+                            PurchaseDate = null,
+                            OS_Type = osType,
+                            OS_Version = osVersion,
+                            Category = DeviceCategory.Other,
+                            LabnetId = labnetId,
+                            Ipv4 = ld.ipv4_address,
+                            Ipv6 = ld.ipv6_address,
+                            DateEdit = now,
+                            UserEditId = User.LabnetId,
+                        });
+                    }
+                    else
+                    {
+                        Log($"Not adding new device with MAC {ld.mac}, labnet {labnetId} is not linked to a department");
+                    }
+                }
+            }
+
+            if (labnetsToAdd.Any())
+            {
+                Log($"Adding {labnetsToAdd.Count} unlinked labnets");
+                db.Labnets.AddRange(labnetsToAdd);
+                db.SaveChanges();
+            }
+            
+            if (devicesToAdd.Any())
+            {
+                Log($"Adding {devicesToAdd.Count} devices");
+                db.Devices.AddRange(devicesToAdd);
+                db.SaveChanges();
+            }
+
+            if (devicesToUpdate.Any())
+            {
+                Log($"Updating {devicesToUpdate.Count} devices");
+                db.DeviceHistories.AddRange(historiesToAdd);
+                db.Devices.UpdateRange(devicesToUpdate);
+                db.SaveChanges();
+            }
         }
 
         #if false
