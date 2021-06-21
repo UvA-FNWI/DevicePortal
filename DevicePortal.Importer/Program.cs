@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
 using DevicePortal.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -38,7 +41,7 @@ namespace DevicePortal.Importer
     {
         static readonly StreamWriter logFile = new("log.txt", true);
 
-        static readonly string HelpText = @"Usage: DevicePortal.Importer.exe [--cmdb] [--labnet <filename>]";
+        static readonly string HelpText = @"Usage: DevicePortal.Importer.exe [--cmdb] [--labnet [<filename>]]";
 
         static void Main(string[] args)
         {
@@ -68,19 +71,37 @@ namespace DevicePortal.Importer
 
                 if (cmd_params.Count == 0) { HelpExit(); }
 
+                var config = new ConfigurationBuilder()
+                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                    .AddJsonFile("appsettings.json")
+                    .AddUserSecrets<Program>()
+                    .Build();
+
                 foreach (var cp in cmd_params)
                 {
                     switch (cp.cmd)
                     {
-                    case "--cmdb":
-                        ImportCmdb(); 
-                        break;
+                        case "--cmdb":
+                            ImportCmdb(config); 
+                            break;
 
-                    case "--labnet":
-                        if (cp.parameters.Count != 1) { HelpExit(); }
-                        var labnetData = JsonConvert.DeserializeObject<LabnetJson>(File.ReadAllText(cp.parameters[0]));
-                        ImportLabnet(labnetData.results);
-                        break;
+                        case "--labnet":
+                            string labnetJson = null;
+                            if (cp.parameters.Count == 0)
+                            {
+                                var sec = config.GetSection("Labnet");
+                                var container = new CookieContainer();
+                                var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true, UseCookies = true, CookieContainer = container });
+
+                                client.PostAsync($"{sec["Url"]}/logincheck", new StringContent($"ajax=1&username={sec["Username"]}&secretkey={sec["Password"]}")).Wait();
+                                labnetJson = client.GetStringAsync($"{sec["Url"]}/api/v2/monitor/user/detected-device?expand_child_macs=true&with_fortilink=true&with_fortiap=false&with_endpoint=true&with_dhcp=true&with_user=true").Result;
+                            }
+                            else if (cp.parameters.Count != 1) { HelpExit(); }
+                            else
+                                labnetJson = File.ReadAllText(cp.parameters[0]);
+                            var labnetData = JsonConvert.DeserializeObject<LabnetJson>(labnetJson);
+                            ImportLabnet(labnetData.results);
+                            break;
                     }
                 }
             }
@@ -95,13 +116,8 @@ namespace DevicePortal.Importer
             logFile.Close();
         }
 
-        static void ImportCmdb() 
+        static void ImportCmdb(IConfiguration config) 
         {
-            var config = new ConfigurationBuilder()
-                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                    .AddJsonFile("appsettings.json")
-                    .AddUserSecrets<Program>()
-                    .Build();
             string connectionString = config.GetConnectionString("DefaultConnection");
             var options = new DbContextOptionsBuilder<PortalContext>()
                 .UseSqlServer(connectionString)
