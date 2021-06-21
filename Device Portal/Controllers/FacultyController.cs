@@ -102,6 +102,12 @@ namespace DevicePortal.Controllers
                 {
                     userNameSet.Add(group.Key);
 
+                    if (!departmentUsers.TryGetValue(department.Id, out var depUsers) ||
+                        !depUsers.Contains(group.Key))
+                    {
+                        continue;
+                    }
+
                     if (group.All(d => d.Category == DeviceCategory.ManagedSpecial || d.Category == DeviceCategory.ManagedStandard))
                     {
                         ++usersManagedDevices;
