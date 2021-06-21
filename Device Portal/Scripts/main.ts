@@ -34,7 +34,7 @@
     export let noteModal = new NoteModal();
     export let deviceModal = new DeviceModal();
 
-    class ActiveUser {
+    export class ActiveUser {
         user_name: string;
         first_name: string;
         last_name: string;    
@@ -98,7 +98,7 @@
         if (!user) { return; }
 
         // Global modals, run before any pages
-        deviceModal.run();
+        deviceModal.run(user);
         noteModal.run();
         confirmModal.run();
         contextModal.run();

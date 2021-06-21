@@ -205,7 +205,7 @@ namespace DP {
             });
         }
 
-        run() {
+        run(activeUser: ActiveUser) {
             let modal = this;
 
             ks.set_next_modal_size(ks.Modal_Size.large);
@@ -421,6 +421,10 @@ namespace DP {
                                     let index = modal.users.findIndex(u => u.userName == modal.device.userName);
                                     if (index >= 0) { modal.device.user = modal.users[index]; }
                                 }
+
+                                modal.device.userEditId = activeUser.user_name;
+                                modal.device.userEditName = activeUser.first_name + ' ' + activeUser.last_name;
+
                                 contextModal.showSuccess('Changes successfully saved.');
                                 ks.refresh();
                             }, fail => {
