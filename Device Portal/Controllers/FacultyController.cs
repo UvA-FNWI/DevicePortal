@@ -109,12 +109,13 @@ namespace DevicePortal.Controllers
                     else
                     {
                         bool submitted = false;
+                        bool intuneCompleted = false;
                         foreach (var d in group.AsEnumerable())
                         {
                             // Intune
                             if (d.Origin == DeviceOrigin.Intune)
                             {
-                                if (d.Status == DeviceStatus.Approved) { ++usersIntuneCompleted; }
+                                if (d.Status == DeviceStatus.Approved) { intuneCompleted = true; }
                             }
                             // Device portal checks
                             else
@@ -127,6 +128,7 @@ namespace DevicePortal.Controllers
                             }
                         }
                         if (submitted) { ++usersCheckSubmitted; }
+                        if (intuneCompleted) { ++usersIntuneCompleted; }
                     }
                 }
 
