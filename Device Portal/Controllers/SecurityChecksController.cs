@@ -146,12 +146,18 @@ namespace DevicePortal.Controllers
             return securityCheck;
         }
 
+        public class SecurityCheckUpdate
+        {
+            public Device device { get; set; }
+            public SecurityCheck check { get; set; }
+        }
+
         [Authorize(Policy = AppPolicies.AuthorizedOnly)]
         // PUT: api/SecurityChecks/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSecurityCheck(int id, SecurityCheck securityCheck)
+        public async Task<IActionResult> PutSecurityCheck(int id, SecurityCheckUpdate update)
         {
-            if (id != securityCheck.Id)
+            if (id != update.check.Id)
             {
                 return BadRequest();
             }
@@ -164,7 +170,7 @@ namespace DevicePortal.Controllers
                 return BadRequest("Expected security check status to be submitted.");
             }
 
-            var device = await _context.Devices.FindAsync(securityCheck.DeviceId);
+            var device = await _context.Devices.FindAsync(update.check.DeviceId);
             if (device == null)
             {
                 return NotFound();
@@ -174,13 +180,30 @@ namespace DevicePortal.Controllers
                 return Forbid();
             }
 
-            foreach (var q in securityCheck.Questions)
+            DateTime now = DateTime.Now;
+            foreach (var q in update.check.Questions)
             {
                 _context.CreateOrUpdate(q);
             }
-            securityCheck.Status = DeviceStatus.Submitted;
-            securityCheck.StatusEffectiveDate = DateTime.Now;
-            _context.Entry(securityCheck).State = EntityState.Modified;
+            update.check.Status = DeviceStatus.Submitted;
+            update.check.StatusEffectiveDate = now;
+            _context.Entry(update.check).State = EntityState.Modified;
+
+            if (device.Status != update.check.Status ||
+                device.OS_Type != update.device.OS_Type ||
+                device.OS_Version != update.device.OS_Version)
+            {
+                _context.DeviceHistories.Add(new DeviceHistory(device));
+                device.DateEdit = now;
+                device.UserEditId = User.GetUserName();
+                device.Status = update.check.Status;
+                device.StatusEffectiveDate = now;
+                device.OS_Type = update.device.OS_Type;
+                device.OS_Version = update.device.OS_Version;
+                _context.UpdateProperties(device, d => d.DateEdit, d => d.UserEditId, 
+                    d => d.Status, d => d.StatusEffectiveDate, d => d.OS_Type, d => d.OS_Version);
+            }
+            
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -212,11 +235,12 @@ namespace DevicePortal.Controllers
 
             if (device.Status != securityCheck.Status)
             {
+                DateTime now = DateTime.Now;
                 _context.DeviceHistories.Add(new DeviceHistory(device));
-                device.DateEdit = DateTime.Now;
+                device.DateEdit = now;
                 device.UserEditId = User.GetUserName();
                 device.Status = securityCheck.Status;
-                device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = DateTime.Now;
+                device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = now;
                 _context.UpdateProperties(device, d => d.DateEdit, d => d.UserEditId, 
                     d => d.Status, d => d.StatusEffectiveDate);
             }
@@ -230,9 +254,9 @@ namespace DevicePortal.Controllers
         [Authorize(Policy = AppPolicies.AuthorizedOnly)]
         // POST: api/SecurityChecks
         [HttpPost]
-        public async Task<ActionResult<SecurityCheck>> PostSecurityCheck(SecurityCheck securityCheck)
+        public async Task<ActionResult<SecurityCheck>> PostSecurityCheck(SecurityCheckUpdate update)
         {
-            var device = await _context.Devices.FindAsync(securityCheck.DeviceId);
+            var device = await _context.Devices.FindAsync(update.check.DeviceId);
             if (device == null)
             {
                 return NotFound();
@@ -246,25 +270,34 @@ namespace DevicePortal.Controllers
 
             await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () => { 
                 var trans =_context.Database.BeginTransaction();
-                _context.DeviceHistories.Add(new DeviceHistory(device));
-                device.DateEdit = DateTime.Now;
-                device.UserEditId = User.GetUserName();
-                device.Status = DeviceStatus.Submitted;
-                device.StatusEffectiveDate = DateTime.Now;
-                _context.UpdateProperties(device, d => d.DateEdit, d => d.UserEditId, d => d.Status, d => d.StatusEffectiveDate);
 
                 DateTime now = DateTime.Now;
-                securityCheck.SubmissionDate = now;
-                securityCheck.Status = DeviceStatus.Submitted;
-                securityCheck.StatusEffectiveDate = now;
-                securityCheck.UserName = userName;
-                _context.SecurityChecks.Add(securityCheck);
+                update.check.SubmissionDate = now;
+                update.check.Status = DeviceStatus.Submitted;
+                update.check.StatusEffectiveDate = now;
+                update.check.UserName = userName;
+                _context.SecurityChecks.Add(update.check);
+
+                if (device.Status != update.check.Status ||
+                    device.OS_Type != update.device.OS_Type ||
+                    device.OS_Version != update.device.OS_Version)
+                {
+                    _context.DeviceHistories.Add(new DeviceHistory(device));
+                    device.DateEdit = now;
+                    device.UserEditId = User.GetUserName();
+                    device.Status = update.check.Status;
+                    device.StatusEffectiveDate = now;
+                    device.OS_Type = update.device.OS_Type;
+                    device.OS_Version = update.device.OS_Version;
+                    _context.UpdateProperties(device, d => d.DateEdit, d => d.UserEditId, 
+                        d => d.Status, d => d.StatusEffectiveDate, d => d.OS_Type, d => d.OS_Version);
+                }
 
                 await _context.SaveChangesAsync();
                 await trans.CommitAsync();
             });
 
-            return CreatedAtAction("GetSecurityCheck", new { id = securityCheck.Id }, securityCheck);
+            return CreatedAtAction("GetSecurityCheck", new { id = update.check.Id }, update.check);
         }
 
         // DELETE: api/SecurityChecks/5

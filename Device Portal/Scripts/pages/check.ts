@@ -199,13 +199,11 @@
                 if (this.getElementsByClassName('is-invalid').length) {
                     ks.cancel_current_form_submission();
                 } else {
-                    let xhrDevice = PUT_JSON(API.Devices(state.device.id), state.device);
+                    let data = { device: state.device, check: state.security_check };
+                    let xhr = state.security_check.id ?
+                        PUT_JSON(API.SecurityCheck(state.security_check.id), data) : POST_JSON(API.SecurityCheck(), data);
 
-                    let xhrCheck = state.security_check.id ?
-                        PUT_JSON(API.SecurityCheck(state.security_check.id), state.security_check) :
-                        POST_JSON(API.SecurityCheck(), state.security_check);
-
-                    $.when(xhrDevice, xhrCheck).done(function () {
+                    xhr.done(function () {
                         ks.navigate_to('Home', '/');
                         state.device.status = DeviceStatus.Submitted;
                         contextModal.showSuccess('Successfully submitted security check.');
