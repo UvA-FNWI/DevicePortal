@@ -482,7 +482,7 @@ namespace DevicePortal.Importer
             using var db = new PortalContext(options);
 
             var portalDevices = db.Devices.Active().ToArray();
-            var mapPortalDevices = portalDevices.Where(d => !string.IsNullOrEmpty(d.Macadres)).ToDictionary(d => d.Macadres);
+            var mapPortalDevices = portalDevices.Where(d => !string.IsNullOrEmpty(d.Macadres) && d.Macadres.Length > 10).ToLookup(d => d.Macadres);
             var labnets = db.Labnets.ToArray();
             var mapLabnets = labnets.ToDictionary(l => l.Id);
 
@@ -571,7 +571,8 @@ namespace DevicePortal.Importer
                     }
                 }
 
-                if (mapPortalDevices.TryGetValue(ld.mac, out var existing))
+                var existing = mapPortalDevices[ld.mac].FirstOrDefault();
+                if (existing != null)
                 {
                     bool ignore = ignoreSet.Contains(existing.Id);
 
