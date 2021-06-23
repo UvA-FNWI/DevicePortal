@@ -210,13 +210,17 @@ namespace DevicePortal.Controllers
                 return NotFound();
             }
 
-            _context.DeviceHistories.Add(new DeviceHistory(device));
-            device.DateEdit = DateTime.Now;
-            device.UserEditId = User.GetUserName();
-            device.Status = securityCheck.Status;
-            device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = DateTime.Now;
+            if (device.Status != securityCheck.Status)
+            {
+                _context.DeviceHistories.Add(new DeviceHistory(device));
+                device.DateEdit = DateTime.Now;
+                device.UserEditId = User.GetUserName();
+                device.Status = securityCheck.Status;
+                device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = DateTime.Now;
+                _context.UpdateProperties(device, d => d.DateEdit, d => d.UserEditId, 
+                    d => d.Status, d => d.StatusEffectiveDate);
+            }
 
-            _context.UpdateProperties(device, d => d.DateEdit, d => d.UserEditId, d => d.Status, d => d.StatusEffectiveDate);
             _context.UpdateProperties(securityCheck, c => c.Status, c => c.StatusEffectiveDate);            
             await _context.SaveChangesAsync();
 
