@@ -866,7 +866,10 @@ namespace DevicePortal.Importer
                         c.DepartmentId      == n.DepartmentId &&
                         c.Disowned          == n.Disowned &&
                         c.Shared            == n.Shared &&
-                        c.UserEditId        == n.UserEditId)
+                        c.UserEditId        == n.UserEditId &&
+                        c.Ipv4              == n.Ipv4 &&
+                        c.Ipv6              == n.Ipv6 &&
+                        c.LabnetId          == n.LabnetId)
                     {
                         ++countDupes;
                         bool current = c is Device;
