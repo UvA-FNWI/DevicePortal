@@ -216,7 +216,7 @@ namespace DevicePortal.Controllers
             device.Status = securityCheck.Status;
             device.StatusEffectiveDate = securityCheck.StatusEffectiveDate = DateTime.Now;
 
-            _context.UpdateProperties(device, d => d.UserEditId, d => d.Status, d => d.StatusEffectiveDate);
+            _context.UpdateProperties(device, d => d.DateEdit, d => d.UserEditId, d => d.Status, d => d.StatusEffectiveDate);
             _context.UpdateProperties(securityCheck, c => c.Status, c => c.StatusEffectiveDate);            
             await _context.SaveChangesAsync();
 
@@ -242,9 +242,12 @@ namespace DevicePortal.Controllers
 
             await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () => { 
                 var trans =_context.Database.BeginTransaction();
+                _context.DeviceHistories.Add(new DeviceHistory(device));
+                device.DateEdit = DateTime.Now;
+                device.UserEditId = User.GetUserName();
                 device.Status = DeviceStatus.Submitted;
                 device.StatusEffectiveDate = DateTime.Now;
-                _context.UpdateProperties(device, d => d.Status, d => d.StatusEffectiveDate);
+                _context.UpdateProperties(device, d => d.DateEdit, d => d.UserEditId, d => d.Status, d => d.StatusEffectiveDate);
 
                 DateTime now = DateTime.Now;
                 securityCheck.SubmissionDate = now;
