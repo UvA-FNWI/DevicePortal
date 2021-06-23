@@ -500,10 +500,12 @@ namespace DP {
             diff('User:', p.user?.name, c.user?.name);
 
             if (p.status !== c.status) {
-                ks.text('Status: ', 'd-inline');
-                ks.text(statusNames[p.status], 'd-inline-block badge badge-' + statusColors[p.status]);
-                ks.text(' → ', 'd-inline');
-                ks.text(statusNames[c.status], 'badge badge-' + statusColors[c.status]);
+                ks.group('diff status', '', function () {
+                    ks.text('Status: ', 'd-inline');
+                    ks.text(statusNames[p.status], 'd-inline-block badge badge-' + statusColors[p.status]);
+                    ks.text(' → ', 'd-inline');
+                    ks.text(statusNames[c.status], 'badge badge-' + statusColors[c.status]);
+                });
             }
 
             diff('Category: ', deviceCategories[p.category], deviceCategories[c.category]);
