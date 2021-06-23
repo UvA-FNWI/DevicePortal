@@ -115,11 +115,23 @@ namespace DevicePortal.Controllers
 
             var original = await _context.Devices.FindAsync(id);
             var history = new DeviceHistory(original);
-            _context.DeviceHistories.Add(history);
 
             // Only allow status update changes if device is lost
             if (device.Status == DeviceStatus.Lost) { device.StatusEffectiveDate = DateTime.Now; }
             else { device.Status = original.Status; }
+
+            if (original.Name == device.Name &&
+                original.OS_Type == device.OS_Type &&
+                original.OS_Version == device.OS_Version &&
+                original.Status == device.Status &&
+                original.Disowned == device.Disowned &&
+                original.StatusEffectiveDate == device.StatusEffectiveDate)
+            {
+                // No changes, prevent adding unnecessary history entries
+                return NoContent();
+            }
+
+            _context.DeviceHistories.Add(history);
 
             device.DateEdit = DateTime.Now;
             device.UserEditId = User.GetUserName();
