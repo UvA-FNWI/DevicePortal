@@ -9,6 +9,7 @@
         Faculty,
         Institute,
         Requests,
+        Changes,
         Admin,
         Home, // Make sure this is last since it's pattern matches all paths
     }
@@ -20,6 +21,7 @@
         '/faculty',
         '/institute',
         '/requests',
+        '/changes',
         '/admin',
         '/',
     ];
@@ -77,6 +79,7 @@
             this.page_access[Page.Institute] = this.can_manage;
 
             // Admin
+            this.page_access[Page.Changes] = this.can_admin;
             this.page_access[Page.Admin] = this.can_admin;
         }
     }
@@ -218,6 +221,14 @@
                         });
                     }
 
+                    if (user.page_access[Page.Changes]) {
+                        ks.nav_item('Changes', iPage === Page.Changes, pages[Page.Changes]);
+                        ks.is_item_clicked(function () {
+                            ks.navigate_to('Changes', pages[Page.Changes]);
+                            return false;
+                        });
+                    }
+
                     if (user.page_access[Page.Admin]) {
                         ks.nav_item('Admin', iPage === Page.Admin, pages[Page.Admin]);
                         ks.is_item_clicked(function () {
@@ -270,6 +281,9 @@
                     break;
                 case Page.Requests:
                     page_requests.call(this, parameters);
+                    break;
+                case Page.Changes:
+                    page_changes.call(this, parameters);
                     break;
                 case Page.Admin:
                     page_admin.call(this);

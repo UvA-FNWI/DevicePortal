@@ -18,7 +18,8 @@ interface Array<T> {
     distinctBy(selector: (t: T) => string | number): T[];
     contains(predicate: T): boolean;
     any(predicate: IWherePredicate<T>): boolean;
-    all(predicate: IWherePredicate<T>): boolean;    
+    all(predicate: IWherePredicate<T>): boolean;
+    count(predicate: IWherePredicate<T>): number;
 }
 if (typeof Array.prototype.where !== 'function') {
     Array.prototype.where = function where<T>(predicate: IWherePredicate<T>): T[] {
@@ -154,5 +155,14 @@ if (typeof Array.prototype.all !== 'function') {
             if (!predicate(this[i])) { return false; }
         }
         return true;
+    };
+}
+if (typeof Array.prototype.count !== 'function') {
+    Array.prototype.count = function count<T>(predicate: IWherePredicate<T>): number {
+        let count = 0;
+        for (let i = 0; i < this.length; ++i) {
+            if (predicate(this[i])) { ++count; }
+        }
+        return count;
     };
 }

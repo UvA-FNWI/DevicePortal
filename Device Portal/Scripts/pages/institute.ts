@@ -493,7 +493,7 @@
         });
 
         ks.set_next_item_class_name('ml-1');
-        paginator('paginator', state.devices.filter(d => device_search_match(search, d)).length, () => ks.refresh(this));
+        paginator('paginator', state.devices.count(d => device_search_match(search, d)), () => ks.refresh(this));
     }
 
     function device_search_match(p: DeviceSearchParams, d: Device): boolean {

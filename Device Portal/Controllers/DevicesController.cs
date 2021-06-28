@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DevicePortal.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DevicePortal.Controllers
 {
@@ -34,6 +35,16 @@ namespace DevicePortal.Controllers
         public async Task<ActionResult<int>> GetDeviceCount()
         {
             return await _context.Devices.Active().CountAsync();
+        }
+
+        // GET: api/Devices/Changes
+        [HttpGet("changes")]
+        [Authorize(Policy = AppPolicies.AdminOnly)]
+        public async Task<ActionResult<IEnumerable<Device>>> GetChanges()
+        {
+            return await _context.Devices.Active()
+                .Where(d => d.History.Any(h => h.UserEditId != Data.User.ImporterId))
+                .ToListAsync();
         }
 
         // GET: api/Devices/Me
