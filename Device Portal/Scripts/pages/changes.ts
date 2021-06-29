@@ -11,6 +11,7 @@
         if (isPageSwap) {
             GET_ONCE('fetch device changes', API.Devices('Changes')).done((result: Device[]) => {
                 state.devices = result;
+                state.devices.sort((a, b) => sort_string(b.dateEdit, a.dateEdit));
                 for (let d of state.devices) {
                     d.nameLowerCase = d.name ? d.name.toLowerCase() : '';
                     d.deviceIdLowerCase = d.deviceId ? d.deviceId.toLowerCase() : '';
@@ -24,7 +25,6 @@
                     Device.formatPurchaseDate(d);
                     Device.formatLastSeenDate(d);
                 }
-                state.devices.sort((a, b) => sort_string(a.name, b.name));
                 ks.refresh();
             });
         }

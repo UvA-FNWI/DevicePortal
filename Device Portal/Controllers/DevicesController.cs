@@ -42,9 +42,20 @@ namespace DevicePortal.Controllers
         [Authorize(Policy = AppPolicies.AdminOnly)]
         public async Task<ActionResult<IEnumerable<Device>>> GetChanges()
         {
-            return await _context.Devices.Active()
+            var devices = await _context.Devices.Active()
+                .Include(d => d.User)
                 .Where(d => d.History.Any(h => h.UserEditId != Data.User.ImporterId))
                 .ToListAsync();
+            var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId);
+            var editNameMap = await _context.Users
+                .Where(u => userEditIds.Contains(u.UserName))
+                .Select(u => new { u.UserName, u.Name })
+                .ToDictionaryAsync(u => u.UserName, u => u.Name);
+            foreach (var d in devices)
+            {
+                d.UserEditName = (d.UserEditId == null || !editNameMap.TryGetValue(d.UserEditId, out var name)) ? null : name;
+            }
+            return devices;
         }
 
         // GET: api/Devices/Me
@@ -66,7 +77,7 @@ namespace DevicePortal.Controllers
         public async Task<ActionResult<IEnumerable<Device>>> GetDevices(string userName)
         {
             var devices = await _context.Devices.Include(d => d.User).Where(d => d.UserName == userName).Active().ToListAsync();
-            var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId).ToHashSet();
+            var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId);
             var editNameMap = await _context.Users
                 .Where(u => userEditIds.Contains(u.UserName))
                 .Select(u => new { u.UserName, u.Name })
