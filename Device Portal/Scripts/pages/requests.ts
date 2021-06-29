@@ -117,7 +117,6 @@
                     // Update request counter in top nav
                     ks.local_persist<{ count: number }>('request count').count--;
 
-                    contextModal.showSuccess('Succesfully saved change.');
                     ks.navigate_to('Requests', pages[Page.Requests]);
                 }, function (fail) {
                     contextModal.showWarning(fail.responseText);
