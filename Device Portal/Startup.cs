@@ -91,12 +91,14 @@ namespace DevicePortal
                                 value.GetString() : "";
                             string familyName = context.User.RootElement.TryGetProperty("family_name", out value) ?
                                 value.GetString() : "";
+                            string email = context.User.RootElement.TryGetProperty("email", out value) ? value.GetString() : "";
 
                             user = new User()
                             {
                                 FacultyId = facultyId,
                                 Name = $"{givenName} {familyName}".Trim(),
                                 UserName = userName,
+                                Email = email,
                             };
 
                             foreach (var right in rightsMap.Values)
@@ -121,6 +123,13 @@ namespace DevicePortal
                         }
                         else 
                         {
+                            if (string.IsNullOrEmpty(user.Email))
+                            {
+                                string email = context.User.RootElement.TryGetProperty("email", out value) ? value.GetString() : "";
+                                user.Email = email;
+                                var entry = db.Entry(user);
+                                entry.Property(u => u.Email).IsModified = true;
+                            }
                             // Update or remove current department from user
                             var userDepartments = db.Users_Departments
                                 .Include(ud => ud.Department)
