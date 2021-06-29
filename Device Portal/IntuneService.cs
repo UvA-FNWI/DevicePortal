@@ -302,6 +302,16 @@ namespace DevicePortal
             finally { semaphoreDeviceSync.Release(); }
         }
 
+        public async Task<string> GetUserObjectId(string userEmail)
+        {
+            var graphClient = GetGraphClient();
+            var info = await graphClient.Users.Request()
+                .Filter($"userPrincipalName eq '{userEmail}'")
+                .Select("displayName, id")
+                .GetAsync();
+            return info.Any() ? info[0].Id : "";
+        }
+
         public async Task SyncUsers()
         {
             await semaphoreUserSync.WaitAsync();

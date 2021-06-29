@@ -68,6 +68,16 @@ namespace DevicePortal.Controllers
             var user = _context.Users.Find(userId);
             if (user == null) { return NotFound(); }
 
+            if (!string.IsNullOrEmpty(user.Email) && string.IsNullOrEmpty(user.ObjectId))
+            {
+                user.ObjectId = await _intuneService.GetUserObjectId(user.Email);
+                if (!string.IsNullOrEmpty(user.ObjectId))
+                {
+                    var entry = _context.Entry(user);
+                    entry.Property(u => u.ObjectId).IsModified = true;
+                    _context.SaveChanges();
+                }
+            }
             await _intuneService.SyncManagedDeviceUser(user.UserName, user.ObjectId);
             return await _context.Devices.Where(d => d.UserName == userId).Active().ToListAsync();
         }
