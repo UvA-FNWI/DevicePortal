@@ -183,7 +183,7 @@ namespace DP {
         ];
         comboId = 0;
 
-        show(device: Device) {
+        show(device: Device, showTimeline: boolean) {
             for (let key in this.edit) {
                 let v = device[key];
                 this.edit[key] = v != null ? v : '';
@@ -192,9 +192,24 @@ namespace DP {
             this.device = device;
             this.display = device;
             this.history = null;
-            this.showTimeline = false;
+            this.showTimeline = showTimeline;
             ks.refresh(this.el);
             ks.open_popup(this.id);
+
+            if (showTimeline) {
+                GET_ONCE('history', API.Devices(device.id + '/History')).done((history: DeviceHistory[]) => {
+                    for (let i = 0; i < history.length; ++i) {
+                        let h = history[i];
+                        h.dateHistory = truncTimeOffDate(h.dateHistory);
+
+                        Device.formatPurchaseDate(h);
+                        Device.formatLastSeenDate(h);
+                    }
+                    this.showTimeline = true;
+                    this.history = history;
+                    ks.refresh();
+                });
+            }
 
             GET_ONCE('user list', API.Users()).done((users: User[]) => {
                 for (let i = 0; i < users.length; ++i) { 

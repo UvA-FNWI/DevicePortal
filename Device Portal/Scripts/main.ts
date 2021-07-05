@@ -27,7 +27,7 @@
     ];
 
     export interface DeviceTableSettings {
-        columns: { label: string, active: boolean }[];
+        columns: { label: string, searchField: string, searchType: string, searchObj: object, active: boolean }[];
     }
 
     export let iPage = Page.Home;
@@ -109,19 +109,19 @@
         {
             let settings = {
                 columns: [
-                    { label: 'Name', active: true },
-                    { label: 'Device ID', active: true },
-                    { label: 'Serial number', active: true },
-                    { label: 'Type', active: true },
-                    { label: 'Category', active: true },
-                    { label: 'OS', active: true },
-                    { label: 'Cost centre', active: true },
-                    { label: 'Building', active: true },
-                    { label: 'Room', active: true },
-                    { label: 'Outlet', active: true },
-                    { label: 'Labnet', active: false },
-                    { label: 'Ipv4', active: false },
-                    { label: 'Ipv6', active: false },
+                    { label: 'Name', searchField: 'name', searchType: 'string', active: true },
+                    { label: 'Device ID', searchField: 'deviceId', searchType: 'string', active: true },
+                    { label: 'Serial number', searchField: 'serialNr', searchType: 'string', active: true },
+                    { label: 'Type', searchField: 'type', searchType: 'combo', searchObj: deviceTypes, active: true },
+                    { label: 'Category', searchField: 'category', searchType: 'combo', searchObj: deviceCategories, active: true },
+                    { label: 'OS', searchField: 'os_type', searchType: 'combo', searchObj: osNames, active: true },
+                    { label: 'Cost centre', searchField: 'costCentre', searchType: 'string', active: true },
+                    { label: 'Building', searchField: 'itracsBuilding', searchType: 'string', active: true },
+                    { label: 'Room', searchField: 'itracsRoom', searchType: 'string', active: true },
+                    { label: 'Outlet', searchField: 'itracsOutlet', searchType: 'string', active: true },
+                    { label: 'Labnet', searchField: 'labnet', searchType: 'string', active: false },
+                    { label: 'Ipv4', searchField: 'ipv4', searchType: 'string', active: false },
+                    { label: 'Ipv6', searchField: 'ipv6', searchType: 'string', active: false },
                 ]
             };
             let stored = JSON.parse(window.localStorage.getItem('device_table_cols'));

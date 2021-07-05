@@ -1,5 +1,5 @@
 ﻿namespace DP {
-    class DeviceSearchParams {
+    export class DeviceSearchParams {
         user = '';
         name = '';
         deviceId = '';
@@ -15,6 +15,26 @@
         ipv4 = '';
         ipv6 = '';
         status = <DeviceStatus>-1;
+
+        static copyToLower(params: DeviceSearchParams) {
+            let result = new DeviceSearchParams();
+            result.user = params.user.toLowerCase();
+            result.name = params.name.toLowerCase();
+            result.deviceId = params.deviceId.toLowerCase();
+            result.serialNr = params.serialNr.toLowerCase();
+            result.type = params.type;
+            result.category = params.category;
+            result.os_type = params.os_type;
+            result.costCentre = params.costCentre.toLowerCase();
+            result.itracsBuilding = params.itracsBuilding.toLowerCase();
+            result.itracsRoom = params.itracsRoom.toLowerCase();
+            result.itracsOutlet = params.itracsOutlet.toLowerCase();
+            result.status = params.status;
+            result.labnet = params.labnet;
+            result.ipv4 = params.ipv4;
+            result.ipv6 = params.ipv6;
+            return result;
+        }
     }
     class Institute {
         name: string;
@@ -43,20 +63,8 @@
                 GET_ONCE('devices', API.Institutes(instituteId) + '/Overview').done((institute: Institute) => {
                     state.institute = institute;
                     state.devices = institute.devices;
-                    for (let d of institute.devices) {
-                        d.nameLowerCase = d.name ? d.name.toLowerCase() : '';
-                        d.deviceIdLowerCase = d.deviceId ? d.deviceId.toLowerCase() : '';
-                        d.serialNumberLowerCase = d.serialNumber ? d.serialNumber.toLowerCase() : '';
-                        if (d.user) { d.user.nameLowerCase = d.user.name ? d.user.name.toLowerCase() : ''; }
-                        d.costCentreLowerCase = d.costCentre ? d.costCentre.toLowerCase() : '';
-                        d.itracsBuildingLowerCase = d.itracsBuilding ? d.itracsBuilding.toLowerCase() : '';
-                        d.itracsRoomLowerCase = d.itracsRoom ? d.itracsRoom.toLowerCase() : '';
-                        d.itracsOutletLowerCase = d.itracsOutlet ? d.itracsOutlet.toLowerCase() : '';
-
-                        Device.formatPurchaseDate(d);
-                        Device.formatLastSeenDate(d);
-                    }
-                    institute.devices.sort((a, b) => sort_string(a.name, b.name));
+                    Device.makeSearchableAndFormatted(state.devices);
+                    state.devices.sort((a, b) => sort_string(a.name, b.name));
                     ks.refresh();
                 });
             }
@@ -162,31 +170,16 @@
         });
 
         let count = 0;
-        let search = new DeviceSearchParams();
-        search.user = state.search.user.toLowerCase();
-        search.name = state.search.name.toLowerCase();
-        search.deviceId = state.search.deviceId.toLowerCase();
-        search.serialNr = state.search.serialNr.toLowerCase();
-        search.type = state.search.type;
-        search.category = state.search.category;
-        search.os_type = state.search.os_type;
-        search.costCentre = state.search.costCentre.toLowerCase();
-        search.itracsBuilding = state.search.itracsBuilding.toLowerCase();
-        search.itracsRoom = state.search.itracsRoom.toLowerCase();
-        search.itracsOutlet = state.search.itracsOutlet.toLowerCase();
-        search.status = state.search.status;
-        search.labnet = state.search.labnet;
-        search.ipv4 = state.search.ipv4;
-        search.ipv6 = state.search.ipv6;
+        let search = DeviceSearchParams.copyToLower(state.search);
 
         for (let i = 0; i < state.devices.length; ++i) {
-            if (!device_search_match(search, state.devices[i])) { continue; }
-            ++count;
+            if (device_search_match(search, state.devices[i])) { ++count; }
         }
 
         let range = paginator_range('paginator', count);
 
         let sort_columns = [];
+        // TODO: remove on fix
         let workaround: { counter: number } = ks.local_persist('####table_settings_workaround');
         ks.set_next_item_class_name('bg-white border');
         ks.table('devices##' + workaround.counter, function () {
@@ -474,7 +467,7 @@
                     ks.set_next_item_class_name('cursor-pointer');
                     device_row(state.devices[i], DTF.EditNote | DTF.ShowSharedColumn, state.devices[i].user?.name || '_');
                     ks.is_item_clicked(function () {
-                        deviceModal.show(state.devices[i]);
+                        deviceModal.show(state.devices[i], false);
                     });
 
                     --countdown;
@@ -496,7 +489,7 @@
         paginator('paginator', state.devices.count(d => device_search_match(search, d)), () => ks.refresh(this));
     }
 
-    function device_search_match(p: DeviceSearchParams, d: Device): boolean {
+    export function device_search_match(p: DeviceSearchParams, d: Device): boolean {
         return (!p.user || d.user?.nameLowerCase.indexOf(p.user) >= 0) &&
             (!p.name || d.nameLowerCase.indexOf(p.name) >= 0) &&
             (!p.deviceId || d.deviceIdLowerCase.indexOf(p.deviceId) >= 0) &&

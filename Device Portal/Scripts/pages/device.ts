@@ -103,6 +103,22 @@
             }
             if (!d.lastSeenDate) { d.lastSeenDate = 'Never'; }
         }
+
+        static makeSearchableAndFormatted(devices: Device[]) {
+            for (let d of devices) {
+                d.nameLowerCase = d.name ? d.name.toLowerCase() : '';
+                d.deviceIdLowerCase = d.deviceId ? d.deviceId.toLowerCase() : '';
+                d.serialNumberLowerCase = d.serialNumber ? d.serialNumber.toLowerCase() : '';
+                if (d.user) { d.user.nameLowerCase = d.user.name ? d.user.name.toLowerCase() : ''; }
+                d.costCentreLowerCase = d.costCentre ? d.costCentre.toLowerCase() : '';
+                d.itracsBuildingLowerCase = d.itracsBuilding ? d.itracsBuilding.toLowerCase() : '';
+                d.itracsRoomLowerCase = d.itracsRoom ? d.itracsRoom.toLowerCase() : '';
+                d.itracsOutletLowerCase = d.itracsOutlet ? d.itracsOutlet.toLowerCase() : '';
+
+                Device.formatPurchaseDate(d);
+                Device.formatLastSeenDate(d);
+            }
+        }
     }
     export class DeviceHistory extends Device {
         dateHistory: string;

@@ -228,7 +228,7 @@
                                 ks.set_next_item_class_name('cursor-pointer');
                                 device_row(state.devices[i], DTF.EditNote, '');
                                 ks.is_item_clicked(function () {
-                                    deviceModal.show(state.devices[i]);
+                                    deviceModal.show(state.devices[i], false);
                                 });
                             }
                         });
