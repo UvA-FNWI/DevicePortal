@@ -152,12 +152,21 @@ namespace DevicePortal.Controllers
             if (device.Status == DeviceStatus.Lost) { device.StatusEffectiveDate = DateTime.Now; }
             else { device.Status = original.Status; }
 
+            bool canManage = User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManage);
+
             if (original.Name == device.Name &&
                 original.OS_Type == device.OS_Type &&
                 original.OS_Version == device.OS_Version &&
                 original.Status == device.Status &&
                 original.Disowned == device.Disowned &&
-                original.StatusEffectiveDate == device.StatusEffectiveDate)
+                original.StatusEffectiveDate == device.StatusEffectiveDate &&
+                (!canManage ||
+                original.Notes == device.Notes &&
+                original.Shared == device.Shared &&
+                original.ItracsBuilding == device.ItracsBuilding &&
+                original.ItracsRoom == device.ItracsRoom &&
+                original.ItracsOutlet == device.ItracsOutlet &&
+                original.UserName == device.UserName))
             {
                 // No changes, prevent adding unnecessary history entries
                 return NoContent();
@@ -169,7 +178,7 @@ namespace DevicePortal.Controllers
             device.UserEditId = User.GetUserName();
             _context.UpdateProperties(device, d => d.Name, d=> d.OS_Type, d => d.OS_Version, d => d.Status, d => d.Disowned,
                                               d => d.StatusEffectiveDate, d => d.UserEditId, d => d.DateEdit);
-            if (User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManage))
+            if (canManage)
             {
                 _context.UpdateProperties(device, d => d.Notes, d => d.Shared, d => d.ItracsBuilding, d => d.ItracsRoom,
                     d => d.ItracsOutlet, d => d.UserName);
