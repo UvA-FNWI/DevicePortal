@@ -1,5 +1,5 @@
 ﻿/*!*****************************************************************************************************
-        KS ImGui version 1.1.0
+        KS ImGui version 1.1.1
         Copyright 2020, by Karbon Solutions
 
         This copy is licensed to Universiteit van Amsterdam
@@ -131,7 +131,7 @@ namespace ks {
 
         constructor() {
             for (let i = 0; i < 1000; ++i) {
-                this.items.push({ el: undefined, parent: undefined, i_child: -1, child_count: 0 });
+                this.items.push({ el: null, parent: null, i_child: -1, child_count: 0 });
             }
         }
 
@@ -139,15 +139,12 @@ namespace ks {
             if (this.length === this.items.length) {
                 let push_count = Math.ceil(this.items.length * 1.5) - this.items.length;
                 for (let i = 0; i < push_count; ++i) {
-                    this.items.push({ el: undefined, parent: undefined, i_child: -1, child_count: 0 });
+                    this.items.push({ el: null, parent: null, i_child: -1, child_count: 0 });
                 }
             }
 
             let item = this.items[this.length++];
             item.el = el;
-            item.parent = undefined;
-            item.i_child = -1;
-            item.child_count = 0;
             return item;
         }
 
@@ -159,6 +156,13 @@ namespace ks {
         }
 
         clear(i_begin: number) {
+            for (let i = i_begin; i < this.length; ++i) {
+                let item = this.items[i];
+                item.el = null;
+                item.parent = null;
+                item.i_child = -1;
+                item.child_count = 0;
+            }
             this.length = i_begin;
         }
     }
@@ -169,7 +173,7 @@ namespace ks {
 
         constructor() {
             for (let i = 0; i < 100; ++i) {
-                this.items.push({ current: undefined, parent: undefined, form: undefined, modal: undefined });
+                this.items.push({ current: null, parent: null, form: null, modal: null });
             }
         }
 
@@ -177,7 +181,7 @@ namespace ks {
             if (this.length === this.items.length) {
                 let push_count = Math.ceil(this.items.length * 1.5) - this.items.length;
                 for (let i = 0; i < push_count; ++i) {
-                    this.items.push({ current: undefined, parent: undefined, form: undefined, modal: undefined });
+                    this.items.push({ current: null, parent: null, form: null, modal: null });
                 }
             }
 
@@ -271,10 +275,10 @@ namespace ks {
         });
     }
 
-    export function combo(label: string, children_proc): HTMLSelectElement {
+    export function combo(id_combo: string, children_proc: Function): HTMLSelectElement {
         let do_item = function (): HTMLSelectElement {
             let class_valid = !next_input_validation ? '' : (next_input_validation.is_valid ? ' is-valid' : ' is-invalid');
-            let id = hash_str(label, id_chain[id_chain.length - 1]);
+            let id = hash_str(id_combo, id_chain[id_chain.length - 1]);
             let existing = item_existing(id, Item_Type.combo);
             if (existing) {
                 set_class_name(existing, 'custom-select' + class_valid);
@@ -283,7 +287,7 @@ namespace ks {
             }
 
             let el = <any>document.createElement('SELECT');
-            let info = item_info_add(el, Item_Type.combo, id, label_extract(label), children_proc);
+            let info = item_info_add(el, Item_Type.combo, id, label_extract(id_combo), children_proc);
             push_set_id(info.id);
 
             set_class_name(el, 'custom-select' + class_valid);
@@ -295,7 +299,7 @@ namespace ks {
                     for (let i = 0; i < el.children.length; ++i) {
                         let child = el.children[i];
                         if (child._ks_info && child._ks_info.option_on_click && child.value === value) {
-                            child._ks_info.option_on_click();
+                            child._ks_info.option_on_click(ev);
                             break;
                         }
                     }
@@ -312,7 +316,7 @@ namespace ks {
             if (is_row && item_current_parent.parentElement === item_current_form || item_current_parent === item_current_form) {
                 set_next_item_this(item_current_parent);
                 let el;
-                group(label, is_row ? 'form-group col' : 'form-group', function () {
+                group(id_combo, is_row ? 'form-group col' : 'form-group', function () {
                     el = do_item.call(this);
                     consume_next_input_validation();
                 });
@@ -762,7 +766,9 @@ namespace ks {
         if (existing) {
             set_class_name(existing);
             if (typeof str_or_children_proc !== 'function') {
-                set_inner_text(existing._ks_info.el_append, str_or_children_proc);
+                if (set_inner_text(existing._ks_info.el_append, str_or_children_proc)) {
+                    item_remove_children(existing, false);
+                }
             } else {
                 set_inner_text(existing._ks_info.el_append, '');
             }
@@ -780,15 +786,10 @@ namespace ks {
 
         let el_flex = document.createElement('DIV');
         set_class_name(el_flex, 'd-flex flex-row align-items-center');
-        let el_grow = document.createElement('DIV');
-        set_class_name(el_grow, 'flex-grow-1');
-        if (typeof str_or_children_proc !== 'function') {
-            set_inner_text(el_grow, str_or_children_proc);
-        } else {
-            set_inner_text(el_grow, '');
-        }
-
-        el_flex.appendChild(el_grow);
+        let el_append = document.createElement('DIV');
+        set_class_name(el_append, 'flex-grow-1');
+        set_inner_text(el_append, typeof str_or_children_proc !== 'function' ? str_or_children_proc : '');
+        el_flex.appendChild(el_append);
 
         if (initial_sort_order !== undefined) {
             el.style.cursor = 'pointer';
@@ -815,7 +816,7 @@ namespace ks {
 
         el.appendChild(el_flex);
 
-        info.el_append = el_grow;
+        info.el_append = el_append;
         return temp_switch_parent_apply(el, proc, true);
     }
 
@@ -845,7 +846,8 @@ namespace ks {
             if (!is_new) {
                 let el_anchor = el._ks_info.el_append;
                 el_anchor.href = href;
-                set_inner_text(el_anchor, children_proc ? '' : el._ks_info.label);
+                if (children_proc) { set_inner_text(el_anchor, ''); }
+                else if (set_inner_text(el_anchor, el._ks_info.label)) { item_remove_children(el, false); }
                 set_class_name(el_anchor, 'nav-link' + (is_active ? ' active' : ''));
                 return;
             }
@@ -871,8 +873,7 @@ namespace ks {
                 this.setAttribute('novalidate', true);
             }
         });
-        if (!action) { el.action = 'javascript:void(0);'; }
-        else { el.action = action; el.method = 'post'; }
+        el.action = action ? action : 'javascript:void(0);';
 
         let current_stored = item_current;
         let parent_stored = item_current_parent;
@@ -1257,10 +1258,6 @@ namespace ks {
     }
 
     let next_input_validation;
-
-    export function show_form_validation() {
-        return item_current_form && item_current_form._ks_info.show_validation;
-    }
 
     export function set_next_input_validation(is_valid: boolean, feedback_valid: string, feedback_invalid: string) {
         if (!item_current_form || !item_current_form._ks_info.show_validation) {
@@ -1822,11 +1819,16 @@ namespace ks {
         item_current_parent = state.parent;
         item_current_form = state.form;
         item_current_modal = state.modal;
+
+        state.current = null;
+        state.parent = null;
+        state.form = null;
+        state.modal = null;
     }
 
     let navigate_after_refresh = false;
     let refresh_may_recurse = false;
-    export function refresh(item?, allow_recursive_refresh?: boolean) {
+    export function refresh(item?: HTMLElement, allow_recursive_refresh?: boolean) {
         if (!item) { item = container; }
         if (is_refresh && !refresh_may_recurse) { return; }
 
@@ -1838,7 +1840,7 @@ namespace ks {
         is_refresh = true;
         ++pass_id;
 
-        let info = item._ks_info;
+        let info = (<any>item)._ks_info;
         if (info && info.proc) {
             let el_restore_focus = <HTMLElement>document.activeElement;
 
@@ -1854,10 +1856,10 @@ namespace ks {
             let i_buffer = tree_item_buffer.length;
             tree_item = tree_item_buffer.push(item);
             tree_item_map = {};
-            tree_item_map[item._ks_info.id] = tree_item;
+            tree_item_map[info.id] = tree_item;
 
             push_set_id(info.id);
-            info.proc.apply(item._ks_info.this);
+            info.proc.apply(info.this);
             pop_id();
 
             for (let i = i_buffer; i < tree_item_buffer.length; ++i) {
@@ -2048,13 +2050,17 @@ namespace ks {
         next_item_class_name = undefined;
     }
 
+    // Note: this can remove child elements unbeknownst to KS, make sure to call item_remove_children() 
+    // on the parent element. The reason we don't call it here because el might not have a ._ks_info and 
+    // thus not the necessary info to remove all children, this is the case for some of our el_append elements.
+    // Returns true if textContent has been updated.
     function set_inner_text(el, str) {
-        // Even though textContent is not supposed to thrash layout, we see a 
-        // performance upgrade by only settings it when necessary
         if (el._ks_inner_text !== str) {
             el.textContent = str;
             el._ks_inner_text = str;
+            return true;
         }
+        return false;
     }
 
     function set_input_value(el, value) {
@@ -2092,6 +2098,20 @@ namespace ks {
         el._ks_el_parent = undefined;
         el._ks_info.el_append.removeChild(el._ks_info.children[index]);
         el._ks_info.children.splice(index, 1);
+    }
+
+    function item_remove_children(el, remove_elements: boolean) {
+        console.assert(el._ks_info);
+        let children = item_children(el);
+        if (remove_elements) {
+            for (let i = children.length - 1; i >= 0; --i) {
+                children[i]._ks_el_parent = undefined;
+                el._ks_info.el_append.removeChild(children[i]);
+            }
+        } else {
+            for (let i = children.length - 1; i >= 0; --i) { children[i]._ks_el_parent = undefined; }
+        }
+        children.length = 0;
     }
 
     function item_onclick(ev) {
