@@ -1,5 +1,5 @@
 ﻿/*!*****************************************************************************************************
-        KS ImGui version 1.1.1
+        KS ImGui version 1.1.2
         Copyright 2020, by Karbon Solutions
 
         This copy is licensed to Universiteit van Amsterdam
@@ -18,6 +18,8 @@ interface Math { imul(a: number, b: number): number; }
 
 namespace ks {
     declare const $: any;
+
+    export let debug_overlay = false;
 
     // https://stackoverflow.com/questions/4565112/javascript-how-to-find-out-if-the-user-browser-is-chrome/13348618#13348618
     let is_chromium = (<any>window).chrome;
@@ -198,6 +200,13 @@ namespace ks {
         }
     }
 
+    enum Debug_Display_Type {
+        New,
+        Recycle,
+        Remove,
+        Move,
+    }
+
     let container;
     let item_current;
     let item_current_parent;
@@ -216,6 +225,9 @@ namespace ks {
     let next_item_this;
     let main_proc;
     let local_persists = {};
+    let debug_display_index = 0;
+    let debug_display_types = [];
+    let debug_display_items = [];
 
     function add_throttled_event_listener(target: EventTarget, type: string, proc: (ev: Event) => void) {
         let request_id = 0;
@@ -1862,13 +1874,56 @@ namespace ks {
             info.proc.apply(info.this);
             pop_id();
 
+            let debug_container: HTMLElement;
+            if (debug_overlay) {
+                for (let i = i_buffer; i < tree_item_buffer.length; ++i) {
+                    let node = tree_item_buffer.items[i];
+                    if (node.parent) {
+                        let parent_children = item_children(node.parent.el);
+                        let c = parent_children[node.i_child];
+
+                        let i_child = node.i_child;
+                        while (c && !c._ks_info && c !== node.el) {
+                            debug_display_add(Debug_Display_Type.Remove, c);
+                            c = parent_children[i_child--];
+                        }
+
+                        if (c !== node.el) { debug_display_add(Debug_Display_Type.Move, node.el); }
+                    }
+                }
+
+                for (let i = i_buffer; i < tree_item_buffer.length; ++i) {
+                    let node = tree_item_buffer.items[i];
+                    if (node.el._ks_info) {
+                        let children = item_children(node.el);
+                        for (let i_child = children.length - 1; i_child >= node.child_count; --i_child) {
+                            debug_display_add(Debug_Display_Type.Remove, children[i_child]);
+                        }
+                    }
+                }
+
+                debug_container = document.createElement('DIV');
+                debug_container.className = 'position-absolute';
+                debug_container.style.top = '0';
+                debug_container.style.left = '0';
+                debug_container.style.width = '100%';
+                debug_container.style.height = '100%';
+                debug_container.style.overflow = 'hidden';
+                debug_container.style.pointerEvents = 'none';
+
+                debug_display_render(debug_container);
+
+                document.body.appendChild(debug_container);
+                debugger;
+            }
+
             for (let i = i_buffer; i < tree_item_buffer.length; ++i) {
                 let node = tree_item_buffer.items[i];
                 if (node.parent) {
                     let parent_children = item_children(node.parent.el);
                     let c = parent_children[node.i_child];
 
-                    while (c && !c._ks_info && (!c._ks_tag_name || c !== node.el)) {
+                    while (c && !c._ks_info && c !== node.el) {
                         item_remove_child(node.parent.el, node.i_child);
                         c = parent_children[node.i_child];
                     }
@@ -1887,6 +1942,14 @@ namespace ks {
                         item_remove_child(node.el, i_child);
                     }
                 }
+            }
+
+            if (debug_overlay) {
+                while (debug_container.lastChild) { debug_container.removeChild(debug_container.lastChild); }
+                debug_display_render(debug_container);
+                debugger;
+                document.body.removeChild(debug_container);
+                debug_display_index = 0;
             }
 
             tree_item_buffer.clear(i_buffer);
@@ -1935,6 +1998,8 @@ namespace ks {
             el.onclick = item_onclick;
             el.onmouseout = item_onmouseout;
             el.onmouseover = item_onmouseover;
+
+            debug_display_add(Debug_Display_Type.New, el);
         }
         el._ks_info.onclick = undefined;
         el._ks_info.onmouseout = undefined;
@@ -1982,6 +2047,8 @@ namespace ks {
             el.onclick = item_onclick;
             el.onmouseout = item_onmouseout;
             el.onmouseover = item_onmouseover;
+
+            debug_display_add(Debug_Display_Type.New, el);
         }
         el._ks_pass_id = pass_id;
 
@@ -2012,6 +2079,9 @@ namespace ks {
                 }
                 el._ks_pass_id = pass_id;
                 tree_item_buffer.push_child(tree_item, el);
+
+                debug_display_add(Debug_Display_Type.Recycle, el);
+
                 return el;
             }
         }
@@ -2095,7 +2165,7 @@ namespace ks {
     }
 
     function item_remove_child(el, index: number) {
-        el._ks_el_parent = undefined;
+        el._ks_info.children[index]._ks_el_parent = undefined;
         el._ks_info.el_append.removeChild(el._ks_info.children[index]);
         el._ks_info.children.splice(index, 1);
     }
@@ -2137,6 +2207,56 @@ namespace ks {
     function item_onmouseover(ev) {
         let el = ev.currentTarget;
         if (el._ks_info && el._ks_info.onmouseover) { el._ks_info.onmouseover(ev); }
+    }
+
+    function debug_display_add(type: Debug_Display_Type, el: HTMLElement) {
+        if (debug_overlay) {
+            debug_display_types[debug_display_index] = type;
+            debug_display_items[debug_display_index] = el;
+            ++debug_display_index;
+        }
+    }
+
+    function debug_display_render(debug_container: HTMLElement) {
+        for (let i = 0; i < debug_display_index; ++i) {
+            let di = debug_display_items[i];
+            let rect = di.getBoundingClientRect();
+            if (!rect.width) {
+                continue;
+            }
+
+            let el = document.createElement('DIV')
+            el.className = 'position-absolute';
+            el.style.left = (window.scrollX + rect.left) + 'px';
+            el.style.top = (window.scrollY + rect.top) + 'px';
+            el.style.width = rect.width + 'px';
+            el.style.height = rect.height + 'px';
+            el.style.pointerEvents = 'none';
+            debug_container.appendChild(el);
+
+            switch (debug_display_types[i]) {
+                case Debug_Display_Type.New:
+                    el.style.border = '2px solid rgb(0, 255, 0)';
+                    break;
+                case Debug_Display_Type.Recycle:
+                    el.style.border = '2px solid rgb(255, 0, 255)';
+                    break;
+                case Debug_Display_Type.Remove:
+                    el.style.left = (window.scrollX + rect.left + 2) + 'px';
+                    el.style.top = (window.scrollY + rect.top + 2) + 'px';
+                    el.style.width = (rect.width - 4) + 'px';
+                    el.style.height = (rect.height - 4) + 'px';
+                    el.style.border = '2px solid rgb(255, 0, 0)';
+                    break;
+                case Debug_Display_Type.Move:
+                    el.style.left = (window.scrollX + rect.left + 4) + 'px';
+                    el.style.top = (window.scrollY + rect.top + 4) + 'px';
+                    el.style.width = (rect.width - 8) + 'px';
+                    el.style.height = (rect.height - 8) + 'px';
+                    el.style.border = '2px solid rgb(0, 0, 255)';
+                    break;
+            }
+        }
     }
 
     export function no_op() { }

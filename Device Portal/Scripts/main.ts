@@ -134,7 +134,6 @@
             }
 
             ks.local_persist('####device_table_cols', settings);
-            ks.local_persist('####table_settings_workaround', { counter: 0 });
         }
 
         let iPagePrev = iPage;
@@ -314,9 +313,7 @@
             ks.set_next_item_class_name('mb-3');
             ks.column('devices', 12, function () {
                 ks.set_next_item_class_name('bg-white border');
-                // TODO: remove on fix
-                let workaround: { counter: number } = ks.local_persist('####table_settings_workaround');
-                ks.table('devices##' + workaround.counter, function () {
+                ks.table('devices', function () {
                     let flags = DTF.EditDevice;
                     if (user.can_secure) { flags |= DTF.CanSecure; }
 
@@ -384,8 +381,6 @@
                                 let c = settings.columns[i];
                                 dropdown_item(c.label, c.active, function () {
                                     c.active = !c.active;
-                                    // TODO: remove when fixed
-                                    (<any>ks.local_persist('####table_settings_workaround')).counter++;
                                     window.localStorage.setItem('device_table_cols', JSON.stringify(settings));
                                     ks.refresh();
                                 });

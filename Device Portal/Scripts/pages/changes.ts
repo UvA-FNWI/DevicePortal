@@ -32,10 +32,8 @@
                 let range = paginator_range('paginator', count);
 
                 let sort_columns = [];
-                // TODO: remove on fix
-                let workaround: { counter: number } = ks.local_persist('####table_settings_workaround');
                 ks.set_next_item_class_name('bg-white border');
-                ks.table('devices##' + workaround.counter, function () {
+                ks.table('devices', function () {
                     let settings: DeviceTableSettings = ks.local_persist('####device_table_cols');
                     ks.table_head(function () {
                         ks.table_row(function () {
@@ -116,8 +114,6 @@
                                             let c = settings.columns[i];
                                             dropdown_item(c.label, c.active, function () {
                                                 c.active = !c.active;
-                                                // TODO: remove when fixed
-                                                (<any>ks.local_persist('####table_settings_workaround')).counter++;
                                                 window.localStorage.setItem('device_table_cols', JSON.stringify(settings));
                                                 ks.refresh();
                                             });

@@ -218,10 +218,8 @@
             ks.row(state.user.userName, function () {
                 ks.set_next_item_class_name('mb-3');
                 ks.column('devices', 12, function () {
-                    // TODO: remove on fix
-                    let workaround: { counter: number } = ks.local_persist('####table_settings_workaround');
                     ks.set_next_item_class_name('bg-white border');
-                    ks.table('devices##' + workaround.counter, function () {
+                    ks.table('devices', function () {
                         device_table_head(0);
                         ks.table_body(function () {
                             for (let i = 0; i < state.devices.length; ++i) {
