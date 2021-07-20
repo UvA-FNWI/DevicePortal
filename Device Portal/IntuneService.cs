@@ -60,7 +60,7 @@ namespace DevicePortal
 
                 var deviceMap = _context.Devices
                     .Where(d => d.UserName == userName && !string.IsNullOrEmpty(d.SerialNumber))
-                    .ToDictionary(d => d.SerialNumber.ToLower());
+                    .ToLookup(d => d.SerialNumber.ToLower());
                 var departmentIds = _context.Users_Departments
                     .Where(ud => ud.UserName == userName)
                     .Select(ud => ud.DepartmentId)
@@ -75,7 +75,11 @@ namespace DevicePortal
                     // Skip duplicates, process entry with latest enrolled dateTime
                     if (!serialSet.Add(serial_lower)) { continue; }
 
-                    if (!deviceMap.TryGetValue(serial_lower, out var device))
+                    var devices = deviceMap[serial_lower];
+                    if (devices.Count() > 1) { continue; }
+
+                    var device = devices.FirstOrDefault();
+                    if (device == null)
                     {
                         device = new Data.Device
                         {
