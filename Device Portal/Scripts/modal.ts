@@ -512,7 +512,7 @@ namespace DP {
 
             diff('Name: ', p.name, c.name);
             diff('Type: ', deviceTypes[p.type], deviceTypes[c.type]);
-            diff('User:', p.user?.name, c.user?.name);
+            diff('User: ', p.user?.name, c.user?.name);
 
             if (p.status !== c.status) {
                 ks.group('diff status', '', function () {
