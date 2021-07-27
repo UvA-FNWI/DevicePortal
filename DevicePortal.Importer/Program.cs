@@ -139,6 +139,12 @@ namespace DevicePortal.Importer
                 .Where(d => d.DeviceId != null) // Note(Joshua): DeviceId is null with Origin.User
                 .ToArray()
                 .ToDictionary(d => d.DeviceId.ToLower());
+            var serialMap = portalContext.Devices
+                .Where(d => d.SerialNumber != null && d.SerialNumber != "" && d.SerialNumber != "0" &&
+                    d.SerialNumber != "Defaultstring" && d.SerialNumber != "Default string" && 
+                    d.SerialNumber != "NotApplicable" && d.SerialNumber != "onbekend" && 
+                    d.SerialNumber != "SystemSerialNumber" && d.SerialNumber != "TobefilledbyO.E.M.")
+                .ToLookup(d => (d.UserName, d.SerialNumber.ToLower()));
             // Note: if a user has made any edit, we no longer update the device through this import 
             HashSet<int> ignoreSet = portalContext.DeviceHistories
                 .Where(h => h.UserEditId != User.ImporterId && h.UserEditId != User.IntuneServiceId)
@@ -239,10 +245,21 @@ namespace DevicePortal.Importer
                     }
                 }
 
-                if (deviceMap.TryGetValue(device.DeviceId.ToLower(), out Device existing))
+                string serialLower = device.DeviceId.ToLower();
+                if (!deviceMap.TryGetValue(serialLower, out Device existing))
+                {
+                    var existingDevices = serialMap[(device.UserName, serialLower)];
+                    if (existingDevices.Count() > 0)
+                    {
+                        existing = existingDevices.First();
+                    }
+                }
+
+                if (existing != null)
                 {
                     if (!ignoreSet.Contains(existing.Id) &&
                         (existing.UserName != device.UserName ||
+                        existing.DeviceId != device.DeviceId ||
                         existing.SerialNumber != device.SerialNumber ||
                         existing.Category != device.Category ||
                         existing.CostCentre != device.CostCentre ||
@@ -262,6 +279,7 @@ namespace DevicePortal.Importer
                         existing.UserName = device.UserName;
                         existing.DateEdit = now;
                         existing.UserEditId = User.ImporterId;
+                        existing.DeviceId = device.DeviceId;
                         existing.SerialNumber = device.SerialNumber;
                         existing.Category = device.Category;
                         existing.CostCentre = device.CostCentre;
