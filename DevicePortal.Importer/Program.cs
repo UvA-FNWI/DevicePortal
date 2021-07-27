@@ -135,10 +135,6 @@ namespace DevicePortal.Importer
             Dictionary<string, User> userMap = portalContext.Users.ToDictionary(u => u.UserName);
             List<User> usersToAdd = new List<User>();
             List<User> usersToUpdate = new List<User>();
-            Dictionary<string, Device> deviceMap = portalContext.Devices
-                .Where(d => d.DeviceId != null) // Note(Joshua): DeviceId is null with Origin.User
-                .ToArray()
-                .ToDictionary(d => d.DeviceId.ToLower());
             var serialMap = portalContext.Devices
                 .Where(d => d.SerialNumber != null && d.SerialNumber != "" && d.SerialNumber != "0" &&
                     d.SerialNumber != "Defaultstring" && d.SerialNumber != "Default string" && 
@@ -161,6 +157,11 @@ namespace DevicePortal.Importer
 
             Log("Getting devices from cmdb");
             var devices = dwhContext.FnwiPortals.ToArray();
+            var setDevicesCMDB = devices.Select(d => d.Naam).ToHashSet();
+            var deviceMap = portalContext.Devices
+                .Where(d => d.DeviceId != null && setDevicesCMDB.Contains(d.DeviceId))  // DeviceId is null with Origin.User
+                .ToArray()
+                .ToDictionary(d => d.DeviceId.ToLower());
             foreach (var d in devices)
             {
                 string departmentName = instituteDepartmentMap.TryGetValue(d.Klantorganisatie, out departmentName) ?
