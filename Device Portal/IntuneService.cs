@@ -159,7 +159,7 @@ namespace DevicePortal
             public string ObjectId { get; set; }
             public string UserName { get; set; }
             public IEnumerable<Data.Device> Devices { get; set; }
-            public int? DepartmentId { get; set; }
+            public int DepartmentId { get; set; }
         }
         public async Task SyncManagedDevices()
         {
@@ -168,13 +168,13 @@ namespace DevicePortal
             try
             {
                 var users = await _context.Users
-                    .Where(u => !string.IsNullOrEmpty(u.ObjectId))
+                    .Where(u => !string.IsNullOrEmpty(u.ObjectId) && u.Departments.Any())
                     .Select(u => new UserData
                     {
                         ObjectId = u.ObjectId,
                         UserName = u.UserName,
                         Devices = u.Devices.Where(d => !string.IsNullOrEmpty(d.SerialNumber)),
-                        DepartmentId = u.Departments.Select(d => d.DepartmentId).FirstOrDefault(),
+                        DepartmentId = u.Departments.Select(d => d.DepartmentId).First(),
                     })
                     .ToArrayAsync();
 
@@ -203,8 +203,6 @@ namespace DevicePortal
                         var graphClient = GetGraphClient();
                         foreach (var user in data)
                         {
-                            if (!user.DepartmentId.HasValue) { continue; }
-
                             IUserManagedDevicesCollectionPage intuneDevices;
                             try
                             {
@@ -254,7 +252,7 @@ namespace DevicePortal
                                             "OS X" => DeviceType.Laptop,
                                             _ => 0,
                                         },
-                                        DepartmentId = user.DepartmentId.Value,
+                                        DepartmentId = user.DepartmentId,
                                         Status = DeviceStatus.Unsecure,
                                         StatusEffectiveDate = now,
                                         Notes = "",
