@@ -212,7 +212,7 @@ namespace DevicePortal
                             }
                             catch { continue; }
 
-                            var deviceMap = user.Devices.ToDictionary(d => d.SerialNumber.ToLower());
+                            var deviceMap = user.Devices.ToLookup(d => d.SerialNumber.ToLower());
                             var serialSet = new HashSet<string>();
                             foreach (var intuneDevice in intuneDevices.OrderByDescending(d => d.EnrolledDateTime))
                             {
@@ -221,7 +221,11 @@ namespace DevicePortal
                                 // Skip duplicates, process entry with latest enrolled dateTime
                                 if (!serialSet.Add(serial_lower)) { continue; }
 
-                                if (!deviceMap.TryGetValue(serial_lower, out var device))
+                                var devices = deviceMap[serial_lower];
+                                if (devices.Count() > 1) { continue; }
+
+                                var device = devices.FirstOrDefault();
+                                if (device == null)
                                 {
                                     device = new Data.Device
                                     {
