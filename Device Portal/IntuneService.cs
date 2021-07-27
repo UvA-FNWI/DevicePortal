@@ -59,7 +59,11 @@ namespace DevicePortal
                 catch { return; }
 
                 var deviceMap = _context.Devices
-                    .Where(d => d.UserName == userName && !string.IsNullOrEmpty(d.SerialNumber))
+                    .Where(d => d.UserName == userName && !string.IsNullOrEmpty(d.SerialNumber) ||
+                        d.UserName == null && !string.IsNullOrEmpty(d.SerialNumber) && d.SerialNumber != "0" &&
+                        d.SerialNumber != "Defaultstring" && d.SerialNumber != "Default string" && 
+                        d.SerialNumber != "NotApplicable" && d.SerialNumber != "onbekend" && 
+                        d.SerialNumber != "SystemSerialNumber" && d.SerialNumber != "TobefilledbyO.E.M.")
                     .ToLookup(d => d.SerialNumber.ToLower());
                 var departmentIds = _context.Users_Departments
                     .Where(ud => ud.UserName == userName)
@@ -69,6 +73,7 @@ namespace DevicePortal
 
                 DateTime now = DateTime.Now;
                 HashSet<string> serialSet = new HashSet<string>();
+                var deviceHistoriesToAdd = new List<DeviceHistory>();
                 foreach (var intuneDevice in intuneDevices.OrderByDescending(d => d.EnrolledDateTime))
                 {
                     string serial_lower = intuneDevice.SerialNumber.ToLower();
@@ -116,33 +121,47 @@ namespace DevicePortal
                             ItracsOutlet = "",
                             ItracsBuilding = "",
                         };
-                        _context.Add(device);
                     }
 
-                    if (intuneDevice.DeviceRegistrationState == DeviceRegistrationState.Registered ||
-                        intuneDevice.DeviceRegistrationState == DeviceRegistrationState.ApprovalPending ||
-                        intuneDevice.DeviceRegistrationState == DeviceRegistrationState.NotRegisteredPendingEnrollment)
+                    var status = intuneDevice.ComplianceState switch
                     {
+                        ComplianceState.Compliant => DeviceStatus.Approved,
+                        ComplianceState.ConfigManager => DeviceStatus.Approved,
+                        ComplianceState.Conflict => DeviceStatus.Denied,
+                        ComplianceState.Error => DeviceStatus.Unsecure,
+                        ComplianceState.InGracePeriod => DeviceStatus.Unsecure,
+                        ComplianceState.Noncompliant => DeviceStatus.Submitted,
+                        ComplianceState.Unknown => DeviceStatus.Unsecure,
+                        _ => DeviceStatus.Unsecure,
+                    };
+                    if ((device.Id == 0 || device.Status != status || device.UserName != userName ||
+                        device.DepartmentId != departmentIds[0]) &&
+                        (intuneDevice.DeviceRegistrationState == DeviceRegistrationState.Registered ||
+                        intuneDevice.DeviceRegistrationState == DeviceRegistrationState.ApprovalPending ||
+                        intuneDevice.DeviceRegistrationState == DeviceRegistrationState.NotRegisteredPendingEnrollment))
+                    {
+                        if (device.Id > 0) {  deviceHistoriesToAdd.Add(new DeviceHistory(device)); }
+
+                        device.UserName = userName;
+                        device.DepartmentId = departmentIds[0];
+                        device.DateEdit = now;
+                        device.UserEditId = Data.User.IntuneServiceId;
                         device.Origin = DeviceOrigin.Intune;
-                        device.Status = intuneDevice.ComplianceState switch
-                        {
-                            ComplianceState.Compliant => DeviceStatus.Approved,
-                            ComplianceState.ConfigManager => DeviceStatus.Approved,
-                            ComplianceState.Conflict => DeviceStatus.Denied,
-                            ComplianceState.Error => DeviceStatus.Unsecure,
-                            ComplianceState.InGracePeriod => DeviceStatus.Unsecure,
-                            ComplianceState.Noncompliant => DeviceStatus.Submitted,
-                            ComplianceState.Unknown => DeviceStatus.Unsecure,
-                            _ => DeviceStatus.Unsecure,
-                        };
+                        device.Status = status;
                         device.StatusEffectiveDate = now;
 
-                        if (device.Id > 0)
+                        if (device.Id == 0)
                         {
-                            _context.UpdateProperties(device, d => d.Origin, d => d.Status, d => d.StatusEffectiveDate);
+                            _context.Add(device);
+                        }
+                        else
+                        {
+                            _context.UpdateProperties(device, d => d.UserName, d => d.DepartmentId, d => d.DateEdit, 
+                                d => d.UserEditId, d => d.Origin, d => d.Status, d => d.StatusEffectiveDate);
                         }
                     }
                 }
+                if (deviceHistoriesToAdd.Any()) { _context.DeviceHistories.AddRange(deviceHistoriesToAdd); }
                 await _context.SaveChangesAsync();
             }
             finally
@@ -177,6 +196,13 @@ namespace DevicePortal
                         DepartmentId = u.Departments.Select(d => d.DepartmentId).First(),
                     })
                     .ToArrayAsync();
+                var decoupledDevices = await _context.Devices
+                    .Where(d => d.UserName == null && !string.IsNullOrEmpty(d.SerialNumber) && d.SerialNumber != "0" &&
+                    d.SerialNumber != "Defaultstring" && d.SerialNumber != "Default string" && 
+                    d.SerialNumber != "NotApplicable" && d.SerialNumber != "onbekend" && 
+                    d.SerialNumber != "SystemSerialNumber" && d.SerialNumber != "TobefilledbyO.E.M.")
+                    .ToArrayAsync();
+                var mapDecoupledDevices = decoupledDevices.ToLookup(d => d.SerialNumber.ToLower());
 
                 DateTime now = DateTime.Now;
                 int threads = 8;
@@ -220,9 +246,10 @@ namespace DevicePortal
                                 if (!serialSet.Add(serial_lower)) { continue; }
 
                                 var devices = deviceMap[serial_lower];
-                                if (devices.Count() > 1) { continue; }
+                                var decoupleds = mapDecoupledDevices[serial_lower];
+                                if (devices.Count() + decoupleds.Count() > 1) { continue; }
 
-                                var device = devices.FirstOrDefault();
+                                var device = devices.FirstOrDefault() ?? decoupleds.FirstOrDefault();
                                 if (device == null)
                                 {
                                     device = new Data.Device
@@ -265,26 +292,31 @@ namespace DevicePortal
                                     devicesToAdd.Add(device);
                                 }
 
-                                if (intuneDevice.DeviceRegistrationState == DeviceRegistrationState.Registered ||
+                                var status = intuneDevice.ComplianceState switch
+                                {
+                                    ComplianceState.Compliant => DeviceStatus.Approved,
+                                    ComplianceState.ConfigManager => DeviceStatus.Approved,
+                                    ComplianceState.Conflict => DeviceStatus.Denied,
+                                    ComplianceState.Error => DeviceStatus.Unsecure,
+                                    ComplianceState.InGracePeriod => DeviceStatus.Unsecure,
+                                    ComplianceState.Noncompliant => DeviceStatus.Submitted,
+                                    ComplianceState.Unknown => DeviceStatus.Unsecure,
+                                    _ => DeviceStatus.Unsecure,
+                                };
+                                if ((device.Id == 0 || device.Status != status || device.UserName != user.UserName ||
+                                    device.DepartmentId != user.DepartmentId) &&
+                                    (intuneDevice.DeviceRegistrationState == DeviceRegistrationState.Registered ||
                                     intuneDevice.DeviceRegistrationState == DeviceRegistrationState.ApprovalPending ||
-                                    intuneDevice.DeviceRegistrationState == DeviceRegistrationState.NotRegisteredPendingEnrollment)
+                                    intuneDevice.DeviceRegistrationState == DeviceRegistrationState.NotRegisteredPendingEnrollment))
                                 {
                                     if (device.Id > 0) { deviceHistoriesToAdd.Add(new DeviceHistory(device)); }
 
+                                    device.UserName = user.UserName;
+                                    device.DepartmentId = user.DepartmentId;
                                     device.DateEdit = now;
                                     device.UserEditId = Data.User.IntuneServiceId;
                                     device.Origin = DeviceOrigin.Intune;
-                                    device.Status = intuneDevice.ComplianceState switch
-                                    {
-                                        ComplianceState.Compliant => DeviceStatus.Approved,
-                                        ComplianceState.ConfigManager => DeviceStatus.Approved,
-                                        ComplianceState.Conflict => DeviceStatus.Denied,
-                                        ComplianceState.Error => DeviceStatus.Unsecure,
-                                        ComplianceState.InGracePeriod => DeviceStatus.Unsecure,
-                                        ComplianceState.Noncompliant => DeviceStatus.Submitted,
-                                        ComplianceState.Unknown => DeviceStatus.Unsecure,
-                                        _ => DeviceStatus.Unsecure,
-                                    };
+                                    device.Status = status;
                                     device.StatusEffectiveDate = now;
 
                                     if (device.Id > 0) { devicesToUpdate.Add(device); }
@@ -299,7 +331,8 @@ namespace DevicePortal
                 if (deviceHistoriesToAdd.Any()) { _context.DeviceHistories.AddRange(deviceHistoriesToAdd); }
                 foreach (var device in devicesToUpdate)
                 {
-                    _context.UpdateProperties(device, d => d.Origin, d => d.Status, d => d.StatusEffectiveDate);
+                    _context.UpdateProperties(device, d => d.UserName, d => d.DepartmentId, d => d.DateEdit, 
+                        d => d.UserEditId, d => d.Origin, d => d.Status, d => d.StatusEffectiveDate);
                 }
                 _context.Devices.AddRange(devicesToAdd);
 
