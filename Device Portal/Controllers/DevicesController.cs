@@ -44,7 +44,7 @@ namespace DevicePortal.Controllers
         {
             var devices = await _context.Devices.Active()
                 .Include(d => d.User)
-                .Where(d => d.History.Any(h => h.UserEditId != Data.User.ImporterId))
+                .Where(d => d.UserEditId != Data.User.ImporterId || d.History.Any(h => h.UserEditId != Data.User.ImporterId))
                 .ToListAsync();
             var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId);
             var editNameMap = await _context.Users
