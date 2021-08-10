@@ -308,6 +308,12 @@ namespace DevicePortal.Importer
                         }
                         devicesToUpdate.Add(existing);
                     }
+                    else
+                    {
+                        // device is in sync, no need to add a history entry
+                        existing.DateInSyncCdmb = device.DateInSyncCdmb;
+                        devicesToUpdate.Add(existing);
+                    }
                 }
                 else { devicesToAdd.Add(device); }
             }
