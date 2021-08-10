@@ -23,7 +23,10 @@ namespace DevicePortal.Importer
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlServer("Server=MSSQL-PRD-AO1.FORET.NL\\MSSQLNOAGPRD_1,1710;Database=DWHPM;Trusted_Connection=True;");
+                optionsBuilder.UseSqlServer("Server=MSSQL-PRD-AO1.FORET.NL\\MSSQLNOAGPRD_1,1710;Database=DWHPM;Trusted_Connection=True;", options =>
+                {
+                    options.EnableRetryOnFailure();
+                });
             }
         }
 

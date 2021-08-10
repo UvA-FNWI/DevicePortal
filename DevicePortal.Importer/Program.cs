@@ -124,7 +124,7 @@ namespace DevicePortal.Importer
                 .EnableSensitiveDataLogging()
                 .Options;
 
-            using var portalContext = new PortalContext(options);
+            using var portalContext = new PortalContext(options) { ClearDateInSyncCmdb = false };
             using var dwhContext = new DWHPMContext();
 
             Log("Preparing");
@@ -194,6 +194,9 @@ namespace DevicePortal.Importer
                     Notes = d.NotitiesKlant ?? "",
                     PurchaseDate = d.Aanschafdatum == DateTime.MinValue ? null : d.Aanschafdatum,
                     OS_Version = "",
+                    DateEdit = now,
+                    UserEditId = User.ImporterId,
+                    DateInSyncCdmb = now,
                 };
                 activeDeviceSet.Add(device.DeviceId.ToLower());
 
@@ -292,6 +295,7 @@ namespace DevicePortal.Importer
                         existing.Name = device.Name;
                         existing.PurchaseDate = device.PurchaseDate;
                         existing.Notes = device.Notes;
+                        existing.DateInSyncCdmb = device.DateInSyncCdmb;
                         if (existing.Status == DeviceStatus.Disposed)
                         {
                             existing.Status = device.Status;
@@ -430,6 +434,9 @@ namespace DevicePortal.Importer
             deviceTable.Columns.Add("ItracsOutlet");
             deviceTable.Columns.Add("Macadres");
             deviceTable.Columns.Add("Notes");
+            deviceTable.Columns.Add("DateEdit");
+            deviceTable.Columns.Add("UserEditId");
+            deviceTable.Columns.Add("DateInSyncCdmb");
 
             foreach (var device in devicesToAdd)
             {
@@ -453,7 +460,10 @@ namespace DevicePortal.Importer
                     device.ItracsRoom,
                     device.ItracsOutlet,
                     device.Macadres,
-                    device.Notes);
+                    device.Notes,
+                    device.DateEdit,
+                    device.UserEditId,
+                    device.DateInSyncCdmb);
             }
 
             sqlBulk.ColumnMappings.Clear();
@@ -477,6 +487,9 @@ namespace DevicePortal.Importer
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("ItracsOutlet", "ItracsOutlet"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Macadres", "Macadres"));
             sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("Notes", "Notes"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("DateEdit", "DateEdit"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("UserEditId", "UserEditId"));
+            sqlBulk.ColumnMappings.Add(new SqlBulkCopyColumnMapping("DateInSyncCdmb", "DateInSyncCdmb"));
             sqlBulk.DestinationTableName = "dbo.Devices";
             sqlBulk.WriteToServer(deviceTable);
             sqlBulk.Close();

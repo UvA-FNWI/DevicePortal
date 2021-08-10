@@ -65,29 +65,48 @@ namespace DevicePortal.Data
     {
         public int Id { get; set; }
 
+        [Cmdb]
         public string Name { get; set; }
+        [Cmdb]
         public string DeviceId { get; set; }
+        [Cmdb]
         public string SerialNumber { get; set; }
-        [JsonPropertyName("os_type")]
+
+        [Cmdb, JsonPropertyName("os_type")]
         public OS_Type OS_Type { get; set; }
-        [JsonPropertyName("os_version")]
+        [Cmdb, JsonPropertyName("os_version")]
         public string  OS_Version { get; set; }
+
+        [Cmdb]
         public DateTime? PurchaseDate { get; set; }
-        public string CostCentre { get; set; }
+        [Cmdb]
         public DateTime? LastSeenDate { get; set; }
+
+        [Cmdb]
+        public string CostCentre { get; set; }
+        [Cmdb]
         public string ItracsBuilding { get; set; }
+        [Cmdb]
         public string ItracsRoom { get; set; }
+        [Cmdb]
         public string ItracsOutlet { get; set; }
+
+        [Cmdb]
         public string Macadres { get; set; }
+
+        [Cmdb]
         public string Notes { get; set; }
         
+        [Cmdb]
         public DeviceType Type { get; set; }
+        [Cmdb]
         public DeviceCategory Category { get; set; }
+
         public DeviceStatus Status { get; set; }
         public DateTime StatusEffectiveDate { get; set; }
         public DeviceOrigin Origin { get; set; }
 
-        [ForeignKey("User")]
+        [Cmdb, ForeignKey("User")]
         public string UserName { get; set; }
         public User User { get; set; }
 
@@ -96,6 +115,7 @@ namespace DevicePortal.Data
         [NotMapped]
         public string UserEditName { get; set; }
 
+        [Cmdb]
         public int DepartmentId { get; set; }
         public Department Department { get; set; }
 
@@ -109,6 +129,8 @@ namespace DevicePortal.Data
 
         public int? LabnetId { get; set; }
         public Labnet Labnet { get; set; }
+
+        public DateTime? DateInSyncCdmb { get; set; }
     }
 
     public class Device : DeviceBase
@@ -144,4 +166,7 @@ namespace DevicePortal.Data
             if (string.IsNullOrEmpty(UserName)) { UserName = null; }
         }
     }
+    
+    [AttributeUsage(AttributeTargets.Property)]
+    public class CmdbAttribute : Attribute { }
 }

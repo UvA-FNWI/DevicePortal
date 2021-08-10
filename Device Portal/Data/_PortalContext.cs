@@ -19,7 +19,34 @@ namespace DevicePortal.Data
             ChangeTracker.AutoDetectChangesEnabled = false;
             ChangeTracker.LazyLoadingEnabled = false;
             ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+
+            SavingChanges += (object sender, SavingChangesEventArgs e) =>
+            {
+                var context = sender as PortalContext;
+                if (!context.ClearDateInSyncCmdb) { return; }
+
+                var type = typeof(DeviceBase);
+                var properties = type.GetProperties();
+                var deviceChanges = context.ChangeTracker.Entries<Device>();
+                foreach (var c in deviceChanges)
+                {
+                    foreach (var p in properties)
+                    {
+                        if (p.CustomAttributes.Any(a => a.AttributeType == typeof(CmdbAttribute)) &&
+                            c.Property(p.Name).IsModified)
+                        {
+                            var prop = c.Property(d => d.DateInSyncCdmb);
+                            prop.IsModified = true;
+                            prop.CurrentValue = null;
+                            break;
+                        }
+                    }
+                }
+            };
         }
+
+        public bool ClearDateInSyncCmdb { get; set; } = true;
+
         public DbSet<Faculty> Faculties { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<User_Department> Users_Departments { get; set; }
