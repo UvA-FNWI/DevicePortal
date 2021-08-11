@@ -261,7 +261,8 @@ namespace DevicePortal.Importer
 
                 if (existing != null)
                 {
-                    if (!ignoreSet.Contains(existing.Id) &&
+                    bool ignore = ignoreSet.Contains(existing.Id);
+                    if (!ignore &&
                         (existing.UserName != device.UserName ||
                         existing.DeviceId != device.DeviceId ||
                         existing.SerialNumber != device.SerialNumber ||
@@ -308,7 +309,7 @@ namespace DevicePortal.Importer
                         }
                         devicesToUpdate.Add(existing);
                     }
-                    else
+                    else if (!ignore)
                     {
                         // device is in sync, no need to add a history entry
                         existing.DateInSyncCdmb = device.DateInSyncCdmb;
