@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Graph.Auth;
 using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -22,6 +23,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace DevicePortal
@@ -37,13 +40,16 @@ namespace DevicePortal
                 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddCors();
+
             JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
             services.AddTransient<IClaimsTransformation, ClaimsTransformer>();
             services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;                
+                options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
             })
+            .AddApiKey(options => { })
             .AddCookie(options => 
             {
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
@@ -190,6 +196,8 @@ namespace DevicePortal
                                                                  context.User.HasClaim(AppClaimTypes.Permission, AppClaims.CanApprove)));
             });
 
+            ApiKeyAuthenticationHandler.apiKey = Configuration["Api:Key"];
+
             string clientId = Configuration["AzureAD:ClientID"];
             string clientSecret = Configuration["AzureAD:ClientSecret"];
             string tentantId = Configuration["AzureAD:TenantID"]; ;
@@ -234,6 +242,14 @@ namespace DevicePortal
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             
+            app.UseCors(options =>
+            {
+                options.AllowAnyOrigin();
+                options.AllowAnyMethod();
+                options.AllowAnyHeader();
+                options.SetIsOriginAllowed(_ => true);
+            });
+
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
@@ -352,4 +368,95 @@ namespace DevicePortal
         public static string Permission = "https://secure.datanose.nl/claims/permission";
         public static string Impersonation = "https://secure.datanose.nl/claims/impersonation";
     }
+
+    // https://josef.codes/asp-net-core-protect-your-api-with-api-keys/
+    public class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions
+    {
+        public const string DefaultScheme = "API Key";
+        public string Scheme => DefaultScheme;
+        public string AuthenticationType = DefaultScheme;
+    }
+
+    public static class AuthenticationBuilderExtensions
+    {
+        public static AuthenticationBuilder AddApiKey(this AuthenticationBuilder authenticationBuilder, Action<ApiKeyAuthenticationOptions> options)
+        {
+            return authenticationBuilder.AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationOptions.DefaultScheme, options);
+        }
+    }
+
+    public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthenticationOptions>
+    {
+        public static string apiKey;
+
+        public ApiKeyAuthenticationHandler(
+            IOptionsMonitor<ApiKeyAuthenticationOptions> options,
+            ILoggerFactory logger,
+            UrlEncoder encoder,
+            ISystemClock clock) : base(options, logger, encoder, clock)
+        {
+        }
+
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            if (!Request.Headers.TryGetValue("X-Api-Key", out var apiKeyHeaderValues))
+            {
+                return Task.FromResult(AuthenticateResult.NoResult());
+            }
+
+            var providedApiKey = apiKeyHeaderValues.FirstOrDefault();
+
+            if (apiKeyHeaderValues.Count == 0 || string.IsNullOrWhiteSpace(providedApiKey))
+            {
+                return Task.FromResult(AuthenticateResult.NoResult());
+            }
+
+            if (apiKey != null && providedApiKey == apiKey)
+            {
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.GivenName, "api"),
+                    new Claim(AppClaimTypes.Permission, AppClaims.CanAdmin),
+                    new Claim(AppClaimTypes.Permission, AppClaims.CanApprove),
+                    new Claim(AppClaimTypes.Permission, AppClaims.CanManage),
+                    new Claim(AppClaimTypes.Permission, AppClaims.CanManageFaculty),
+                    new Claim(AppClaimTypes.Permission, AppClaims.CanSecure),
+                };
+
+                var identity = new ClaimsIdentity(claims, Options.AuthenticationType);
+                var identities = new List<ClaimsIdentity> { identity };
+                var principal = new ClaimsPrincipal(identities);
+                var ticket = new AuthenticationTicket(principal, Options.Scheme);
+
+                return Task.FromResult(AuthenticateResult.Success(ticket));
+            }
+
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
+        {
+            Response.StatusCode = 401;
+            Response.ContentType = "application/problem+json";
+
+            await Response.WriteAsync(JsonSerializer.Serialize(new {
+                Type = "https://httpstatuses.com/401",
+                Title = "Unauthorized",
+                Status = 401,
+            }));
+        }
+
+        protected override async Task HandleForbiddenAsync(AuthenticationProperties properties)
+        {
+            Response.StatusCode = 403;
+            Response.ContentType = "application/problem+json";
+
+            await Response.WriteAsync(JsonSerializer.Serialize(new {
+                Type = "https://httpstatuses.com/403",
+                Title = "Forbidden",
+                Status = 403,
+            }));
+        }
+    }
+
 }

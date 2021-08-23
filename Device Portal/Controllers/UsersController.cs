@@ -140,5 +140,21 @@ namespace DevicePortal.Controllers
 
             return NoContent();
         }
+
+        // POST: api/Users/{UserName}
+        [Authorize(AuthenticationSchemes = ApiKeyAuthenticationOptions.DefaultScheme), HttpPost("")]
+        public async Task<IActionResult> PostUser(User user)
+        {
+            try
+            {
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception)
+            {
+                return BadRequest();
+            }
+        }
     }
 }

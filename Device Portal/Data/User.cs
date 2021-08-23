@@ -28,6 +28,8 @@ namespace DevicePortal.Data
         public bool CanSecure { get; set; }
         public bool CanApprove { get; set; }
         public bool CanAdmin { get; set; }
+
+        public bool Inactive { get; set; }
     
         public int FacultyId { get; set; }
         public Faculty Faculty { get; set; }
