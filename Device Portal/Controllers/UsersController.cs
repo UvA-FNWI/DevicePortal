@@ -141,13 +141,22 @@ namespace DevicePortal.Controllers
             return NoContent();
         }
 
-        // POST: api/Users/{UserName}
-        [Authorize(AuthenticationSchemes = ApiKeyAuthenticationOptions.DefaultScheme), HttpPost("")]
-        public async Task<IActionResult> PostUser(User user)
+        // POST: api/Users/AddOrUpdate
+        [Authorize(AuthenticationSchemes = ApiKeyAuthenticationOptions.DefaultScheme), HttpPost("AddOrUpdate")]
+        public async Task<IActionResult> PostOrPutUser(User user)
         {
             try
             {
-                _context.Users.Add(user);
+                if (!_context.Users.Any(u => u.UserName == user.UserName))
+                {
+                    _context.Users.Add(user);
+                }
+                else
+                {
+                    _context.Users.Attach(user);
+                    var entry = _context.Entry(user);
+                    entry.State = EntityState.Modified;
+                }
                 await _context.SaveChangesAsync();
                 return NoContent();
             }

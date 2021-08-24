@@ -40,7 +40,9 @@ namespace DevicePortal
                 
         public void ConfigureServices(IServiceCollection services)
         {
+            #if DEBUG
             services.AddCors();
+            #endif
 
             JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
             services.AddTransient<IClaimsTransformation, ClaimsTransformer>();
@@ -242,6 +244,7 @@ namespace DevicePortal
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             
+            #if DEBUG
             app.UseCors(options =>
             {
                 options.AllowAnyOrigin();
@@ -249,6 +252,7 @@ namespace DevicePortal
                 options.AllowAnyHeader();
                 options.SetIsOriginAllowed(_ => true);
             });
+            #endif
 
             app.UseRouting();
             app.UseAuthentication();
