@@ -40,11 +40,14 @@ namespace DevicePortal.Controllers
                 return Forbid();
             }
             if (!db.Departments.Any(d => d.Id == id)) { return NotFound(); }
-            var department = await db.Departments.FirstAsync(d => d.Id == id);
+            
+            var departments = await db.Departments.Where(d => d.Id == id || d.ParentDepartmentId == id).ToListAsync();
+            departments.Sort((a, b) => (b.ParentDepartmentId ?? 0) - (a.ParentDepartmentId ?? 0));
+            var departmentIds = departments.Select(d => d.Id);
 
             var devices = await db.Devices
                 .Include(d => d.User)
-                .Where(d => d.DepartmentId == id).Active()
+                .Where(d => departmentIds.Contains(d.DepartmentId)).Active()
                 .ToArrayAsync();
             var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId).ToHashSet();
             var editNameMap = await db.Users
@@ -67,7 +70,8 @@ namespace DevicePortal.Controllers
                .ToArrayAsync();
             var userNameSet = devices.Where(d => !string.IsNullOrEmpty(d.UserName)).Select(d => d.UserName).ToHashSet();
 
-            users = users.Where(u => u.Departments.Contains(id) || userNameSet.Contains(u.UserName)).ToArray();
+            var department = departments.Last();
+            users = users.Where(u => u.Departments.Overlaps(departmentIds) || userNameSet.Contains(u.UserName)).ToArray();
             return Ok(new 
             {
                 Name = department.Name,

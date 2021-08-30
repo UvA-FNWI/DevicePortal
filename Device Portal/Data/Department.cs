@@ -21,6 +21,9 @@ namespace DevicePortal.Data
         public int FacultyId { get; set; }
         public Faculty Faculty { get; set; }
 
+        public int? ParentDepartmentId { get; set; }
+        public Department ParentDepartment { get; set; }
+
         [JsonIgnore]
         public HashSet<Device> Devices { get; set; }
         [JsonIgnore]

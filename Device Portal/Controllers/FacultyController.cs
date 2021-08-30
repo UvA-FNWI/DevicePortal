@@ -49,8 +49,13 @@ namespace DevicePortal.Controllers
                 {
                     d.Id,
                     d.Name,
+                    d.ParentDepartmentId,
                     Devices = d.Devices,
                 }).ToArrayAsync();
+            var departmentMap = departments.ToDictionary(d => d.Id);
+            var childMap = departments.Where(d => d.ParentDepartmentId != null).ToLookup(d => d.ParentDepartmentId);
+            var parentMap = departments.Where(d => d.ParentDepartmentId != null)
+                .ToLookup(d => d.Id, d => departmentMap[(int)d.ParentDepartmentId]);
             var users = await _context.Users
                 .Select(u => new
                 {
@@ -64,16 +69,44 @@ namespace DevicePortal.Controllers
             var userNameSet = new HashSet<string>();
 
             var departmentUsers = new Dictionary<int, HashSet<string>>();
-            foreach (var user in users)
             {
-                foreach (int departmentId in user.Departments)
+                var parentAdded = new HashSet<int>();
+
+                foreach (var user in users)
                 {
-                    if (!departmentUsers.TryGetValue(departmentId, out var userIds))
+                    parentAdded.Clear();
+
+                    foreach (int departmentId in user.Departments)
                     {
-                        userIds = new HashSet<string>();
-                        departmentUsers.Add(departmentId, userIds);
+                        if (!departmentUsers.TryGetValue(departmentId, out var userIds))
+                        {
+                            userIds = new HashSet<string>();
+                            departmentUsers.Add(departmentId, userIds);
+                        }
+                        userIds.Add(user.UserName);
+
+                        var parents = parentMap[departmentId];
+                        foreach (var parent in parents)
+                        {
+                            if (!parentAdded.Add(parent.Id)) { continue; }
+
+                            if (!departmentUsers.TryGetValue(parent.Id, out var parentUserIds))
+                            {
+                                parentUserIds = new HashSet<string>();
+                                departmentUsers.Add(parent.Id, parentUserIds);
+                            }
+                            parentUserIds.Add(user.UserName);
+                        }
                     }
-                    userIds.Add(user.UserName);
+                }
+            }
+
+            foreach (var department in departments)
+            {
+                var children = childMap[department.Id];
+                foreach (var child in children)
+                {
+                    foreach (var device in child.Devices) { department.Devices.Add(device); }
                 }
             }
 
@@ -141,6 +174,7 @@ namespace DevicePortal.Controllers
                 departmentStats.Add(new Department
                 {
                     Id = department.Id,
+                    ParentDepartmentId = department.ParentDepartmentId ?? 0,
                     Name = department.Name,
                     Devices = department.Devices.Count,
                     DevicesBYOD = department.Devices.Count(d => d.Category == DeviceCategory.BYOD),
@@ -173,6 +207,7 @@ namespace DevicePortal.Controllers
         class Department
         {
             public int Id { get; set; }
+            public int ParentDepartmentId { get; set; }
             public string Name { get; set; }
             public int Users { get; set; }
             public int UsersAuthorized { get; set; }

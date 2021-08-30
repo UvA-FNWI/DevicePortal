@@ -7,6 +7,7 @@
     }
     class Department {
         id: number;
+        parentDepartmentId: number;
         name: string;
         users: number;
         usersAuthorized: number;
@@ -76,7 +77,8 @@
                 ks.group('card', 'card mb-3', function () {
                     ks.group('body', 'card-body text-center d-flex flex-column justify-content-center', function () {
                         ks.icon('fa fa-microchip').style.fontSize = '1.5rem';
-                        let count = state.institutes.reduce((count, i) => count + i.devices, 0);
+                        let count = state.institutes
+                            .reduce((count, i) => i.parentDepartmentId === 0 ? (count + i.devices) : count, 0);
                         ks.h4(count.toString(), 'font-weight-bolder text-secondary mt-2 mb-2');
                         ks.text('Devices', 'text-muted');
                     });
@@ -99,7 +101,7 @@
                             });
                             ks.is_item_clicked(function (_, ev) {
                                 ks.navigate_to(inst.name, url);
-                                ev.stopPropagation();
+                                return false;
                             });
 
                             ks.group('devices', 'mb-1 d-flex', function () {
