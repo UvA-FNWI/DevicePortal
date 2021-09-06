@@ -27,7 +27,7 @@ namespace DevicePortal.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Device>>> GetDevices()
         {
-            return await _context.Devices.Active().ToListAsync();
+            return await _context.Devices.Include(d => d.Department).Active().ToListAsync();
         }
 
         // GET: api/Devices/Count
@@ -44,6 +44,7 @@ namespace DevicePortal.Controllers
         {
             var devices = await _context.Devices.Active()
                 .Include(d => d.User)
+                .Include(d => d.Department)
                 .Where(d => d.UserEditId != Data.User.ImporterId || d.History.Any(h => h.UserEditId != Data.User.ImporterId))
                 .ToListAsync();
             var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId);
@@ -79,14 +80,18 @@ namespace DevicePortal.Controllers
                 }
             }
             await _intuneService.SyncManagedDeviceUser(user.UserName, user.ObjectId);
-            return await _context.Devices.Where(d => d.UserName == userId).Active().ToListAsync();
+            return await _context.Devices.Include(d => d.Department).Where(d => d.UserName == userId).Active().ToListAsync();
         }
 
         // GET: api/Devices/User{userName}
         [HttpGet("User/{userName}")]
         public async Task<ActionResult<IEnumerable<Device>>> GetDevices(string userName)
         {
-            var devices = await _context.Devices.Include(d => d.User).Where(d => d.UserName == userName).Active().ToListAsync();
+            var devices = await _context.Devices
+                .Include(d => d.User)
+                .Include(d => d.Department)
+                .Where(d => d.UserName == userName)
+                .Active().ToListAsync();
             var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId);
             var editNameMap = await _context.Users
                 .Where(u => userEditIds.Contains(u.UserName))
@@ -103,7 +108,7 @@ namespace DevicePortal.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Device>> GetDevice(int id)
         {
-            var device = await _context.Devices.FindAsync(id);
+            var device = await _context.Devices.Include(d => d.Department).FirstOrDefaultAsync(d => d.Id == id);
 
             if (device == null || device.Status == DeviceStatus.Disposed)
             {

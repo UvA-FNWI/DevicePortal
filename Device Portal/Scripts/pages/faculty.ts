@@ -5,7 +5,7 @@
         usersApprover: number;
         departments: Department[];
     }
-    class Department {
+    export class Department {
         id: number;
         parentDepartmentId: number;
         name: string;

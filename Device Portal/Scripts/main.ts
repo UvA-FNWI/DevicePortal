@@ -107,6 +107,7 @@
         contextModal.run();
 
         {
+            // TODO: adding new new columns in between is cumbersome, add something like a sort index
             let settings = {
                 columns: [
                     { label: 'Name', searchField: 'name', searchType: 'string', active: true },
@@ -115,6 +116,7 @@
                     { label: 'Type', searchField: 'type', searchType: 'combo', searchObj: deviceTypes, active: true },
                     { label: 'Category', searchField: 'category', searchType: 'combo', searchObj: deviceCategories, active: true },
                     { label: 'OS', searchField: 'os_type', searchType: 'combo', searchObj: osNames, active: true },
+                    { label: 'Institute', searchField: 'department', searchType: 'string', active: false },
                     { label: 'Cost centre', searchField: 'costCentre', searchType: 'string', active: true },
                     { label: 'Building', searchField: 'itracsBuilding', searchType: 'string', active: true },
                     { label: 'Room', searchField: 'itracsRoom', searchType: 'string', active: true },
@@ -443,13 +445,14 @@
             }
             if (cols[4].active) { ks.table_cell(deviceCategories[d.category]); }
             if (cols[5].active) { ks.table_cell(osNames[d.os_type]); }
-            if (cols[6].active) { ks.table_cell(d.costCentre); }
-            if (cols[7].active) { ks.table_cell(d.itracsBuilding); }
-            if (cols[8].active) { ks.table_cell(d.itracsRoom); }
-            if (cols[9].active) { ks.table_cell(d.itracsOutlet); }
-            if (cols[10].active) { ks.table_cell(d.labnetId ? ('Labnet-' + d.labnetId) : ''); }
-            if (cols[11].active) { ks.table_cell(d.ipv4); }
-            if (cols[12].active) { ks.table_cell(d.ipv6); }
+            if (cols[6].active) { ks.table_cell(d.department.name); }
+            if (cols[7].active) { ks.table_cell(d.costCentre); }
+            if (cols[8].active) { ks.table_cell(d.itracsBuilding); }
+            if (cols[9].active) { ks.table_cell(d.itracsRoom); }
+            if (cols[10].active) { ks.table_cell(d.itracsOutlet); }
+            if (cols[11].active) { ks.table_cell(d.labnetId ? ('Labnet-' + d.labnetId) : ''); }
+            if (cols[12].active) { ks.table_cell(d.ipv4); }
+            if (cols[13].active) { ks.table_cell(d.ipv6); }
             ks.table_cell(function () {
                 if (!(d.category & (DeviceCategory.ManagedSpecial | DeviceCategory.ManagedStandard))) {
                     ks.text(statusNames[d.status], 'badge badge-' + statusColors[d.status]);

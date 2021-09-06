@@ -81,6 +81,9 @@
         userEditId: string;
         userEditName: string;
         dateEdit: string;
+        departmentId: number;
+        department: Department;
+        departmentNameLowerCase: string;   // Note: used on institue page for performance
         labnetId: number;
         ipv4: string;
         ipv6: string;
@@ -110,6 +113,7 @@
                 d.deviceIdLowerCase = d.deviceId ? d.deviceId.toLowerCase() : '';
                 d.serialNumberLowerCase = d.serialNumber ? d.serialNumber.toLowerCase() : '';
                 if (d.user) { d.user.nameLowerCase = d.user.name ? d.user.name.toLowerCase() : ''; }
+                d.departmentNameLowerCase = d.department ? d.department.name.toLowerCase() : '';
                 d.costCentreLowerCase = d.costCentre ? d.costCentre.toLowerCase() : '';
                 d.itracsBuildingLowerCase = d.itracsBuilding ? d.itracsBuilding.toLowerCase() : '';
                 d.itracsRoomLowerCase = d.itracsRoom ? d.itracsRoom.toLowerCase() : '';

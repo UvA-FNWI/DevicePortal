@@ -7,6 +7,7 @@
         type = DeviceType.All;
         category = DeviceCategory.All;
         os_type = OSType.All;
+        department = '';
         costCentre = '';
         itracsBuilding = '';
         itracsRoom = '';
@@ -18,21 +19,10 @@
 
         static copyToLower(params: DeviceSearchParams) {
             let result = new DeviceSearchParams();
-            result.user = params.user.toLowerCase();
-            result.name = params.name.toLowerCase();
-            result.deviceId = params.deviceId.toLowerCase();
-            result.serialNr = params.serialNr.toLowerCase();
-            result.type = params.type;
-            result.category = params.category;
-            result.os_type = params.os_type;
-            result.costCentre = params.costCentre.toLowerCase();
-            result.itracsBuilding = params.itracsBuilding.toLowerCase();
-            result.itracsRoom = params.itracsRoom.toLowerCase();
-            result.itracsOutlet = params.itracsOutlet.toLowerCase();
-            result.status = params.status;
-            result.labnet = params.labnet;
-            result.ipv4 = params.ipv4;
-            result.ipv6 = params.ipv6;
+            for (let key in params) {
+                if (typeof (params[key]) === 'string') { result[key] = params[key].toLowerCase(); }
+                else { result[key] = params[key]; }
+            }
             return result;
         }
     }
@@ -321,6 +311,19 @@
                     if (settings.columns[6].active) {
                         ks.table_cell(function () {
                             ks.set_next_item_class_name('form-control-sm');
+                            ks.input_text('department', state.search.department, 'Institute', function (str) {
+                                state.search.department = str;
+                                range.reset();
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                        sort_columns.push({ field: 'department', type: 'string' });
+                    }
+
+                    if (settings.columns[7].active) {
+                        ks.table_cell(function () {
+                            ks.set_next_item_class_name('form-control-sm');
                             ks.input_text('cost centre', state.search.costCentre, 'Cost centre', function (str) {
                                 state.search.costCentre = str;
                                 range.reset();
@@ -331,7 +334,7 @@
                         sort_columns.push({ field: 'costCentre', type: 'string' });
                     }
 
-                    if (settings.columns[7].active) {
+                    if (settings.columns[8].active) {
                         ks.table_cell(function () {
                             ks.set_next_item_class_name('form-control-sm');
                             ks.input_text('building', state.search.itracsBuilding, 'Building', function (str) {
@@ -344,7 +347,7 @@
                         sort_columns.push({ field: 'itracsBuilding', type: 'string' });
                     }
 
-                    if (settings.columns[8].active) {
+                    if (settings.columns[9].active) {
                         ks.table_cell(function () {
                             ks.set_next_item_class_name('form-control-sm');
                             ks.input_text('room', state.search.itracsRoom, 'Room', function (str) {
@@ -357,7 +360,7 @@
                         sort_columns.push({ field: 'itracsRoom', type: 'string' });
                     }
 
-                    if (settings.columns[9].active) {
+                    if (settings.columns[10].active) {
                         ks.table_cell(function () {
                             ks.set_next_item_class_name('form-control-sm');
                             ks.input_text('outlet', state.search.itracsOutlet, 'Outlet', function (str) {
@@ -370,7 +373,7 @@
                         sort_columns.push({ field: 'itracsOutlet', type: 'string' });
                     }
 
-                    if (settings.columns[10].active) {
+                    if (settings.columns[11].active) {
                         ks.table_cell(function () {
                             ks.set_next_item_class_name('form-control-sm');
                             ks.input_text('Labnet', state.search.labnet, 'Labnet', function (str) {
@@ -383,7 +386,7 @@
                         sort_columns.push({ field: 'labnetId', type: 'number' });
                     }
 
-                    if (settings.columns[11].active) {
+                    if (settings.columns[12].active) {
                         ks.table_cell(function () {
                             ks.set_next_item_class_name('form-control-sm');
                             ks.input_text('ipv4', state.search.ipv4, 'IPv4', function (str) {
@@ -396,7 +399,7 @@
                         sort_columns.push({ field: 'ipv4', type: 'string' });
                     }
 
-                    if (settings.columns[12].active) {
+                    if (settings.columns[13].active) {
                         ks.table_cell(function () {
                             ks.set_next_item_class_name('form-control-sm');
                             ks.input_text('ipv6', state.search.ipv6, 'IPv6', function (str) {
@@ -492,6 +495,7 @@
             (!p.serialNr || d.serialNumberLowerCase.indexOf(p.serialNr) >= 0) &&
             ((p.type === DeviceType.All && d.type === 0) || (p.type & d.type) > 0) &&
             ((p.os_type === OSType.All && d.os_type === 0) || (p.os_type & d.os_type) > 0) &&
+            (!p.department || d.departmentNameLowerCase.indexOf(p.department) >= 0) &&
             ((p.category === DeviceCategory.All && d.category === 0) || (p.category & d.category) > 0) &&
             (!p.costCentre || d.costCentreLowerCase.indexOf(p.costCentre) >= 0) &&
             (!p.itracsBuilding || d.itracsBuildingLowerCase.indexOf(p.itracsBuilding) >= 0) &&

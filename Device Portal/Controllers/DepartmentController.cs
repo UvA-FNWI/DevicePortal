@@ -47,6 +47,7 @@ namespace DevicePortal.Controllers
 
             var devices = await db.Devices
                 .Include(d => d.User)
+                .Include(d => d.Department)
                 .Where(d => departmentIds.Contains(d.DepartmentId)).Active()
                 .ToArrayAsync();
             var userEditIds = devices.Where(d => d.UserEditId != null).Select(d => d.UserEditId).ToHashSet();
