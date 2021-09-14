@@ -142,6 +142,8 @@
         Submitted,
         Unsecure,
         Lost,
+        Disposed,
+        Expired,
     }
     export let statusNames = {};
     statusNames[DeviceStatus.Approved] = 'Approved';

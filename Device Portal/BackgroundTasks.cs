@@ -532,4 +532,85 @@ namespace DevicePortal
             await db.SaveChangesAsync();
         }
     }
+
+    public class ExpireTask : IHostedService
+    {
+        private readonly IServiceScopeFactory _scopeFactory;
+        private Timer _timer;
+
+        public ExpireTask(IServiceScopeFactory scopeFactory)
+        {
+            _scopeFactory = scopeFactory;
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            DateTime nextRunTime;
+            var now = DateTime.Now;
+            var today = DateTime.Today;
+            const int hour = 8;
+
+            if (today.DayOfWeek == DayOfWeek.Saturday) { nextRunTime = today.AddDays(2).AddHours(hour); }
+            else if (today.DayOfWeek == DayOfWeek.Sunday) { nextRunTime = today.AddDays(1).AddHours(hour); }
+            else if (now < today.AddHours(hour)) { nextRunTime = today.AddHours(hour); }
+            else { nextRunTime = today.AddDays(1).AddHours(hour); }
+
+            var firstInterval = nextRunTime.Subtract(now);
+            Task.Run(() =>
+            {
+                Task.Delay(firstInterval).Wait();
+                ExpireSecurityChecks();
+
+                // timer repeates call to ExpireSecurityChecks every monday through friday at <hour>.
+                _timer = new Timer(
+                    ExpireSecurityChecks,
+                    null,
+                    TimeSpan.Zero,
+                    TimeSpan.FromDays(1)
+                );
+            }, cancellationToken);
+
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _timer?.Change(Timeout.Infinite, 0);
+            return Task.CompletedTask;
+        }
+
+        public void ExpireSecurityChecks(object _ = null)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            using var db = scope.ServiceProvider.GetRequiredService<PortalContext>();
+
+            var checks = db.SecurityChecks.Include(c => c.Device).Where(c => c.Status == DeviceStatus.Approved).ToArray();
+
+            var now = DateTime.Now;
+            foreach (var check in checks)
+            {
+                if (check.ValidTill == null)
+                {
+                    check.ValidTill = now.AddYears(1);
+                    db.UpdateProperties(check, c => c.ValidTill);
+                }
+                else if (check.ValidTill <= now)
+                {
+                    check.Status = DeviceStatus.Expired;
+                    check.StatusEffectiveDate = now;
+                    db.UpdateProperties(check, c => c.Status, c => c.StatusEffectiveDate);
+
+                    db.DeviceHistories.Add(new DeviceHistory(check.Device));
+                    check.Device.DateEdit = now;
+                    check.Device.UserEditId = User.ExpireId;
+                    check.Device.Status = DeviceStatus.Unsecure;
+                    check.Device.StatusEffectiveDate = now;
+                    db.UpdateProperties(check.Device, d => d.DateEdit, d => d.UserEditId, 
+                        d => d.Status, d => d.StatusEffectiveDate);
+                }
+            }
+
+            db.SaveChanges();
+        }
+    }
 }

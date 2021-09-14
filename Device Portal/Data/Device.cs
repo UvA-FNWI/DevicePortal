@@ -49,6 +49,7 @@ namespace DevicePortal.Data
         Unsecure,
         Lost,
         Disposed,
+        Expired, // Not used for devices, only for security checks
     }
 
     public enum OS_Type 

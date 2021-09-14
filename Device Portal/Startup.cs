@@ -226,6 +226,8 @@ namespace DevicePortal
             services.AddHostedService<NotificationTask>();
             services.AddSingleton<RightsTask>();
             services.AddHostedService<RightsTask>();
+            services.AddSingleton<ExpireTask>();
+            services.AddHostedService<ExpireTask>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

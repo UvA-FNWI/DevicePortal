@@ -127,7 +127,7 @@ namespace DevicePortal.Data
             }
 
             int facultyId = Faculties.First(f => f.Name == "FNWI").Id;
-            var userIds = new string[] { User.ImporterId, User.IntuneServiceId, User.LabnetId };
+            var userIds = new string[] { User.ImporterId, User.IntuneServiceId, User.LabnetId, User.ExpireId };
             foreach (string id in userIds)
             {
                 if (!Users.Any(u => u.UserName == id))
