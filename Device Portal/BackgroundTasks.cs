@@ -35,11 +35,11 @@ namespace DevicePortal
             Task.Run(() => 
             {
                 Task.Delay(firstInterval).Wait();
-                NotifyApprovers();
+                Notify();
 
-                // timer repeates call to NotifyApprovers every monday at 0900.
+                // timer repeates call to Notify every monday at 0900.
                 _timer = new Timer(
-                    NotifyApprovers,
+                    Notify,
                     null,
                     TimeSpan.Zero,
                     interval
@@ -55,7 +55,13 @@ namespace DevicePortal
             return Task.CompletedTask;
         }
 
-        public void NotifyApprovers(object _ = null)
+        public void Notify(object _ = null)
+        {
+            NotifyApprovers();
+            NotifyUnsecureDevices();
+        }
+
+        public void NotifyApprovers()
         {
             using var scope = _scopeFactory.CreateScope();
             using var db = scope.ServiceProvider.GetRequiredService<PortalContext>();
@@ -120,6 +126,56 @@ namespace DevicePortal
             }
 
             client.Disconnect(true);            
+        }
+
+        void NotifyUnsecureDevices()
+        {
+            using var scope = _scopeFactory.CreateScope();
+            using var db = scope.ServiceProvider.GetRequiredService<PortalContext>();
+            var Configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+            string host = Configuration["SMTP:Host"];
+            string userName = Configuration["SMTP:UserName"];
+            string password = Configuration["SMTP:Password"];
+            string port_str = Configuration["SMTP:Port"];
+            string sender = Configuration["NotificationCenter:Sender"];
+            string senderEmail = Configuration["NotificationCenter:SenderEmail"];
+            string portalUrl = Configuration["NotificationCenter:PortalUrl"];
+            string subject = Configuration["NotificationCenter:UnsecureDevicesSubject"];
+            if (string.IsNullOrEmpty(host) || !int.TryParse(port_str, out int port)) { return; }
+
+            var users = db.Users
+                .Where(u => u.CanSecure && !u.Inactive && 
+                    u.Devices.Any(d => d.Origin == DeviceOrigin.User && d.Status == DeviceStatus.Unsecure))
+                .Where(u => u.UserName == "goomens1") // TODO: remove this line after testing
+                .Select(u => new
+                {
+                    u.Name,
+                    u.Email,
+                    Count = u.Devices.Count(d => d.Origin == DeviceOrigin.User && d.Status == DeviceStatus.Unsecure)
+                }).ToArray();
+
+            using var client = new SmtpClient();
+            client.Connect(host, port, false);
+            if (!string.IsNullOrEmpty(userName) && !string.IsNullOrEmpty(password))
+            {
+                client.Authenticate(userName, password);
+            }
+
+            foreach (var user in users)
+            {
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(sender, senderEmail));
+                message.To.Add(new MailboxAddress(user.Name, user.Email));
+                message.Subject = subject;
+                message.Body = new TextPart("html")
+                {
+                    Text = MailBodyInsecureDevices(user.Name, user.Count, portalUrl),
+                };
+                client.Send(message);
+            }
+
+            client.Disconnect(true);
         }
 
         private static string MailBody(string approver, string[] departmentNames, int deviceCount, string portalUrl) => @$"
@@ -373,6 +429,266 @@ namespace DevicePortal
                     </tr>
                     </table>
                 </div>            
+                </div>
+            </td>
+            <td>&nbsp;</td>
+            </tr>
+        </table>
+    </body>
+</html>";
+
+        string MailBodyInsecureDevices(string user, int numberOfPendingDevices, string portalUrl)
+        {
+            return string.Format(Template, @$"<p>Dear {user},</p>
+<p>In the Science Secure portal, you have {numberOfPendingDevices} devices for which the security check needs to be completed. Please go to <a href=""{portalUrl}"">{portalUrl}</a> or click the button below to fill out the security check.</p>
+<table role = ""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" class=""btn btn-primary"">
+    <tbody>
+    <tr>
+        <td align = ""left"" >
+        <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"">
+            <tbody>
+            <tr>
+                <td><a href = ""{portalUrl}"" target=""_blank"">Go to Device portal</a> </td>
+            </tr>
+            </tbody>
+        </table>
+        </td>
+    </tr>
+    </tbody>
+</table>
+<p>Best regards,</p>
+<p>Faculty of Science IT,</br>
+    secure-science@uva.nl</p>");
+        }
+
+        static readonly string Template = @"<!doctype html>
+<html>
+    <head>
+        <meta name=""viewport"" content=""width=device-width"" />
+        <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"" />
+        <title>Simple Transactional Email</title>
+        <style>
+            img {
+                border: none;
+                -ms-interpolation-mode: bicubic;
+                max-width: 100%;
+            }
+            body {
+                background-color: #f6f6f6;
+                font-family: sans-serif;
+                -webkit-font-smoothing: antialiased;
+                font-size: 14px;
+                line-height: 1.4;
+                margin: 0;
+                padding: 0;
+                -ms-text-size-adjust: 100%;
+                -webkit-text-size-adjust: 100%;
+            }
+            table {
+                border-collapse: separate;
+                mso-table-lspace: 0pt;
+                mso-table-rspace: 0pt;
+                width: 100%; }
+                table td {
+                    font-family: sans-serif;
+                    font-size: 14px;
+                    vertical-align: top;
+            }
+
+            .body {
+                background-color: #f6f6f6;
+                width: 100%;
+            }
+
+            .container {
+                display: block;
+                margin: 0 auto !important;
+                /* makes it centered */
+                max-width: 580px;
+                padding: 10px;
+                width: 580px;
+            }
+            .content {
+                box-sizing: border-box;
+                display: block;
+                margin: 0 auto;
+                max-width: 580px;
+                padding: 10px;
+            }
+
+            .main {
+                background: #ffffff;
+                border-radius: 3px;
+                width: 100%;
+            }
+            .wrapper {
+                box-sizing: border-box;
+                padding: 20px;
+            }
+            .content-block {
+                padding-bottom: 10px;
+                padding-top: 10px;
+            }
+
+            .footer {
+                clear: both;
+                margin-top: 10px;
+                text-align: center;
+                width: 100%;
+            }
+            .footer td,
+            .footer p,
+            .footer span,
+            .footer a {
+                color: #999999;
+                font-size: 12px;
+                text-align: center;
+            }
+
+            h1,
+            h2,
+            h3,
+            h4 {
+                color: #000000;
+                font-family: sans-serif;
+                font-weight: 400;
+                line-height: 1.4;
+                margin: 0;
+                margin-bottom: 30px;
+            }
+            h1 {
+                font-size: 35px;
+                font-weight: 300;
+                text-align: center;
+                text-transform: capitalize;
+            }
+            p,
+            ul,
+            ol {
+                font-family: sans-serif;
+                font-size: 14px;
+                font-weight: normal;
+                margin: 0;
+                margin-bottom: 15px;
+            }
+            p li,
+            ul li,
+            ol li {
+                list-style-position: inside;
+                margin-left: 5px;
+            }
+            a {
+                color: #3498db;
+                text-decoration: underline;
+            }
+
+            .btn {
+            box-sizing: border-box;
+            width: 100%; }
+            .btn > tbody > tr > td {
+                padding-bottom: 15px; }
+            .btn table {
+                width: auto;
+            }
+            .btn table td {
+                background-color: #ffffff;
+                border-radius: 5px;
+                text-align: center;
+            }
+            .btn a {
+                background-color: #ffffff;
+                border: solid 1px #3498db;
+                border-radius: 5px;
+                box-sizing: border-box;
+                color: #3498db;
+                cursor: pointer;
+                display: inline-block;
+                font-size: 14px;
+                font-weight: bold;
+                margin: 0;
+                padding: 6px 12px;
+                text-decoration: none;
+                text-transform: capitalize;
+            }
+            .btn-primary table td {
+                background-color: #3498db;
+            }
+            .btn-primary a {
+                background-color: #bc0031;
+                border-color: #bc0031;
+                color: #ffffff;
+            }
+
+            @media only screen and (max-width: 620px) {
+                table[class=body] h1 {
+                    font-size: 28px !important;
+                    margin-bottom: 10px !important;
+                }
+                table[class=body] p,
+                table[class=body] ul,
+                table[class=body] ol,
+                table[class=body] td,
+                table[class=body] span,
+                table[class=body] a {
+                    font-size: 16px !important;
+                }
+                table[class=body] .wrapper,
+                table[class=body] .article {
+                    padding: 10px !important;
+                }
+                table[class=body] .content {
+                    padding: 0 !important;
+                }
+                table[class=body] .container {
+                    padding: 0 !important;
+                    width: 100% !important;
+                }
+                table[class=body] .main {
+                    border-left-width: 0 !important;
+                    border-radius: 0 !important;
+                    border-right-width: 0 !important;
+                }
+                table[class=body] .btn table {
+                    width: 100% !important;
+                }
+                table[class=body] .btn a {
+                    width: 100% !important;
+                }
+                table[class=body] .img-responsive {
+                    height: auto !important;
+                    max-width: 100% !important;
+                    width: auto !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <table role = ""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" class=""body"">
+            <tr>
+            <td>&nbsp;</td>
+            <td class=""container"">
+                <div class=""content"">
+                    <table role = ""presentation"" class=""main"">
+                        <tr>
+                        <td class=""wrapper"">
+                            <table role = ""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"">
+                            <tr>
+                                <td>{0}</td>
+                            </tr>
+                            </table>
+                        </td>
+                        </tr>
+                    </table>
+
+                    <div class=""footer"">
+                        <table role = ""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"">
+                        <tr>
+                            <td class=""content-block powered-by"">
+                            University of Amsterdam, Faculty of Science IT
+                            </td>
+                        </tr>
+                        </table>
+                    </div>
                 </div>
             </td>
             <td>&nbsp;</td>
