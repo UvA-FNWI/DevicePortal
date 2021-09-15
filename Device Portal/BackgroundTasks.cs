@@ -146,13 +146,13 @@ namespace DevicePortal
 
             var users = db.Users
                 .Where(u => u.CanSecure && !u.Inactive && 
-                    u.Devices.Any(d => d.Origin == DeviceOrigin.User && d.Status == DeviceStatus.Unsecure))
+                    u.Devices.Any(d => d.Origin == DeviceOrigin.DataExport && d.Status == DeviceStatus.Unsecure))
                 .Where(u => u.UserName == "goomens1") // TODO: remove this line after testing
                 .Select(u => new
                 {
                     u.Name,
                     u.Email,
-                    Count = u.Devices.Count(d => d.Origin == DeviceOrigin.User && d.Status == DeviceStatus.Unsecure)
+                    Count = u.Devices.Count(d => d.Origin == DeviceOrigin.DataExport && d.Status == DeviceStatus.Unsecure)
                 }).ToArray();
 
             using var client = new SmtpClient();
