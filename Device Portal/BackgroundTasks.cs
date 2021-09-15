@@ -440,7 +440,7 @@ namespace DevicePortal
         string MailBodyInsecureDevices(string user, int numberOfPendingDevices, string portalUrl)
         {
             return string.Format(Template, @$"<p>Dear {user},</p>
-<p>In the Science Secure portal, you have {numberOfPendingDevices} devices for which the security check needs to be completed. Please go to <a href=""{portalUrl}"">{portalUrl}</a> or click the button below to fill out the security check.</p>
+<p>In the Science Secure portal, you have {numberOfPendingDevices} device{(numberOfPendingDevices == 1 ? "" : "s")} for which the security check needs to be completed. Please go to <a href=""{portalUrl}"">{portalUrl}</a> or click the button below to fill out the security check.</p>
 <table role = ""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" class=""btn btn-primary"">
     <tbody>
     <tr>
