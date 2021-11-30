@@ -12,12 +12,13 @@
             device: <Device>null,
             security_check: <SecurityCheck>null,
             checks: <SecurityCheckSubmitted[]>null,
-            search: { name: '', institute: '' },
+            search: { department: '', user: '', device: '' },
         });
         if (isPageSwap) {
             state.device = null;
-            state.search.name = '';
-            state.search.institute = '';
+            state.search.user = '';
+            state.search.device = '';
+            state.search.department = '';
 
             // TODO sort
             GET_ONCE('security_checks', API.SecurityCheck('Submitted')).then((checks: SecurityCheckSubmitted[]) => {
@@ -66,9 +67,47 @@
 
             ks.set_next_item_class_name('bg-white border');
             ks.table('devices', function () {
+                ks.table_head(function () {
+                    ks.table_row(function () {
+                        ks.table_cell(function () {
+                            ks.input_text('institute', state.search.department, 'Institute', function (str) {
+                                state.search.department = str;
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                        ks.table_cell(function () {
+                            ks.input_text('user', state.search.user, 'User', function (str) {
+                                state.search.user = str;
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                        ks.table_cell(function () {
+                            ks.input_text('device', state.search.device, 'Device', function (str) {
+                                state.search.device = str;
+                                ks.refresh();
+                            });
+                            ks.is_item_clicked(function (_, ev) { ev.stopPropagation(); });
+                        }, ks.Sort_Order.none);
+                        ks.table_cell('');
+                    });
+                });
+
+                let search = { department: '', user: '', device: '' };
+                for (let key in state.search) {
+                    if (typeof state.search[key] === 'string') { search[key] = state.search[key].toUpperCase(); }
+                }
+
                 ks.table_body(function () {
                     for (let i = 0; i < state.checks.length; ++i) {
                         let c = state.checks[i];
+
+                        if (search.department && c.departmentName.toUpperCase().indexOf(search.department) < 0 ||
+                            search.user && c.userFullName.toUpperCase().indexOf(search.user) < 0 ||
+                            search.device && c.deviceName.toUpperCase().indexOf(search.device) < 0) {
+                            continue;
+                        }
 
                         ks.table_row(function () {
                             ks.table_cell(c.departmentName);
@@ -85,6 +124,10 @@
                         });
                     }
                 });
+            }, function (i_head, order) {
+                if (i_head === 0) { state.checks.sort((a, b) => order * sort_string(a.departmentName, b.departmentName)); }
+                if (i_head === 1) { state.checks.sort((a, b) => order * sort_string(a.userFullName, b.userFullName)); }
+                if (i_head === 2) { state.checks.sort((a, b) => order * sort_string(a.deviceName, b.deviceName)); }
             });
         } else {
             for (let i = 0; i < state.security_check.questions.length; ++i) {
