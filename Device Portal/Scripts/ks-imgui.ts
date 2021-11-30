@@ -1,5 +1,5 @@
 ﻿/*!*****************************************************************************************************
-        KS ImGui version 1.1.2
+        KS ImGui version 1.1.6
         Copyright 2020, by Karbon Solutions
 
         This copy is licensed to Universiteit van Amsterdam
@@ -14,9 +14,8 @@
         OTHER DEALINGS IN THE SOFTWARE.
 *******************************************************************************************************/
 
-interface Math { imul(a: number, b: number): number; }
-
 namespace ks {
+    'use strict';
     declare const $: any;
 
     export let debug_overlay = false;
@@ -41,18 +40,15 @@ namespace ks {
     else { is_google_chrome = false; }
 
 
-    if (!Math.imul) {
-        Math.imul = function (a: number, b: number): number {
-            b |= 0;
-            let result = (a & 0x003fffff) * b;
-            if (a & 0xffc00000) { result += (a & 0xffc00000) * b | 0; }
-            return result | 0;
-        };
-    }
+    let imul = (<any>Math).imul ? (<any>Math).imul : function (a: number, b: number): number {
+        b |= 0;
+        let result = (a & 0x003fffff) * b;
+        if (a & 0xffc00000) { result += (a & 0xffc00000) * b | 0; }
+        return result | 0;
+    };
 
     export enum Item_Type {
         container,
-        panel,
         column,
         combo,
         collapsing_header,
@@ -69,7 +65,6 @@ namespace ks {
         radio_button,
         switch_button,
         modal,
-        modal_footer,
         row,
         group,
         table,
@@ -213,10 +208,10 @@ namespace ks {
     let item_current_form;
     let item_current_modal;
     let state_stack = new State_Stack();
-    let item_map = {};
+    let item_map = Object.create(null);
     let id_chain = [0];
     let tree_item: Tree_Item;
-    let tree_item_map = {};
+    let tree_item_map = Object.create(null);
     let tree_item_buffer = new Tree_Item_Buffer();
     let is_refresh = false;
     let pass_id = 0;
@@ -224,7 +219,7 @@ namespace ks {
     let next_item_class_name;
     let next_item_this;
     let main_proc;
-    let local_persists = {};
+    let local_persists = Object.create(null);
     let debug_display_index = 0;
     let debug_display_types = [];
     let debug_display_items = [];
@@ -248,20 +243,42 @@ namespace ks {
 
         item_info_add(container, 0, 0, '', main_proc);
 
-        ks.refresh(container, true);
+        //let sheet = document.createElement('style');
+        //sheet.type = 'text/css';
+        //sheet.innerText = '';
+        //document.head.appendChild(sheet);
+
+        refresh(container, true);
     }
 
     function on_popstate(ev) {
-        refresh(container);
+        refresh(container, true);
+    }
+
+    function on_click(ev) {
+        if (ev.target._ks_info && ev.target._ks_info.onclick) {
+            if (!ev.target._ks_info.onclick(ev)) { return; }
+        }
+
+        if (ev.bubbles && !ev.defaultPrevented) {
+            let parent = ev.target.parentElement;
+            while (parent) {
+                if (parent._ks_info && parent._ks_info.onclick) {
+                    if (!parent._ks_info.onclick(ev)) { return; }
+                    if (ev.defaultPrevented) { return }
+                }
+                parent = parent.parentElement;
+            }
+        }
     }
 
     export function navigate_to(title: string, url: string) {
         window.history.pushState(undefined, title, url);
         if (is_refresh) { navigate_after_refresh = true; }
-        else { refresh(container); }
+        else { refresh(container, true); }
     }
 
-    export function run(proc_main) {
+    export function run(proc_main: Function) {
         main_proc = proc_main;
 
         window.removeEventListener('load', on_load);
@@ -273,6 +290,9 @@ namespace ks {
 
         window.removeEventListener('popstate', on_popstate);
         window.addEventListener('popstate', on_popstate);
+
+        window.removeEventListener('click', on_click);
+        window.addEventListener('click', on_click);
     }
 
     export function row(id: string, children_proc): HTMLElement {
@@ -325,7 +345,7 @@ namespace ks {
         // User can however then manually create the groups to avoid this.
         if (item_current_form) {
             let is_row = item_current_parent._ks_info && item_current_parent._ks_info.type === Item_Type.row;
-            if (is_row && item_current_parent.parentElement === item_current_form || item_current_parent === item_current_form) {
+            if (is_row && item_current_parent._ks_el_parent === item_current_form || item_current_parent === item_current_form) {
                 set_next_item_this(item_current_parent);
                 let el;
                 group(id_combo, is_row ? 'form-group col' : 'form-group', function () {
@@ -343,39 +363,45 @@ namespace ks {
     }
 
     export function collapsing_header(label: string, initially_open: boolean, children_proc): HTMLElement {
-        ks.set_next_item_class_name('card ' + (next_item_class_name || ''));
+        set_next_item_class_name('card ' + (next_item_class_name || ''));
         return item_container(label, Item_Type.collapsing_header, 'DIV', function () {
             let info = this._ks_info;
             let is_new = !info.el_collapse;
             if (is_new) { info.collapsed = !initially_open; }
 
-            ks.set_next_item_class_name('d-flex flex-row py-2');
-            let header = ks.card_header('header', function () {
-                ks.text(label, 'flex-grow-1');
-                ks.group('toggle', '', function () {
-                    ks.set_next_item_class_name('text-muted');
-                    ks.icon(!info.collapsed ? ks_icons[KS_Icon.collapsed] : ks_icons[KS_Icon.expanded]);
+            set_next_item_class_name('d-flex flex-row py-2');
+            let header = card_header('header', function () {
+                text(label, 'flex-grow-1');
+                group('toggle', '', function () {
+                    set_next_item_class_name('text-muted');
+                    icon(!info.collapsed ? ks_icons[KS_Icon.collapsed] : ks_icons[KS_Icon.expanded]);
                 });
             });
             header.style.cursor = 'pointer';
-            ks.is_item_clicked(function () {
+            is_item_clicked(function () {
                 info.collapsed = !info.collapsed;
                 $(info.el_collapse).collapse(info.collapsed ? 'hide' : 'show');
-                ks.refresh(header);
+                refresh(header);
             });
 
-            info.el_collapse = ks.group('collapse', 'collapse', children_proc);
+            info.el_collapse = group('collapse', 'collapse', children_proc);
             if (is_new) { $(info.el_collapse).collapse({ toggle: initially_open }); }
         });
     }
 
-    export function open_popup(id_label: string) {
-        let id = hash_str(id_label, id_chain[id_chain.length - 1]);
-        let existing = item_existing(id, Item_Type.modal);
-        if (existing && existing._ks_info.type === Item_Type.modal) {
-            $(existing).modal('show');
+    export function open_popup(id_or_element: string | HTMLElement) {
+        if (typeof id_or_element === 'string') {
+            let id = hash_str(id_or_element, id_chain[id_chain.length - 1]);
+            let existing = item_existing(id, Item_Type.modal);
+            if (existing && existing._ks_info.type === Item_Type.modal) {
+                $(existing).modal('show');
+            } else {
+                console.error('Could not find modal \'' + id_or_element + '\'');
+            }
         } else {
-            console.error('Could not find modal \'' + id_label + '\'');
+            if (id_or_element && (<any>id_or_element)._ks_info.type === Item_Type.modal) {
+                console.error('Element is not a modal', id_or_element);
+            }
         }
     }
 
@@ -581,12 +607,7 @@ namespace ks {
     export function table(id: string, children_proc, proc_sort?: (i_head: number, order: Sort_Order) => void): HTMLTableElement {
         return item_container(id, Item_Type.table, 'TABLE', children_proc, function (el) {
             set_class_name(el, 'table table-hover');
-            let info = el._ks_info;
-            info.proc_sort = proc_sort;
-            if (info.pass_id !== pass_id) {
-                info.i_table_row = 0;
-                info.i_table_cell = 0;
-            }
+            el._ks_info.proc_sort = proc_sort;
         });
     }
 
@@ -618,13 +639,14 @@ namespace ks {
             return;
         }
 
-        return item_container('head', Item_Type.table_head, 'THEAD', children_proc, function () {
-            let info = this._ks_info;
-            let info_table = item_current_parent._ks_info;
-            if (info.pass_id !== pass_id) { info_table.i_table_row = 0; }
+        return item_container('head', Item_Type.table_head, 'THEAD', function (pass_id_el) {
+            let info = item_current_parent._ks_info;
+            if (pass_id_el !== pass_id) { info.i_table_row = 0; }
+            children_proc.call(this);
+        }, function () {
             set_class_name(this);
-            info.el_table = item_current_parent;
-            info.is_table_head = true;
+            this._ks_info.el_table = item_current_parent;
+            this._ks_info.is_table_head = true;
         });
     }
 
@@ -634,7 +656,11 @@ namespace ks {
             return;
         }
 
-        return item_container('body', Item_Type.table_body, 'TBODY', children_proc, function () {
+        return item_container('body', Item_Type.table_body, 'TBODY', function (pass_id_el) {
+            let info = item_current_parent._ks_info;
+            if (pass_id_el !== pass_id) { info.i_table_row = 1; }
+            children_proc.call(this);
+        }, function () {
             set_class_name(this);
             this._ks_info.el_table = item_current_parent;
         });
@@ -648,31 +674,32 @@ namespace ks {
         }
 
         let table = info_parent.el_table;
-        let info_table = table._ks_info;
         console.assert(table._ks_info.type === Item_Type.table);
 
-        // TODO: currently only allows for a single header row, should we support multiple?
-        let row_nr = info_parent.type === Item_Type.table_head ? 1 : 1 + (++info_table.i_table_row);
+        let proc = function (pass_id_el) {
+            if (pass_id_el !== pass_id) { this._ks_info.i_table_cell = 0; }
+            children_proc.call(this);
+        };
+
+        let row_nr = ++info_parent.i_table_row;
         let id = hash_fleeting(row_nr, id_chain[id_chain.length - 1]);
         let existing = item_existing(id, Item_Type.table_row);
         if (existing) {
             let info = existing._ks_info;
-            if (info.pass_id !== pass_id) { info.i_table_cell = 0; }
             set_class_name(existing);
             info.el_table = table;
             info.is_head_row = !!item_current_parent._ks_info.is_table_head;
             push_set_id(existing._ks_info.id);
-            return temp_switch_parent_apply(existing, children_proc);
+            return temp_switch_parent_apply(existing, proc);
         }
 
         let el = document.createElement('TR');
         let info = item_info_add(el, Item_Type.table_row, id, '', children_proc);
-        info.i_table_cell = 0;
         info.el_table = table;
         info.is_head_row = !!item_current_parent._ks_info.is_table_head;
         set_class_name(el);
         push_set_id(id);
-        return temp_switch_parent_apply(el, children_proc, true);
+        return temp_switch_parent_apply(el, proc, true);
     }
 
     export function table_cell(str_or_children_proc: string | Function, initial_sort_order?: Sort_Order): HTMLTableCellElement {
@@ -684,9 +711,6 @@ namespace ks {
 
         const is_head = item_current_parent._ks_info.is_head_row;
         const row = item_current_parent;
-        const table = item_current_parent._ks_info.el_table;
-
-        console.assert(table._ks_info.type === Item_Type.table);
 
         if (is_head) { return table_cell_header(str_or_children_proc, initial_sort_order); }
 
@@ -727,7 +751,6 @@ namespace ks {
         const table = item_current_parent._ks_info.el_table;
         const info_table = table._ks_info;
 
-        console.assert(table._ks_info.type === Item_Type.table);
         if (initial_sort_order !== undefined && !info_table.proc_sort) {
             console.warn('Initial sort order provided, but the table has no associated sort procedure.');
         }
@@ -779,7 +802,7 @@ namespace ks {
             set_class_name(existing);
             if (typeof str_or_children_proc !== 'function') {
                 if (set_inner_text(existing._ks_info.el_append, str_or_children_proc)) {
-                    item_remove_children(existing, false);
+                    item_remove_children(existing);
                 }
             } else {
                 set_inner_text(existing._ks_info.el_append, '');
@@ -833,8 +856,13 @@ namespace ks {
     }
 
     export function anchor(id: string, href: string, children_proc?): HTMLAnchorElement {
-        return item_container(id, Item_Type.anchor, 'A', children_proc || no_op, function (el) {
-            el.href = href;
+        return item_container(id, Item_Type.anchor, 'A', children_proc || no_op, function (el, is_new) {
+            if (is_new) {
+                if (href !== undefined) { el.href = href; }
+            } else {
+                if (href === undefined) { el.removeAttribute('href'); }
+                else { el.href = href; }
+            }
             set_inner_text(el, children_proc ? '' : el._ks_info.label);
             set_class_name(el);
         });
@@ -859,7 +887,7 @@ namespace ks {
                 let el_anchor = el._ks_info.el_append;
                 el_anchor.href = href;
                 if (children_proc) { set_inner_text(el_anchor, ''); }
-                else if (set_inner_text(el_anchor, el._ks_info.label)) { item_remove_children(el, false); }
+                else if (set_inner_text(el_anchor, el._ks_info.label)) { item_remove_children(el); }
                 set_class_name(el_anchor, 'nav-link' + (is_active ? ' active' : ''));
                 return;
             }
@@ -920,6 +948,41 @@ namespace ks {
         return el;
     }
 
+    /*
+    Note: if we do something like this we don't have any validation info ready since the form hasn't been refreshed. 
+    The current workings of forms that call for refresh seems like the right play.
+
+    What might be of interest is knowing that a form was submitted so that this can be used in subsequent refreshes.
+    So for example: we want to display a message for a limited time on submission. Right now current_form_submitted()
+    would return true on submission, but placing any item inside that if statement would disapear on the next refresh.
+    We can't simply change current_form_submitted to not reset, this would make every refresh do things you only want to
+    do once on submission (e.g. post to backend).
+    Having said all that, this should be doable in user space using local persist to track submission and manually reset
+    the flag when desired.
+    */
+    export function current_form_on_submit(proc: (event) => void) {
+        if (!item_current_form) {
+            console.error('current_form_on_submit() should be called inside a form');
+            return;
+        }
+
+        let current_stored = item_current;
+        let parent_stored = item_current_parent;
+        let form_stored = item_current_form;
+        let modal_stored = item_current_modal;
+        item_current_form._ks_info.form_submit = function (event) {
+            push_state(current_stored, parent_stored, form_stored, modal_stored);
+
+            push_set_id(current_stored._ks_info.id_chain);
+            proc.call(parent_stored._ks_info.this, event);
+            pop_id();
+
+            pop_state();
+        };
+    }
+
+    // TODO: maybe add something like current_form_previously_submitted? So we can do a timeout on submit to hide validation
+
     export function current_form_submitted() {
         if (!item_current_form) {
             console.error('current_form_submitted() should be called inside a form');
@@ -928,6 +991,7 @@ namespace ks {
         return !!item_current_form._ks_info.form_is_submitted;
     }
 
+    // If the form has an 'action' set, this prevents that from happening
     export function cancel_current_form_submission() {
         if (!item_current_form) {
             console.error('cancel_current_form_submission() should be called inside a form');
@@ -936,6 +1000,7 @@ namespace ks {
         item_current_form._ks_info.cancel_submission = true;
     }
 
+    // When called current_form_submitted() returns false and validation is hidden
     export function unsubmit_current_form() {
         if (!item_current_form) {
             console.error('unsubmit_current_form() should be called inside a form');
@@ -943,6 +1008,25 @@ namespace ks {
         }
         item_current_form._ks_info.form_is_submitted = false;
         item_current_form._ks_info.show_validation = false;
+    }
+
+    // When called current_form_submitted() returns false and validation is hidden
+    export function unsubmit_form(id_or_element: string | HTMLFormElement) {
+        if (typeof id_or_element === 'string') {
+            let id = hash_str(id_or_element, id_chain[id_chain.length - 1]);
+            let existing = item_existing(id, Item_Type.form);
+            if (existing && existing._ks_info.type === Item_Type.form) {
+                existing._ks_info.form_is_submitted = false;
+                existing._ks_info.show_validation = false;
+            } else {
+                console.error('Could not find form', id_or_element);
+            }
+        } else {
+            if (id_or_element && (<any>id_or_element)._ks_info.type === Item_Type.form) {
+                id_or_element._ks_info.form_is_submitted = false;
+                id_or_element._ks_info.show_validation = false;
+            }
+        }
     }
 
     export function form_hide_validation(form: HTMLFormElement) {
@@ -1036,8 +1120,22 @@ namespace ks {
         });
     }
 
-    export function group(id: string, class_name: string, children_proc): HTMLElement {
-        return item_container(id, Item_Type.group, 'DIV', children_proc, function (el) {
+    export function group(id_label: string, class_name: string, children_proc): HTMLElement {
+        if (item_current_parent._ks_info.type === Item_Type.combo) {
+            return item_container(id_label, Item_Type.group, 'OPTGROUP', children_proc, function (el, is_new) {
+                set_class_name(el);
+                let info = el._ks_info;
+                if (is_new) { el.label = label_extract(id_label); }
+                else {
+                    if (info.label !== id_label) {
+                        let label = label_extract(id_label);
+                        if (info.label !== label) { el.label = label; }
+                    }
+                }
+            });
+        }
+
+        return item_container(id_label, Item_Type.group, 'DIV', children_proc, function (el) {
             set_class_name(el, class_name);
         });
     }
@@ -1125,6 +1223,13 @@ namespace ks {
         return el;
     }
 
+    export function span(str: string, class_name?: string): HTMLElement {
+        let el = recycle_set_current('SPAN');
+        set_class_name(el, class_name);
+        set_inner_text(el, str);
+        return el;
+    }
+
     export function text(str: string, class_name?: string): HTMLElement {
         let el = recycle_set_current('DIV');
         set_class_name(el, class_name);
@@ -1203,8 +1308,8 @@ namespace ks {
         return el;
     }
 
-    export function button(id_label: string, proc_input, type = 'primary'): HTMLButtonElement {
-        let class_name = type ? 'btn btn-' + type : undefined;
+    export function button(id_label: string, proc_input, theme_color = 'primary'): HTMLButtonElement {
+        let class_name = theme_color ? 'btn btn-' + theme_color : undefined;
         let id = hash_str(id_label, id_chain[id_chain.length - 1]);
         let existing = item_existing(id, Item_Type.button);
         if (existing) {
@@ -1359,7 +1464,7 @@ namespace ks {
             item_info_add(el, item_type, id, label_extract(id_label));
 
             set_class_name(el, 'form-control' + class_valid);
-            el.type = type;
+            if (item_type !== Item_Type.input_text_area) { el.type = type; }
             if (el._ks_input_value !== str) {
                 if (item_type !== Item_Type.input_number || !isNaN(str)) { el.value = str; }
                 else if (item_type === Item_Type.input_number && str === undefined) { el.value = ''; }
@@ -1380,7 +1485,7 @@ namespace ks {
         // User can however then manually create the groups to avoid this.
         if (item_current_form) {
             let is_row = item_current_parent._ks_info && item_current_parent._ks_info.type === Item_Type.row;
-            if (is_row && item_current_parent.parentElement === item_current_form || item_current_parent === item_current_form) {
+            if (is_row && item_current_parent._ks_el_parent === item_current_form || item_current_parent === item_current_form) {
                 set_next_item_this(item_current_parent);
                 let el;
                 group(id_label, is_row ? 'form-group col' : 'form-group', function () {
@@ -1397,24 +1502,26 @@ namespace ks {
         return do_input();
     }
 
-    export function checkbox(label: string, is_checked: boolean, proc_input: (checked: boolean) => void): HTMLInputElement {
-        return checkbox_radio_input(Item_Type.checkbox, label, is_checked, proc_input);
+    export function checkbox(id_label: string, is_checked: boolean, proc_input: (checked: boolean) => void): HTMLInputElement {
+        return checkbox_radio_input(Item_Type.checkbox, id_label, is_checked, proc_input);
     }
 
-    export function switch_button(label: string, is_checked: boolean, proc_input: (checked: boolean) => void): HTMLInputElement {
-        return checkbox_radio_input(Item_Type.switch_button, label, is_checked, proc_input);
+    export function switch_button(id_label: string, is_checked: boolean, proc_input: (checked: boolean) => void): HTMLInputElement {
+        return checkbox_radio_input(Item_Type.switch_button, id_label, is_checked, proc_input);
     }
 
-    export function radio_button(label: string, is_checked: boolean, proc_input: Function): HTMLInputElement {
-        return checkbox_radio_input(Item_Type.radio_button, label, is_checked, proc_input);
+    export function radio_button(id_label: string, is_checked: boolean, proc_input: Function): HTMLInputElement {
+        return checkbox_radio_input(Item_Type.radio_button, id_label, is_checked, proc_input);
     }
 
     function do_check_radio_item(item_type: Item_Type, id_label: string, is_checked: boolean, proc_change): HTMLInputElement {
+        let el_input;
         set_next_item_this(this);
-        return item_container(id_label, Item_Type.group, 'DIV', function () {
+        item_container(id_label, Item_Type.group, 'DIV', function () {
             let id = hash_str(id_label, id_chain[id_chain.length - 1]);
             let existing = item_existing(id, item_type);
             if (existing) {
+                el_input = existing;
                 set_class_name(existing, 'custom-control-input');
                 if (existing._ks_info.is_checked !== is_checked) {
                     existing._ks_info.is_checked = is_checked;
@@ -1431,7 +1538,7 @@ namespace ks {
             }
 
             let label = label_extract(id_label);
-            let el = <any>document.createElement('INPUT');
+            let el = el_input = <any>document.createElement('INPUT');
             let info = item_info_add(el, item_type, id, label);
             el.type = (item_type === Item_Type.radio_button && !is_microsoft) ? 'radio' : 'checkbox';
             el.checked = is_checked;
@@ -1469,7 +1576,7 @@ namespace ks {
                 if (!is_microsoft) {
                     el.onclick = el_label.onclick = function (ev) {
                         if (info.is_checked && el.checked) {
-                            el._ks_info.onchange(undefined);
+                            el.onchange();
                             ev.preventDefault();
                             ev.stopPropagation();
                             return false;
@@ -1478,7 +1585,7 @@ namespace ks {
                 }
                 el.onkeyup = function (ev) {
                     if (ev.code === 'Space' && info.is_checked) {
-                        el._ks_info.onchange(undefined);
+                        el.onchange();
                         return false;
                     }
                 };
@@ -1488,6 +1595,7 @@ namespace ks {
             let index_validation = !next_input_validation ? 0 : (next_input_validation.is_valid ? 1 : 2);
             set_class_name(el_wrapper, check_radio_class_names[index_validation * 3 + index_type]);
         });
+        return el_input;
     }
 
     let check_radio_class_names = [
@@ -1508,7 +1616,7 @@ namespace ks {
         // User can however then manually create the groups to avoid this.
         if (item_current_form) {
             let is_row = item_current_parent._ks_info && item_current_parent._ks_info.type === Item_Type.row;
-            if (is_row && item_current_parent.parentElement === item_current_form || item_current_parent === item_current_form) {
+            if (is_row && item_current_parent._ks_el_parent === item_current_form || item_current_parent === item_current_form) {
                 set_next_item_this(item_current_parent);
                 let el;
                 group(id_label, is_row ? 'form-group col' : 'form-group', function () {
@@ -1526,13 +1634,12 @@ namespace ks {
     }
 
     // TODO: add multi event registration
-    export function is_item_clicked(proc, cookie?) {
+    export function is_item_clicked(proc: Function | ((cookie: any, event: MouseEvent) => boolean), cookie?) {
         if (!item_current) { return; }
         if (!item_current._ks_info) {
             item_info_add(item_current, Item_Type.fleeting, hash_fleeting(fleeting_id++, id_chain[id_chain.length - 1]));
-            item_current.onclick = item_onclick;
-            item_current.onmouseout = item_onmouseout;
-            item_current.onmouseover = item_onmouseover;
+        } else if (item_current._ks_info.onclick) {
+            console.warn('Item already has a click proc assigned, this will overwrite the previous one', item_current);
         }
 
         let current_stored = item_current;
@@ -1559,33 +1666,6 @@ namespace ks {
         // and it is unclear when it is/isn't supported, we simulate them by using the onchange event.
         if (item_current.tagName === 'OPTION') { item_current._ks_info.option_on_click = on_click; }
         else { item_current._ks_info.onclick = on_click; }
-    }
-
-    // TODO: add multi event registration
-    export function is_item_hovered(): boolean {
-        if (!item_current) { return false; }
-        if (!item_current._ks_info) {
-            let id = hash_fleeting(fleeting_id++, id_chain[id_chain.length - 1]);
-            let info = item_info_add(item_current, Item_Type.fleeting, id);
-            info.hovered = false;
-            item_current.onclick = item_onclick;
-            item_current.onmouseout = item_onmouseout;
-            item_current.onmouseover = item_onmouseover;
-        }
-
-        let current_stored = item_current;
-        let parent_stored = item_current_parent;
-        item_current._ks_info.onmouseover = function (event) {
-            event.stopPropagation();
-            current_stored._ks_info.hovered = true;
-            refresh(parent_stored, true);
-        };
-        item_current._ks_info.onmouseout = function (event) {
-            event.stopPropagation();
-            current_stored._ks_info.hovered = false;
-            refresh(parent_stored, true);
-        };
-        return item_current._ks_info.hovered;
     }
 
     export function set_timeout(id: string, timeout_ms: number, proc: Function) {
@@ -1635,7 +1715,7 @@ namespace ks {
             }
         }, timeout_ms);
 
-        item_append_child(item_current_parent, el);
+        item_append_child_to_new_el(item_current_parent, el);
         tree_item_buffer.push_child(tree_item, el);
     }
 
@@ -1688,7 +1768,7 @@ namespace ks {
             }
         }, interval_ms);
 
-        item_append_child(item_current_parent, el);
+        item_append_child_to_new_el(item_current_parent, el);
         tree_item_buffer.push_child(tree_item, el);
         if (run_immediately) { proc.apply(info.parent_stored._ks_info.this); }
     }
@@ -1740,8 +1820,8 @@ namespace ks {
                 }
             }
 
-            h1 = Math.imul(h1 ^ c, 2654435761);
-            h2 = Math.imul(h2 ^ c, 1597334677);
+            h1 = imul(h1 ^ c, 2654435761);
+            h2 = imul(h2 ^ c, 1597334677);
         }
         return 4294967296 * (2097151 & h2) + (h1 >>> 0);
     }
@@ -1749,8 +1829,8 @@ namespace ks {
     function hash_int(val: number, seed: number): number {
         let h1 = 0xdeadbeef ^ seed;
         let h2 = 0x41c6ce57 ^ seed;
-        h1 = Math.imul(h1 ^ val, 2654435761);
-        h2 = Math.imul(h2 ^ val, 1597334677);
+        h1 = imul(h1 ^ val, 2654435761);
+        h2 = imul(h2 ^ val, 1597334677);
         return 4294967296 * (2097151 & h2) + (h1 >>> 0);
     }
 
@@ -1760,22 +1840,26 @@ namespace ks {
         let h1 = 0xdeadbeef ^ seed;
         let h2 = 0x41c6ce57 ^ seed;
 
-        h1 = Math.imul(h1 ^ 35, 2654435761);
-        h2 = Math.imul(h2 ^ 35, 1597334677);
-        h1 = Math.imul(h1 ^ 35, 2654435761);
-        h2 = Math.imul(h2 ^ 35, 1597334677);
-        h1 = Math.imul(h1 ^ 35, 2654435761);
-        h2 = Math.imul(h2 ^ 35, 1597334677);
-        h1 = Math.imul(h1 ^ 35, 2654435761);
-        h2 = Math.imul(h2 ^ 35, 1597334677);
+        h1 = imul(h1 ^ 35, 2654435761);
+        h2 = imul(h2 ^ 35, 1597334677);
+        h1 = imul(h1 ^ 35, 2654435761);
+        h2 = imul(h2 ^ 35, 1597334677);
+        h1 = imul(h1 ^ 35, 2654435761);
+        h2 = imul(h2 ^ 35, 1597334677);
+        h1 = imul(h1 ^ 35, 2654435761);
+        h2 = imul(h2 ^ 35, 1597334677);
 
-        h1 = Math.imul(h1 ^ val, 2654435761);
-        h2 = Math.imul(h2 ^ val, 1597334677);
+        h1 = imul(h1 ^ val, 2654435761);
+        h2 = imul(h2 ^ val, 1597334677);
         return 4294967296 * (2097151 & h2) + (h1 >>> 0);
     }
 
-    export function push_id(id: string) {
-        id_chain.push(hash_str(id, id_chain[id_chain.length - 1]));
+    export function push_id(id: number | string) {
+        if (typeof (id) === 'number') {
+            id_chain.push(hash_int(id, id_chain[id_chain.length - 1]));
+        } else {
+            id_chain.push(hash_str(id, id_chain[id_chain.length - 1]));
+        }
     }
 
     function push_set_id(id: number) {
@@ -1801,7 +1885,7 @@ namespace ks {
             if (item._ks_info && item._ks_info.type === Item_Type.modal) {
                 return item;
             }
-            item = item.parentElement;
+            item = item._ks_el_parent;
         }
         return undefined;
     }
@@ -1813,7 +1897,7 @@ namespace ks {
             if (item._ks_info && item._ks_info.type === Item_Type.form) {
                 return item;
             }
-            item = item.parentElement;
+            item = item._ks_el_parent;
         }
         return undefined;
     }
@@ -1838,11 +1922,17 @@ namespace ks {
         state.modal = null;
     }
 
+    // TODO: remove recursive refresh bool since we have a refresh queue now?
+    let refresh_queue = [];
     let navigate_after_refresh = false;
     let refresh_may_recurse = false;
     export function refresh(item?: HTMLElement, allow_recursive_refresh?: boolean) {
         if (!item) { item = container; }
         if (is_refresh && !refresh_may_recurse) { return; }
+        if (is_refresh) {
+            refresh_queue.push(item);
+            return;
+        }
 
         let prev_refresh_may_recurse = refresh_may_recurse;
         refresh_may_recurse = !!allow_recursive_refresh;
@@ -1867,7 +1957,7 @@ namespace ks {
 
             let i_buffer = tree_item_buffer.length;
             tree_item = tree_item_buffer.push(item);
-            tree_item_map = {};
+            tree_item_map = Object.create(null);
             tree_item_map[info.id] = tree_item;
 
             push_set_id(info.id);
@@ -1908,7 +1998,6 @@ namespace ks {
                 debug_container.style.left = '0';
                 debug_container.style.width = '100%';
                 debug_container.style.height = '100%';
-                debug_container.style.overflow = 'hidden';
                 debug_container.style.pointerEvents = 'none';
 
                 debug_display_render(debug_container);
@@ -1937,10 +2026,20 @@ namespace ks {
                 if (node.el._ks_info) {
                     let children = item_children(node.el);
                     for (let i_child = children.length - 1; i_child >= node.child_count; --i_child) {
-                        let el_child = children[i_child];
-                        remove_item(el_child);
-                        item_remove_child(node.el, i_child);
+                        remove_item(children[i_child]);
                     }
+                }
+            }
+
+            // Above loop removes items from item_map, here we remove the elements
+            for (let i = i_buffer; i < tree_item_buffer.length; ++i) {
+                let node = tree_item_buffer.items[i];
+                if (node.el._ks_info) {
+                    let children = item_children(node.el);
+                    for (let i_child = children.length - 1; i_child >= node.child_count; --i_child) {
+                        node.el._ks_info.el_append.removeChild(children[i_child]);
+                    }
+                    children.length = node.child_count;
                 }
             }
 
@@ -1966,9 +2065,6 @@ namespace ks {
             pop_state();
         }
 
-        is_refresh = is_recursive_refresh;
-        refresh_may_recurse = prev_refresh_may_recurse;
-
         if (chain_length < id_chain.length) {
             console.error('Missing ' + (id_chain.length - chain_length) + ' pop_id() calls.');
         }
@@ -1976,9 +2072,17 @@ namespace ks {
             console.error('No matching push_id() for ' + (chain_length - id_chain.length) + ' pop_id() calls.');
         }
 
+        is_refresh = is_recursive_refresh;
+        refresh_may_recurse = prev_refresh_may_recurse;
+
+        while (refresh_queue.length) {
+            let q = refresh_queue.splice(0, 1)[0];
+            refresh(q);
+        }
+
         if (navigate_after_refresh && !is_refresh) {
             navigate_after_refresh = false;
-            refresh(container);
+            refresh(container, true);
         }
     }
 
@@ -1994,16 +2098,11 @@ namespace ks {
     // returns el
     function temp_switch_parent_apply(el, proc, is_new = false, state_form?, state_modal?) {
         if (is_new) {
-            item_append_child(item_current_parent, el);
-            el.onclick = item_onclick;
-            el.onmouseout = item_onmouseout;
-            el.onmouseover = item_onmouseover;
+            item_append_child_to_new_el(item_current_parent, el);
 
             debug_display_add(Debug_Display_Type.New, el);
         }
         el._ks_info.onclick = undefined;
-        el._ks_info.onmouseout = undefined;
-        el._ks_info.onmouseover = undefined;
 
         push_state(el, el, state_form || item_current_form, state_modal || item_current_modal);
 
@@ -2011,7 +2110,9 @@ namespace ks {
             el._ks_info.this = next_item_this;
             next_item_this = undefined;
         }
-        if (el._ks_info.pass_id === pass_id) {
+
+        let pass_id_el = el._ks_info.pass_id;
+        if (pass_id_el === pass_id) {
             let proc_existing = el._ks_info.proc;
             el._ks_info.proc = function () {
                 proc_existing.apply(el._ks_info.this);
@@ -2019,7 +2120,6 @@ namespace ks {
             };
         } else {
             el._ks_info.proc = proc;
-            el._ks_info.pass_id = pass_id;
         }
 
         let prev_tree_item = tree_item;
@@ -2030,8 +2130,12 @@ namespace ks {
             tree_item_map[el._ks_info.id] = tree_item;
         }
 
-        proc.apply(el._ks_info.this);
+        proc.call(el._ks_info.this, pass_id_el);
         pop_id();
+
+        if (pass_id_el !== pass_id) {
+            el._ks_info.pass_id = pass_id;
+        }
 
         tree_item = prev_tree_item;
 
@@ -2043,10 +2147,7 @@ namespace ks {
     // returns el
     function append_set_current(el, is_new = false) {
         if (is_new) {
-            item_append_child(item_current_parent, el);
-            el.onclick = item_onclick;
-            el.onmouseout = item_onmouseout;
-            el.onmouseover = item_onmouseover;
+            item_append_child_to_new_el(item_current_parent, el);
 
             debug_display_add(Debug_Display_Type.New, el);
         }
@@ -2054,8 +2155,6 @@ namespace ks {
 
         if (el._ks_info) {
             el._ks_info.onclick = undefined;
-            el._ks_info.onmouseout = undefined;
-            el._ks_info.onmouseover = undefined;
         }
         item_current = el;
 
@@ -2074,8 +2173,6 @@ namespace ks {
                 if (el._ks_info) {
                     delete item_map[el._ks_info.id];
                     el._ks_info.onclick = undefined;
-                    el._ks_info.onmouseout = undefined;
-                    el._ks_info.onmouseover = undefined;
                 }
                 el._ks_pass_id = pass_id;
                 tree_item_buffer.push_child(tree_item, el);
@@ -2098,6 +2195,13 @@ namespace ks {
 
     export function set_next_item_class_name(class_name: string) {
         next_item_class_name = class_name;
+    }
+
+    export function set_item_class_name(el, class_name: string) {
+        if (el._ks_class_name !== class_name) {
+            el._ks_class_name = class_name;
+            el.className = class_name;
+        }
     }
 
     // Prevent layout trashing with these functions
@@ -2144,11 +2248,7 @@ namespace ks {
         return el._ks_info.children;
     }
 
-    function item_append_child(el, child) {
-        if (child._ks_el_parent) {
-            let index = child._ks_el_parent._ks_info.children.indexOf(child);
-            if (index >= 0) { item_remove_child(child._ks_el_parent, index); }
-        }
+    function item_append_child_to_new_el(el, child) {
         child._ks_el_parent = el;
         el._ks_info.el_append.appendChild(child);
         el._ks_info.children.push(child);
@@ -2170,23 +2270,9 @@ namespace ks {
         el._ks_info.children.splice(index, 1);
     }
 
-    function item_remove_children(el, remove_elements: boolean) {
-        console.assert(el._ks_info);
+    function item_remove_children(el) {
         let children = item_children(el);
-        if (remove_elements) {
-            for (let i = children.length - 1; i >= 0; --i) {
-                children[i]._ks_el_parent = undefined;
-                el._ks_info.el_append.removeChild(children[i]);
-            }
-        } else {
-            for (let i = children.length - 1; i >= 0; --i) { children[i]._ks_el_parent = undefined; }
-        }
         children.length = 0;
-    }
-
-    function item_onclick(ev) {
-        let el = ev.currentTarget;
-        if (el._ks_info && el._ks_info.onclick) { return el._ks_info.onclick(ev); }
     }
 
     function item_onchange(ev) {
@@ -2197,16 +2283,6 @@ namespace ks {
     function item_oninput(ev) {
         let el = ev.currentTarget;
         if (el._ks_info && el._ks_info.oninput) { el._ks_info.oninput(ev); }
-    }
-
-    function item_onmouseout(ev) {
-        let el = ev.currentTarget;
-        if (el._ks_info && el._ks_info.onmouseout) { el._ks_info.onmouseout(ev); }
-    }
-
-    function item_onmouseover(ev) {
-        let el = ev.currentTarget;
-        if (el._ks_info && el._ks_info.onmouseover) { el._ks_info.onmouseover(ev); }
     }
 
     function debug_display_add(type: Debug_Display_Type, el: HTMLElement) {
