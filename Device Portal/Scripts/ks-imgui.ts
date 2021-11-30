@@ -243,11 +243,6 @@ namespace ks {
 
         item_info_add(container, 0, 0, '', main_proc);
 
-        //let sheet = document.createElement('style');
-        //sheet.type = 'text/css';
-        //sheet.innerText = '';
-        //document.head.appendChild(sheet);
-
         refresh(container, true);
     }
 
@@ -760,7 +755,7 @@ namespace ks {
 
         let proc = function () {
             let info = this._ks_info;
-            if (info_table.proc_sort && info.el_table_sort_icon) {
+            if (info_table.proc_sort && info.sort_order !== undefined) {
                 is_item_clicked(function (i_head) {
                     for (let i = 0; i < row.children.length; ++i) {
                         let child = row.children[i];
@@ -807,6 +802,21 @@ namespace ks {
             } else {
                 set_inner_text(existing._ks_info.el_append, '');
             }
+
+            if (initial_sort_order === undefined && existing._ks_info.sort_order !== undefined) {
+                existing.style.cursor = 'auto';
+                existing._ks_info.sort_order = undefined;
+                set_class_name(existing._ks_info.el_table_sort_icon, 'd-none');
+            }
+            if (initial_sort_order !== undefined && existing._ks_info.sort_order === undefined) {
+                existing.style.cursor = 'pointer';
+                existing._ks_info.sort_order = initial_sort_order;
+                let icon = existing._ks_info.el_table_sort_icon;
+                if (initial_sort_order === Sort_Order.none) { set_class_name(icon, ks_icons[KS_Icon.sort]); }
+                else if (initial_sort_order === Sort_Order.asc) { set_class_name(icon, ks_icons[KS_Icon.sort_asc]); }
+                else if (initial_sort_order === Sort_Order.desc) { set_class_name(icon, ks_icons[KS_Icon.sort_desc]); }
+            }
+
             push_set_id(existing._ks_info.id);
             return temp_switch_parent_apply(existing, proc);
         }
@@ -818,6 +828,7 @@ namespace ks {
 
         el.scope = 'col';
         set_class_name(el);
+        if (initial_sort_order !== undefined) { el.style.cursor = 'pointer'; }
 
         let el_flex = document.createElement('DIV');
         set_class_name(el_flex, 'd-flex flex-row align-items-center');
@@ -826,28 +837,26 @@ namespace ks {
         set_inner_text(el_append, typeof str_or_children_proc !== 'function' ? str_or_children_proc : '');
         el_flex.appendChild(el_append);
 
-        if (initial_sort_order !== undefined) {
-            el.style.cursor = 'pointer';
+        let el_icon_container = document.createElement('DIV');
+        set_class_name(el_icon_container, 'ml-1');
+        let el_icon = document.createElement('I');
+        el_icon.setAttribute('aria-hidden', 'true');
 
-            let el_icon_container = document.createElement('DIV');
-            set_class_name(el_icon_container, 'ml-1');
-            let el_icon = document.createElement('I');
-            el_icon.setAttribute('aria-hidden', 'true');
-
-            if (initial_sort_order !== Sort_Order.none && info_table.i_sort_head === undefined) {
-                info_table.i_sort_head = i_cell;
-                info_table.sort_order = initial_sort_order;
-            }
-
-            if (initial_sort_order === Sort_Order.none) { set_class_name(el_icon, ks_icons[KS_Icon.sort]); }
-            else if (initial_sort_order === Sort_Order.asc) { set_class_name(el_icon, ks_icons[KS_Icon.sort_asc]); }
-            else if (initial_sort_order === Sort_Order.desc) { set_class_name(el_icon, ks_icons[KS_Icon.sort_desc]); }
-
-            el_icon_container.appendChild(el_icon);
-            el_flex.appendChild(el_icon_container);
-
-            info.el_table_sort_icon = el_icon;
+        if (initial_sort_order !== undefined && initial_sort_order !== Sort_Order.none &&
+            info_table.i_sort_head === undefined) {
+            info_table.i_sort_head = i_cell;
+            info_table.sort_order = initial_sort_order;
         }
+
+        if (initial_sort_order === Sort_Order.none) { set_class_name(el_icon, ks_icons[KS_Icon.sort]); }
+        else if (initial_sort_order === Sort_Order.asc) { set_class_name(el_icon, ks_icons[KS_Icon.sort_asc]); }
+        else if (initial_sort_order === Sort_Order.desc) { set_class_name(el_icon, ks_icons[KS_Icon.sort_desc]); }
+        else { set_class_name(el_icon, 'd-none'); }
+
+        el_icon_container.appendChild(el_icon);
+        el_flex.appendChild(el_icon_container);
+
+        info.el_table_sort_icon = el_icon;
 
         el.appendChild(el_flex);
 
@@ -948,41 +957,6 @@ namespace ks {
         return el;
     }
 
-    /*
-    Note: if we do something like this we don't have any validation info ready since the form hasn't been refreshed. 
-    The current workings of forms that call for refresh seems like the right play.
-
-    What might be of interest is knowing that a form was submitted so that this can be used in subsequent refreshes.
-    So for example: we want to display a message for a limited time on submission. Right now current_form_submitted()
-    would return true on submission, but placing any item inside that if statement would disapear on the next refresh.
-    We can't simply change current_form_submitted to not reset, this would make every refresh do things you only want to
-    do once on submission (e.g. post to backend).
-    Having said all that, this should be doable in user space using local persist to track submission and manually reset
-    the flag when desired.
-    */
-    export function current_form_on_submit(proc: (event) => void) {
-        if (!item_current_form) {
-            console.error('current_form_on_submit() should be called inside a form');
-            return;
-        }
-
-        let current_stored = item_current;
-        let parent_stored = item_current_parent;
-        let form_stored = item_current_form;
-        let modal_stored = item_current_modal;
-        item_current_form._ks_info.form_submit = function (event) {
-            push_state(current_stored, parent_stored, form_stored, modal_stored);
-
-            push_set_id(current_stored._ks_info.id_chain);
-            proc.call(parent_stored._ks_info.this, event);
-            pop_id();
-
-            pop_state();
-        };
-    }
-
-    // TODO: maybe add something like current_form_previously_submitted? So we can do a timeout on submit to hide validation
-
     export function current_form_submitted() {
         if (!item_current_form) {
             console.error('current_form_submitted() should be called inside a form');
@@ -1008,25 +982,6 @@ namespace ks {
         }
         item_current_form._ks_info.form_is_submitted = false;
         item_current_form._ks_info.show_validation = false;
-    }
-
-    // When called current_form_submitted() returns false and validation is hidden
-    export function unsubmit_form(id_or_element: string | HTMLFormElement) {
-        if (typeof id_or_element === 'string') {
-            let id = hash_str(id_or_element, id_chain[id_chain.length - 1]);
-            let existing = item_existing(id, Item_Type.form);
-            if (existing && existing._ks_info.type === Item_Type.form) {
-                existing._ks_info.form_is_submitted = false;
-                existing._ks_info.show_validation = false;
-            } else {
-                console.error('Could not find form', id_or_element);
-            }
-        } else {
-            if (id_or_element && (<any>id_or_element)._ks_info.type === Item_Type.form) {
-                id_or_element._ks_info.form_is_submitted = false;
-                id_or_element._ks_info.show_validation = false;
-            }
-        }
     }
 
     export function form_hide_validation(form: HTMLFormElement) {
@@ -1220,13 +1175,6 @@ namespace ks {
         let el = recycle_set_current('I');
         set_class_name(el, class_name);
         el.setAttribute('aria-hidden', 'true');
-        return el;
-    }
-
-    export function span(str: string, class_name?: string): HTMLElement {
-        let el = recycle_set_current('SPAN');
-        set_class_name(el, class_name);
-        set_inner_text(el, str);
         return el;
     }
 
