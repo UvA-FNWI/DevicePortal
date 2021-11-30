@@ -1,5 +1,5 @@
 ﻿/*!*****************************************************************************************************
-        KS ImGui version 1.1.6
+        KS ImGui version 1.1.7
         Copyright 2020, by Karbon Solutions
 
         This copy is licensed to Universiteit van Amsterdam
@@ -252,15 +252,18 @@ namespace ks {
 
     function on_click(ev) {
         if (ev.target._ks_info && ev.target._ks_info.onclick) {
-            if (!ev.target._ks_info.onclick(ev)) { return; }
+            if (ev.target._ks_info.onclick(ev) === false) {
+                ev.preventDefault();
+            }
         }
 
-        if (ev.bubbles && !ev.defaultPrevented) {
+        if (ev.bubbles) {
             let parent = ev.target.parentElement;
-            while (parent) {
+            while (parent && !ev.cancelBubble) {
                 if (parent._ks_info && parent._ks_info.onclick) {
-                    if (!parent._ks_info.onclick(ev)) { return; }
-                    if (ev.defaultPrevented) { return }
+                    if (parent._ks_info.onclick(ev) === false) {
+                        ev.preventDefault();
+                    }
                 }
                 parent = parent.parentElement;
             }
