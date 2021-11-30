@@ -192,7 +192,7 @@
                                             u.canSecure = checked;
                                             PUT_JSON(API.Users(u.userName), u);
                                             ks.refresh(stats);
-                                        });
+                                        }).disabled = !activeUser.can_admin;
                                     });
                                     ks.is_item_clicked(function (_, ev) { ev.stopPropagation() });
                                 });

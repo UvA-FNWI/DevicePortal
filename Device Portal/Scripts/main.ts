@@ -83,14 +83,14 @@
             this.page_access[Page.Admin] = this.can_admin;
         }
     }
-    let user: ActiveUser;
+    export let activeUser: ActiveUser;
     let init = false;
     ks.run(function () {
         if (!init) {
             init = true;
             GET(API.Identity()).done((claims: { type: string, value: string; }[]) => {
                 if (claims && claims.length) {
-                    user = new ActiveUser(claims);
+                    activeUser = new ActiveUser(claims);
                     ks.refresh();
                 } else if (window.location.href.indexOf('enter') == -1) {
                     // Trigger login screen if front-end loaded from cache
@@ -98,10 +98,10 @@
                 }
             });
         }
-        if (!user) { return; }
+        if (!activeUser) { return; }
 
         // Global modals, run before any pages
-        deviceModal.run(user);
+        deviceModal.run(activeUser);
         noteModal.run();
         confirmModal.run();
         contextModal.run();
@@ -148,7 +148,7 @@
                 break;
             }
         }
-        if (!user.page_access[iPage]) {
+        if (!activeUser.page_access[iPage]) {
             ks.navigate_to('Home', '/');
             return;
         }
@@ -156,7 +156,7 @@
 
         // Setup request count update interval
         let requestCount = ks.local_persist('request count', { count: 0 });
-        if (user.can_approve) {
+        if (activeUser.can_approve) {
             if (isPageSwap) {
                 // If we swap to the Requests page we want to immediately update this number, interval might be far out
                 GET(API.SecurityCheck('Submitted/Count')).done(c => {
@@ -193,7 +193,7 @@
                         return false;
                     });
 
-                    if (user.page_access[Page.Faculty]) {
+                    if (activeUser.page_access[Page.Faculty]) {
                         ks.nav_item('Institutes', iPage === Page.Faculty, pages[Page.Faculty]);
                         ks.is_item_clicked(function () {
                             ks.navigate_to('Institutes', pages[Page.Faculty]);
@@ -201,7 +201,7 @@
                         });
                     }
 
-                    if (user.page_access[Page.Users]) {
+                    if (activeUser.page_access[Page.Users]) {
                         ks.nav_item('Users', iPage === Page.Users, pages[Page.Users]);
                         ks.is_item_clicked(function () {
                             ks.navigate_to('Users', pages[Page.Users]);
@@ -209,7 +209,7 @@
                         });
                     }
 
-                    if (user.page_access[Page.Requests]) {
+                    if (activeUser.page_access[Page.Requests]) {
                         ks.nav_item('requests', iPage === Page.Requests, pages[Page.Requests], function () {
                             ks.text('Requests', 'd-inline mr-1');
                             if (requestCount.count) {
@@ -222,7 +222,7 @@
                         });
                     }
 
-                    if (user.page_access[Page.Changes]) {
+                    if (activeUser.page_access[Page.Changes]) {
                         ks.nav_item('Changes', iPage === Page.Changes, pages[Page.Changes]);
                         ks.is_item_clicked(function () {
                             ks.navigate_to('Changes', pages[Page.Changes]);
@@ -230,7 +230,7 @@
                         });
                     }
 
-                    if (user.page_access[Page.Admin]) {
+                    if (activeUser.page_access[Page.Admin]) {
                         ks.nav_item('Admin', iPage === Page.Admin, pages[Page.Admin]);
                         ks.is_item_clicked(function () {
                             ks.navigate_to('Admin', pages[Page.Admin]);
@@ -239,9 +239,9 @@
                     }
                 });
 
-                ks.text(user.first_name.substr(0, 1) + '. ' + user.last_name, 'ml-auto');
+                ks.text(activeUser.first_name.substr(0, 1) + '. ' + activeUser.last_name, 'ml-auto');
                 ks.unordered_list('right', 'navbar-nav', function () {
-                    if (user.impersonating) {
+                    if (activeUser.impersonating) {
                         ks.nav_item('End impersonation', false, '');
                         ks.is_item_clicked(function () {
                             GET(API.Identity('impersonate/end')).always(function () {
@@ -317,7 +317,7 @@
                 ks.set_next_item_class_name('bg-white border');
                 ks.table('devices', function () {
                     let flags = DTF.EditDevice;
-                    if (user.can_secure) { flags |= DTF.CanSecure; }
+                    if (activeUser.can_secure) { flags |= DTF.CanSecure; }
 
                     device_table_head(flags);
 

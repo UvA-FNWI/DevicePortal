@@ -105,7 +105,8 @@ namespace DevicePortal.Controllers
                 return BadRequest();
             }
 
-            if (!User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin) &&
+            bool isAdmin = User.HasClaim(AppClaimTypes.Permission, AppClaims.CanAdmin);
+            if (!isAdmin &&
                 !User.HasClaim(AppClaimTypes.Permission, AppClaims.CanManageFaculty))
             {
                 string userName = User.GetUserName();
@@ -120,7 +121,7 @@ namespace DevicePortal.Controllers
             
             var entry = _context.Entry(user);
             entry.Property(u => u.CanApprove).IsModified = true;
-            entry.Property(u => u.CanSecure).IsModified = true;
+            entry.Property(u => u.CanSecure).IsModified = isAdmin;
 
             try
             {
