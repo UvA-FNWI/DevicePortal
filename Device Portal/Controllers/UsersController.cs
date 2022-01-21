@@ -158,6 +158,7 @@ namespace DevicePortal.Controllers
                     current.Name = user.Name;
                     current.Email = user.Email;
                     current.Inactive = user.Inactive;
+                    _context.Update(current);
                 }
                 await _context.SaveChangesAsync();
                 return NoContent();
