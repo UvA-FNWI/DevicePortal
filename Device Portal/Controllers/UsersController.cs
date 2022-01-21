@@ -148,15 +148,16 @@ namespace DevicePortal.Controllers
         {
             try
             {
-                if (!_context.Users.Any(u => u.UserName == user.UserName))
+                var current = _context.Users.FirstOrDefault(u => u.UserName == user.UserName);
+                if (current == null)
                 {
                     _context.Users.Add(user);
                 }
                 else
                 {
-                    _context.Users.Attach(user);
-                    var entry = _context.Entry(user);
-                    entry.State = EntityState.Modified;
+                    current.Name = user.Name;
+                    current.Email = user.Email;
+                    current.Inactive = user.Inactive;
                 }
                 await _context.SaveChangesAsync();
                 return NoContent();
