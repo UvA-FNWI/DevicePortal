@@ -85,6 +85,10 @@ namespace DevicePortal.Importer
                             ImportCmdb(config); 
                             break;
 
+                        case "--tool":
+                            new ImportTool(config).Run();
+                            break;
+
                         case "--labnet":
                             string labnetJson = null;
                             if (cp.parameters.Count == 0)
@@ -286,7 +290,6 @@ namespace DevicePortal.Importer
                         existing.UserEditId = User.ImporterId;
                         existing.DeviceId = device.DeviceId;
                         existing.SerialNumber = device.SerialNumber;
-                        existing.Category = device.Category;
                         existing.CostCentre = device.CostCentre;
                         existing.ItracsBuilding = device.ItracsBuilding;
                         existing.ItracsOutlet = device.ItracsOutlet;

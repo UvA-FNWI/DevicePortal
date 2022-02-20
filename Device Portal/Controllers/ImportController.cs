@@ -191,7 +191,6 @@ namespace DevicePortal.Controllers
                         existing.DateEdit = now;
                         existing.UserEditId = Data.User.ImporterId;
                         existing.SerialNumber = device.SerialNumber;
-                        existing.Category = device.Category;
                         existing.CostCentre = device.CostCentre;
                         existing.ItracsBuilding = device.ItracsBuilding;
                         existing.ItracsOutlet = device.ItracsOutlet;

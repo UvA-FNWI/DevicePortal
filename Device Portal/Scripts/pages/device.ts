@@ -16,14 +16,16 @@
         ManagedSpecial = 1 << 1,
         SelfSupport = 1 << 2,
         Other = 1 << 3,
-        BYOD = 1 << 4, // bring your own device 
-        All = (1 << 5) - 1,
+        BYOD = 1 << 4, // bring your own device
+        PackageControl = 1 << 5,
+        All = (1 << 6) - 1,
     }
     export let deviceCategories = {};
     deviceCategories[DeviceCategory.ManagedStandard] = 'Managed standard';
     deviceCategories[DeviceCategory.ManagedSpecial] = 'Managed special';
     deviceCategories[DeviceCategory.SelfSupport] = 'Self support';
     deviceCategories[DeviceCategory.Other] = 'Other';
+    deviceCategories[DeviceCategory.PackageControl] = 'Package control';
     deviceCategories[DeviceCategory.BYOD] = 'BYOD';
 
     export enum OSType {

@@ -141,7 +141,7 @@ namespace DevicePortal.Controllers
                         continue;
                     }
 
-                    if (group.All(d => d.Category == DeviceCategory.ManagedSpecial || d.Category == DeviceCategory.ManagedStandard))
+                    if (group.All(d => d.Category == DeviceCategory.ManagedSpecial || d.Category == DeviceCategory.ManagedStandard || d.Category == DeviceCategory.PackageControl))
                     {
                         ++usersManagedDevices;
                     }
@@ -178,7 +178,7 @@ namespace DevicePortal.Controllers
                     Name = department.Name,
                     Devices = department.Devices.Count,
                     DevicesBYOD = department.Devices.Count(d => d.Category == DeviceCategory.BYOD),
-                    DevicesManaged = department.Devices.Count(d => d.Category == DeviceCategory.ManagedStandard || d.Category == DeviceCategory.ManagedSpecial),
+                    DevicesManaged = department.Devices.Count(d => d.Category == DeviceCategory.ManagedStandard || d.Category == DeviceCategory.ManagedSpecial || d.Category == DeviceCategory.PackageControl),
                     DevicesSelfSupport = department.Devices.Count(d => d.Category == DeviceCategory.SelfSupport),
                     DevicesCheckApproved = devicesCheckApproved,
                     DevicesCheckSubmitted = devicesCheckSubmitted,
