@@ -163,7 +163,7 @@ namespace DevicePortal.Importer
             var devices = dwhContext.FnwiPortals.ToArray();
             var setDevicesCMDB = devices.Select(d => d.Naam).ToHashSet();
             var deviceMap = portalContext.Devices
-                .Where(d => d.DeviceId != null && setDevicesCMDB.Contains(d.DeviceId))  // DeviceId is null with Origin.User
+                .Where(d => d.DeviceId != null && (d.Origin == DeviceOrigin.DataExport || setDevicesCMDB.Contains(d.DeviceId)))  // DeviceId is null with Origin.User
                 .ToArray()
                 .ToDictionary(d => d.DeviceId.ToLower());
             foreach (var d in devices)
