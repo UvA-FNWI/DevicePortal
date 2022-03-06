@@ -59,8 +59,7 @@ namespace DevicePortal
                 catch { return; }
 
                 var deviceMap = _context.Devices
-                    .Where(d => d.UserName == userName && !string.IsNullOrEmpty(d.SerialNumber) ||
-                        d.UserName == null && !string.IsNullOrEmpty(d.SerialNumber) && d.SerialNumber != "0" &&
+                    .Where(d => !string.IsNullOrEmpty(d.SerialNumber) && d.SerialNumber != "0" &&
                         d.SerialNumber != "Defaultstring" && d.SerialNumber != "Default string" && 
                         d.SerialNumber != "NotApplicable" && d.SerialNumber != "onbekend" && 
                         d.SerialNumber != "SystemSerialNumber" && d.SerialNumber != "TobefilledbyO.E.M.")
@@ -196,6 +195,12 @@ namespace DevicePortal
                         DepartmentId = u.Departments.Select(d => d.DepartmentId).First(),
                     })
                     .ToArrayAsync();
+                var deviceMap = _context.Devices
+                    .Where(d => d.UserName != null && !string.IsNullOrEmpty(d.SerialNumber) && d.SerialNumber != "0" &&
+                        d.SerialNumber != "Defaultstring" && d.SerialNumber != "Default string" &&
+                        d.SerialNumber != "NotApplicable" && d.SerialNumber != "onbekend" &&
+                        d.SerialNumber != "SystemSerialNumber" && d.SerialNumber != "TobefilledbyO.E.M.")
+                    .ToLookup(d => d.SerialNumber.ToLower());
                 var decoupledDevices = await _context.Devices
                     .Where(d => d.UserName == null && !string.IsNullOrEmpty(d.SerialNumber) && d.SerialNumber != "0" &&
                     d.SerialNumber != "Defaultstring" && d.SerialNumber != "Default string" && 
@@ -236,7 +241,6 @@ namespace DevicePortal
                             }
                             catch { continue; }
 
-                            var deviceMap = user.Devices.ToLookup(d => d.SerialNumber.ToLower());
                             var serialSet = new HashSet<string>();
                             foreach (var intuneDevice in intuneDevices.OrderByDescending(d => d.EnrolledDateTime))
                             {
