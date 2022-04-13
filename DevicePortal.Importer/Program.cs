@@ -168,6 +168,11 @@ namespace DevicePortal.Importer
                 .ToDictionary(d => d.DeviceId.ToLower());
             foreach (var d in devices)
             {
+                if (d.Klantorganisatie == null)
+                {
+                    Console.WriteLine($"Missing department for {d.Naam}");
+                    continue;
+                }
                 string departmentName = instituteDepartmentMap.TryGetValue(d.Klantorganisatie, out departmentName) ?
                            departmentName : d.Klantorganisatie;
                 if (!departmentMap.TryGetValue(departmentName, out Department department))
