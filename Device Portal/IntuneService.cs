@@ -249,7 +249,7 @@ namespace DevicePortal
                                 // Skip duplicates, process entry with latest enrolled dateTime
                                 if (!serialSet.Add(serial_lower)) { continue; }
 
-                                var devices = deviceMap[serial_lower];
+                                var devices = deviceMap[serial_lower].Concat(deviceMap["S" + serial_lower]);
                                 var decoupleds = mapDecoupledDevices[serial_lower];
                                 if (devices.Count() + decoupleds.Count() > 1) { continue; }
 
